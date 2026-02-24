@@ -1,0 +1,101 @@
+import React from 'react';
+import { Home, ShoppingBag, ShoppingCart, User, Search } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useLocation, Link } from 'react-router-dom';
+
+const BottomNav = () => {
+    const location = useLocation();
+    const cartCount = 2; // Mock cart count
+
+    const navItems = [
+        { icon: Home, label: 'Accueil', path: '/' },
+        { icon: Search, label: 'Découvrir', path: '/shop' },
+        { icon: ShoppingCart, label: 'Panier', path: '/cart', count: cartCount },
+        { icon: User, label: 'Compte', path: '/login' },
+    ];
+
+    return (
+        <motion.nav
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            className="show-mobile glass"
+            style={{
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                zIndex: 1001,
+                padding: '10px 0 calc(10px + var(--safe-bottom))',
+                borderTop: '1px solid var(--divider)',
+                display: 'none', // Managed by show-mobile class
+            }}
+        >
+            <div className="container" style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+                {navItems.map((item) => {
+                    const isActive = location.pathname === item.path;
+                    const Icon = item.icon;
+
+                    return (
+                        <Link
+                            key={item.label}
+                            to={item.path}
+                            id={`bottom-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: '4px',
+                                color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                                textDecoration: 'none',
+                                position: 'relative',
+                                minWidth: '64px',
+                            }}
+                        >
+                            <div style={{ position: 'relative' }}>
+                                <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+                                {item.count > 0 && (
+                                    <span style={{
+                                        position: 'absolute',
+                                        top: '-6px',
+                                        right: '-10px',
+                                        background: 'var(--secondary)',
+                                        color: 'white',
+                                        fontSize: '9px',
+                                        fontWeight: 700,
+                                        width: '16px',
+                                        height: '16px',
+                                        borderRadius: '50%',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        border: '2px solid var(--white)',
+                                    }}>
+                                        {item.count}
+                                    </span>
+                                )}
+                            </div>
+                            <span style={{ fontSize: '0.62rem', fontWeight: isActive ? 700 : 500, letterSpacing: '0.02em' }}>
+                                {item.label}
+                            </span>
+                            {isActive && (
+                                <motion.div
+                                    layoutId="bottomTab"
+                                    style={{
+                                        position: 'absolute',
+                                        top: '-10px',
+                                        width: '4px',
+                                        height: '4px',
+                                        borderRadius: '50%',
+                                        background: 'var(--accent)',
+                                    }}
+                                />
+                            )}
+                        </Link>
+                    );
+                })}
+            </div>
+        </motion.nav>
+    );
+};
+
+export default BottomNav;
