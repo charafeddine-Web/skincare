@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ShoppingBag, Heart, Eye, Star } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 
 const StarRating = ({ rating = 4.5, count }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -24,6 +24,16 @@ const ProductCard = ({ product }) => {
     const [wishlisted, setWishlisted] = useState(false);
     const [addedToCart, setAddedToCart] = useState(false);
 
+    const rating = product.rating || 4.5;
+    const reviewCount = useMemo(() => {
+        if (product.reviews) return product.reviews;
+        // Deterministic pseudo-random fallback based on product id (pure)
+        const idNum = Number(product.id) || 1;
+        return ((idNum * 37) % 200) + 50;
+    }, [product.reviews, product.id]);
+    const isNew = product.isNew;
+    const badge = product.badge;
+
     const handleAddToCart = (e) => {
         e.stopPropagation();
         setAddedToCart(true);
@@ -35,13 +45,8 @@ const ProductCard = ({ product }) => {
         setWishlisted(!wishlisted);
     };
 
-    const rating = product.rating || 4.5;
-    const reviewCount = product.reviews || Math.floor(Math.random() * 200 + 50);
-    const isNew = product.isNew;
-    const badge = product.badge;
-
     return (
-        <motion.div
+        <Motion.div
             whileHover={{ y: -8 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="card"
@@ -70,42 +75,54 @@ const ProductCard = ({ product }) => {
                     opacity: 0.6,
                 }} />
 
-                {/* Product visual placeholder */}
-                <div style={{
-                    position: 'relative',
-                    zIndex: 1,
-                    textAlign: 'center',
-                    transform: 'scale(clamp(0.85, 1vw, 1))',
-                }}>
+                {/* Product image if provided */}
+                {product.image ? (
+                    <img
+                        src={product.image}
+                        alt={product.name || 'Produit Éveline'}
+                        loading="lazy"
+                        decoding="async"
+                        style={{ width: 'auto', height: '65%', objectFit: 'contain', zIndex: 1 }}
+                        srcSet={product.srcSet}
+                        sizes="(max-width:640px) 80vw, 30vw"
+                    />
+                ) : (
                     <div style={{
-                        width: 'clamp(90px, 20vw, 110px)',
-                        height: 'clamp(120px, 25vw, 150px)',
-                        background: 'linear-gradient(160deg, var(--primary-deep) 0%, var(--primary) 50%, var(--accent-light) 100%)',
-                        borderRadius: '50px 50px 30px 30px',
-                        margin: '0 auto 12px',
-                        boxShadow: '0 20px 40px rgba(197,160,89,0.2)',
                         position: 'relative',
+                        zIndex: 1,
+                        textAlign: 'center',
+                        transform: 'scale(clamp(0.85, 1vw, 1))',
                     }}>
                         <div style={{
-                            position: 'absolute',
-                            top: '12px', left: '50%',
-                            transform: 'translateX(-50%)',
-                            width: '40px', height: '4px',
-                            backgroundColor: 'rgba(255,255,255,0.4)',
-                            borderRadius: '2px',
-                        }} />
+                            width: 'clamp(90px, 20vw, 110px)',
+                            height: 'clamp(120px, 25vw, 150px)',
+                            background: 'linear-gradient(160deg, var(--primary-deep) 0%, var(--primary) 50%, var(--accent-light) 100%)',
+                            borderRadius: '50px 50px 30px 30px',
+                            margin: '0 auto 12px',
+                            boxShadow: '0 20px 40px rgba(197,160,89,0.2)',
+                            position: 'relative',
+                        }}>
+                            <div style={{
+                                position: 'absolute',
+                                top: '12px', left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: '40px', height: '4px',
+                                backgroundColor: 'rgba(255,255,255,0.4)',
+                                borderRadius: '2px',
+                            }} />
+                        </div>
+                        <span style={{
+                            fontSize: '0.58rem',
+                            letterSpacing: '1.5px',
+                            textTransform: 'uppercase',
+                            color: 'var(--text-muted)',
+                            fontWeight: 600,
+                        }}>Collection Bloom</span>
                     </div>
-                    <span style={{
-                        fontSize: '0.58rem',
-                        letterSpacing: '1.5px',
-                        textTransform: 'uppercase',
-                        color: 'var(--text-muted)',
-                        fontWeight: 600,
-                    }}>Collection Bloom</span>
-                </div>
+                )}
 
                 {/* Hover overlay (Desktop only via hover) */}
-                <motion.div
+                <Motion.div
                     initial={{ opacity: 0 }}
                     whileHover={{ opacity: 1 }}
                     className="hide-mobile"
@@ -119,16 +136,17 @@ const ProductCard = ({ product }) => {
                         zIndex: 3,
                     }}
                 >
-                    <motion.button
+                    <Motion.button
                         initial={{ y: 10, opacity: 0 }}
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                         className="btn-icon"
                         style={{ background: 'white', boxShadow: 'var(--shadow-md)' }}
+                        aria-label="Aperçu du produit"
                     >
                         <Eye size={16} />
-                    </motion.button>
-                </motion.div>
+                    </Motion.button>
+                </Motion.div>
 
                 {/* Badges */}
                 <div style={{ position: 'absolute', top: 'clamp(10px, 2vw, 14px)', left: 'clamp(10px, 2vw, 14px)', display: 'flex', flexDirection: 'column', gap: '4px', zIndex: 4 }}>
@@ -137,12 +155,14 @@ const ProductCard = ({ product }) => {
                 </div>
 
                 {/* Wishlist button */}
-                <motion.button
+                <Motion.button
                     whileTap={{ scale: 0.8 }}
                     onClick={handleWishlist}
+                    aria-pressed={wishlisted}
+                    aria-label={wishlisted ? 'Retirer de la liste de souhaits' : 'Ajouter à la liste de souhaits'}
                     style={{
                         position: 'absolute', top: '10px', right: '10px',
-                        background: wishlisted ? 'var(--primary-deep)' : 'white/80',
+                        background: wishlisted ? 'var(--primary-deep)' : 'rgba(255,255,255,0.9)',
                         backdropFilter: 'blur(4px)',
                         border: '1px solid var(--divider)',
                         borderRadius: '50%',
@@ -158,7 +178,7 @@ const ProductCard = ({ product }) => {
                         fill={wishlisted ? '#8B4A52' : 'none'}
                         color={wishlisted ? '#8B4A52' : 'var(--text-muted)'}
                     />
-                </motion.button>
+                </Motion.button>
             </div>
 
             {/* ── Product Info ── */}
@@ -204,13 +224,14 @@ const ProductCard = ({ product }) => {
                     </div>
 
                     <AnimatePresence mode="wait">
-                        <motion.button
+                        <Motion.button
                             key={addedToCart ? 'added' : 'add'}
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.8, opacity: 0 }}
                             whileTap={{ scale: 0.9 }}
                             onClick={handleAddToCart}
+                            aria-label={addedToCart ? 'Produit ajouté au panier' : 'Ajouter au panier'}
                             style={{
                                 background: addedToCart ? 'var(--success)' : 'var(--secondary)',
                                 color: 'white',
@@ -228,11 +249,11 @@ const ProductCard = ({ product }) => {
                         >
                             <ShoppingBag size={14} />
                             <span className={addedToCart ? '' : 'hide-mobile'}>{addedToCart ? 'Ajouté ✓' : 'Ajouter'}</span>
-                        </motion.button>
+                        </Motion.button>
                     </AnimatePresence>
                 </div>
             </div>
-        </motion.div>
+        </Motion.div>
     );
 };
 

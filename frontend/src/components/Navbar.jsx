@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingBag, Search, User, Menu, X, ChevronDown, Instagram, Facebook, Youtube, Phone, ArrowRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 
 const navLinks = [
     { label: 'Accueil', href: '/' },
@@ -27,10 +27,12 @@ const Navbar = () => {
 
     return (
         <>
-            <motion.nav
+            <Motion.nav
                 initial={{ y: -100, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                role="navigation"
+                aria-label="Navigation principale"
                 style={{
                     position: 'fixed',
                     top: 0,
@@ -53,23 +55,27 @@ const Navbar = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(24px, 4vw, 60px)' }}>
                         {/* Brand */}
                         <a href="/" style={{ textDecoration: 'none', transition: 'transform 0.3s var(--ease-out)' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                                <span style={{
-                                    fontFamily: "'Cormorant Garant', serif",
-                                    fontSize: 'clamp(1.5rem, 3vw, 1.85rem)',
-                                    fontWeight: 700,
-                                    letterSpacing: '5px',
-                                    color: 'var(--text-main)',
-                                    lineHeight: 1.1,
-                                }}>ÉVELINE</span>
-                                <span style={{
-                                    fontSize: '0.55rem',
-                                    letterSpacing: '4px',
-                                    textTransform: 'uppercase',
-                                    color: 'var(--accent)',
-                                    fontWeight: 600,
-                                    marginTop: '2px',
-                                }}>SKINCARE PARIS</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                {/* Logo image placed before brand text. Asset from public/logo1.png served at '/logo1.png' */}
+                                {/*<img src="/logo2.png" alt="Éveline logo" style={{ height: '48px', width: 'auto', display: 'block', borderRadius: '6px' }} />*/}
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                    <span style={{
+                                        fontFamily: "'Cormorant Garant', serif",
+                                        fontSize: 'clamp(1.5rem, 3vw, 1.85rem)',
+                                        fontWeight: 700,
+                                        letterSpacing: '5px',
+                                        color: 'var(--text-main)',
+                                        lineHeight: 1.1,
+                                    }}>ÉVELINE</span>
+                                    <span style={{
+                                        fontSize: '0.55rem',
+                                        letterSpacing: '4px',
+                                        textTransform: 'uppercase',
+                                        color: 'var(--accent)',
+                                        fontWeight: 600,
+                                        marginTop: '2px',
+                                    }}>Cosmetics</span>
+                                </div>
                             </div>
                         </a>
 
@@ -88,7 +94,10 @@ const Navbar = () => {
                                         fontWeight: 500,
                                         letterSpacing: '0.04em',
                                         textTransform: 'uppercase',
-                                    }}>
+                                    }}
+                                    aria-haspopup={link.children ? 'menu' : undefined}
+                                    aria-expanded={link.children ? (activeDropdown === link.label).toString() : undefined}
+                                    >
                                         {link.label}
                                         {link.children && <ChevronDown size={14} style={{
                                             transition: 'transform 0.3s var(--ease-out)',
@@ -98,11 +107,13 @@ const Navbar = () => {
 
                                     <AnimatePresence>
                                         {link.children && activeDropdown === link.label && (
-                                            <motion.div
+                                            <Motion.div
                                                 initial={{ opacity: 0, y: 12 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: 12 }}
                                                 transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                                                role="menu"
+                                                aria-label={`${link.label} sous-menu`}
                                                 style={{
                                                     position: 'absolute',
                                                     top: 'calc(100% + 20px)',
@@ -137,7 +148,7 @@ const Navbar = () => {
                                                         }}
                                                     >{child}</a>
                                                 ))}
-                                            </motion.div>
+                                            </Motion.div>
                                         )}
                                     </AnimatePresence>
                                 </li>
@@ -148,7 +159,7 @@ const Navbar = () => {
                     {/* Right: Actions */}
                     <div className="flex-row-stack" style={{ gap: '20px' }}>
                         {/* Search (Desktop only, mobile has it in BottomNav) */}
-                        <motion.button
+                        <Motion.button
                             whileHover={{ scale: 1.1, color: 'var(--accent)' }}
                             whileTap={{ scale: 0.9 }}
                             className="btn-icon hide-mobile"
@@ -156,23 +167,23 @@ const Navbar = () => {
                             aria-label="Rechercher"
                         >
                             <Search size={20} />
-                        </motion.button>
+                        </Motion.button>
 
                         {/* Account (Desktop only) */}
                         <a href="/login" style={{ display: 'flex' }} className="hide-mobile">
-                            <motion.button
+                            <Motion.button
                                 whileHover={{ scale: 1.1, color: 'var(--accent)' }}
                                 whileTap={{ scale: 0.9 }}
                                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', color: 'var(--text-muted)' }}
                                 aria-label="Mon compte"
                             >
                                 <User size={20} />
-                            </motion.button>
+                            </Motion.button>
                         </a>
 
                         {/* Cart (Desktop only, mobile version in BottomNav) */}
                         <a href="/cart" style={{ display: 'flex' }} className="hide-mobile">
-                            <motion.button
+                            <Motion.button
                                 whileHover={{ scale: 1.05, boxShadow: 'var(--shadow-md)' }}
                                 whileTap={{ scale: 0.95 }}
                                 className="btn btn-dark"
@@ -202,11 +213,11 @@ const Navbar = () => {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                 }}>{cartCount}</span>
-                            </motion.button>
+                            </Motion.button>
                         </a>
 
                         {/* Mobile hamburger (keeps Categories and About accessible) */}
-                        <motion.button
+                        <Motion.button
                             className="show-mobile"
                             whileTap={{ scale: 0.9 }}
                             onClick={() => setIsOpen(!isOpen)}
@@ -221,16 +232,16 @@ const Navbar = () => {
                             aria-label="Menu"
                         >
                             {isOpen ? <X size={22} /> : <Menu size={22} />}
-                        </motion.button>
+                        </Motion.button>
                     </div>
                 </div>
-            </motion.nav>
+            </Motion.nav>
 
             {/* Mobile Drawer */}
             <AnimatePresence>
                 {isOpen && (
                     <>
-                        <motion.div
+                        <Motion.div
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
@@ -241,7 +252,7 @@ const Navbar = () => {
                                 backdropFilter: 'blur(8px)',
                             }}
                         />
-                        <motion.div
+                        <Motion.div
                             initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                             transition={{ type: 'spring', damping: 28, stiffness: 220 }}
                             style={{
@@ -266,7 +277,7 @@ const Navbar = () => {
 
                             <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
                                 {navLinks.map((link, i) => (
-                                    <motion.div
+                                    <Motion.div
                                         key={link.label}
                                         initial={{ opacity: 0, x: 20 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -292,7 +303,7 @@ const Navbar = () => {
                                             {link.label}
                                             <ArrowRight size={20} style={{ opacity: 0.3 }} />
                                         </a>
-                                    </motion.div>
+                                    </Motion.div>
                                 ))}
                             </nav>
 
@@ -328,7 +339,7 @@ const Navbar = () => {
                                     </div>
                                 </div>
                             </div>
-                        </motion.div>
+                        </Motion.div>
                     </>
                 )}
             </AnimatePresence>

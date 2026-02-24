@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Heart, Star, ArrowLeft, Plus, Minus, ChevronDown, Check, Leaf, Shield, Truck } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { ShoppingBag, Heart, Star, ArrowLeft, Plus, Minus, Leaf, Shield, Truck } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
 /* ── MOCK DATA ── */
@@ -28,6 +28,7 @@ Formulé pour tous les types de peau, il estompe les taches pigmentaires, unifie
             { name: 'Isabelle R.', loc: 'Lyon', rating: 5, text: 'Texture légère, ne graisse pas, parfait sous le maquillage.', date: 'Décembre 2025' },
             { name: 'Nadia K.', loc: 'Marseille', rating: 4, text: 'Très efficace sur les taches. Livraison ultra rapide.', date: 'Novembre 2025' },
         ],
+        image: '/images/products/serum-vitc.jpg'
     },
 };
 
@@ -43,7 +44,6 @@ const FALLBACK_PRODUCT = {
     ingredients: ['Aloe Vera', 'Vitamine E', 'Acide Hyaluronique'],
     howTo: 'Appliquez sur peau propre, matin et soir.',
     size: '30 ml',
-    skinType: ['Tous types'],
     reviewsList: [],
 };
 
@@ -68,13 +68,49 @@ const guarantee = [
 /* ── COMPONENT ── */
 const ProductDetail = () => {
     const { id } = useParams();
-    const product = productsData[id] || { ...FALLBACK_PRODUCT, name: `Produit #${id}` };
+    const product = useMemo(() => (productsData[id] || { ...FALLBACK_PRODUCT, name: `Produit #${id}` }), [id]);
+
+    React.useEffect(() => {
+        // Meta (client-side) : titre et description simples
+        document.title = `${product.name} — Éveline Skincare`;
+        const metaDesc = document.querySelector('meta[name="description"]');
+        if (metaDesc) metaDesc.setAttribute('content', product.shortDesc || 'Soins naturels Éveline');
+
+        // JSON-LD structured data
+        const script = document.createElement('script');
+        script.type = 'application/ld+json';
+        script.text = JSON.stringify({
+            "@context": "https://schema.org/",
+            "@type": "Product",
+            "name": product.name,
+            "image": product.image ? [product.image] : [],
+            "description": product.shortDesc,
+            "sku": `EVEL-${product.id}`,
+            "brand": { "@type": "Brand", "name": "Éveline Skincare" },
+            "offers": {
+                "@type": "Offer",
+                "priceCurrency": "EUR",
+                "price": product.price,
+                "availability": "https://schema.org/InStock"
+            },
+            "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": product.rating || 4.5,
+                "reviewCount": product.reviews || 0
+            }
+        });
+        document.head.appendChild(script);
+
+        return () => {
+            // cleanup
+            document.head.removeChild(script);
+        };
+    }, [product]);
 
     const [qty, setQty] = useState(1);
     const [wishlisted, setWishlisted] = useState(false);
     const [added, setAdded] = useState(false);
     const [activeTab, setActiveTab] = useState('description');
-    const [expandedFaq, setExpandedFaq] = useState(null);
 
     const handleAddToCart = () => {
         setAdded(true);
@@ -108,7 +144,7 @@ const ProductDetail = () => {
 
             <div className="container" style={{ padding: 'clamp(20px, 5vw, 60px) var(--container-pad)' }}>
                 {/* ── Back link ── */}
-                <motion.a
+                <Motion.a
                     href="/shop"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -121,12 +157,12 @@ const ProductDetail = () => {
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
                     <ArrowLeft size={16} /> Retour à la boutique
-                </motion.a>
+                </Motion.a>
 
                 {/* ── Main: Image + Info ── */}
                 <div className="split-grid" style={{ marginBottom: 'clamp(60px, 8vw, 100px)', alignItems: 'flex-start' }}>
                     {/* Left: Image Gallery */}
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
@@ -146,7 +182,7 @@ const ProductDetail = () => {
                         }}>
                             {/* Product visual */}
                             <div style={{ textAlign: 'center', position: 'relative', zIndex: 1 }}>
-                                <motion.div
+                                <Motion.div
                                     animate={{ y: [0, -15, 0] }}
                                     transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
                                     style={{
@@ -166,7 +202,7 @@ const ProductDetail = () => {
                                         backgroundColor: 'rgba(255,255,255,0.4)',
                                         borderRadius: '2px',
                                     }} />
-                                </motion.div>
+                                </Motion.div>
                                 <span className="badge badge-gold">Collection Premium</span>
                             </div>
 
@@ -185,10 +221,10 @@ const ProductDetail = () => {
                                 }} />
                             ))}
                         </div>
-                    </motion.div>
+                    </Motion.div>
 
                     {/* Right: Product Info */}
-                    <motion.div
+                    <Motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.8, delay: 0.2 }}
@@ -250,7 +286,7 @@ const ProductDetail = () => {
                                 <button onClick={() => setQty(q => q + 1)} className="btn-icon" style={{ border: 'none' }}><Plus size={16} /></button>
                             </div>
 
-                            <motion.button
+                            <Motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={handleAddToCart}
@@ -259,7 +295,7 @@ const ProductDetail = () => {
                             >
                                 <ShoppingBag size={20} />
                                 {added ? 'Ajouté !' : 'Ajouter au Panier'}
-                            </motion.button>
+                            </Motion.button>
 
                             <button className="btn-icon" onClick={() => setWishlisted(!wishlisted)} style={{
                                 border: '1px solid var(--divider)',
@@ -270,14 +306,14 @@ const ProductDetail = () => {
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '24px 0', borderTop: '1px solid var(--divider)' }}>
-                            {guarantee.map(({ icon: Icon, text }) => (
-                                <div key={text} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <Icon size={14} style={{ color: 'var(--accent)' }} />
-                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{text}</span>
+                            {guarantee.map((g) => (
+                                <div key={g.text} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <g.icon size={14} style={{ color: 'var(--accent)' }} />
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{g.text}</span>
                                 </div>
                             ))}
                         </div>
-                    </motion.div>
+                    </Motion.div>
                 </div>
 
                 {/* ── Tabs ── */}
@@ -304,7 +340,7 @@ const ProductDetail = () => {
                 </div>
 
                 <AnimatePresence mode="wait">
-                    <motion.div
+                    <Motion.div
                         key={activeTab}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -342,7 +378,7 @@ const ProductDetail = () => {
                                 ))}
                             </div>
                         )}
-                    </motion.div>
+                    </Motion.div>
                 </AnimatePresence>
             </div>
         </div>
