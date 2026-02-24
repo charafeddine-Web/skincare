@@ -26,7 +26,7 @@ const Footer = () => {
         >
             {/* Trust Bar */}
             <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '40px 0' }}>
-                <div className="container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '32px' }}>
+                <div className="container footer-trust-bar">
                     {trustItems.map(({ icon: Icon, label, sub }) => (
                         <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                             <div style={{
@@ -46,16 +46,16 @@ const Footer = () => {
             </div>
 
             {/* Main Footer */}
-            <div style={{ padding: '80px 0 60px' }}>
+            <div style={{ padding: 'clamp(60px, 10vw, 80px) 0' }}>
                 <div className="container footer-grid">
                     {/* Brand Column */}
-                    <div>
+                    <div className="footer-brand-side">
                         <div style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '2rem', fontWeight: 700, letterSpacing: '4px', marginBottom: '4px' }}>ÉVELINE</div>
                         <div style={{ fontSize: '0.55rem', letterSpacing: '4px', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600, marginBottom: '28px' }}>SKINCARE PARIS</div>
-                        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.9rem', lineHeight: 1.8, marginBottom: '32px' }}>
+                        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.9rem', lineHeight: 1.8, marginBottom: '32px', maxWidth: '380px' }}>
                             Votre destination beauté dédiée au skincare naturel & professionnel. Révélez le meilleur de votre peau avec la douceur de la nature.
                         </p>
-                        <div className="flex-row-stack" style={{ gap: '12px' }}>
+                        <div className="flex-row-stack no-stack" style={{ gap: '12px' }}>
                             {socials.map(({ Icon, href, label }) => (
                                 <motion.a
                                     key={label} href={href} whileHover={{ y: -3, background: 'var(--accent)', color: 'white' }}
@@ -72,7 +72,7 @@ const Footer = () => {
                     </div>
 
                     {/* Navigation */}
-                    <div>
+                    <div className="footer-nav-col">
                         <h4 style={{ fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '28px' }}>Explorer</h4>
                         <ul className="footer-links" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             {['Accueil', 'Boutique', 'À Propos', 'Conseils', 'Engagement', 'Contact'].map(label => (
@@ -84,9 +84,9 @@ const Footer = () => {
                     </div>
 
                     {/* Contact */}
-                    <div>
+                    <div className="footer-contact-col">
                         <h4 style={{ fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '28px' }}>Contact</h4>
-                        <ul style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <ul style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                             {[
                                 { Icon: Mail, text: 'contact@eveline.fr' },
                                 { Icon: Phone, text: '+33 1 23 45 67 89' },
@@ -101,9 +101,9 @@ const Footer = () => {
                     </div>
 
                     {/* Newsletter */}
-                    <div>
+                    <div className="footer-news-col">
                         <h4 style={{ fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '28px' }}>Newsletter</h4>
-                        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.9rem', marginBottom: '24px', lineHeight: 1.7 }}>
+                        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', marginBottom: '24px', lineHeight: 1.7 }}>
                             Profitez de 10% sur votre première commande en rejoignant notre communauté.
                         </p>
                         <form onSubmit={e => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -114,7 +114,7 @@ const Footer = () => {
                                     borderRadius: '12px', padding: '14px 18px', color: 'white', fontSize: '0.85rem', outline: 'none',
                                 }}
                             />
-                            <button id="newsletter-submit" className="btn btn-primary" style={{ padding: '14px' }}>S'abonner</button>
+                            <button id="newsletter-submit" className="btn btn-primary btn-full" style={{ padding: '14px' }}>S'abonner</button>
                         </form>
                     </div>
                 </div>
@@ -122,11 +122,11 @@ const Footer = () => {
 
             {/* Bottom bar */}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '30px 0' }}>
-                <div className="container flex-row-stack justify-center" style={{ textAlign: 'center' }}>
-                    <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', width: '100%' }}>
-                        © 2026 Éveline Skincare Paris · Créé avec passion pour votre beauté.
+                <div className="container flex-row-stack no-stack justify-between" style={{ textAlign: 'center' }}>
+                    <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>
+                        © 2026 Éveline Skincare Paris · Créé avec passion.
                     </p>
-                    <div className="flex-row-stack justify-center mt-12" style={{ gap: '24px' }}>
+                    <div className="flex-row-stack no-stack" style={{ gap: '24px' }}>
                         {['CGV', 'Confidentialité', 'Cookies'].map(item => (
                             <a key={item} href="#" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.25)' }}>{item}</a>
                         ))}

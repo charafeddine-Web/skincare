@@ -95,8 +95,8 @@ const Navbar = () => {
                                         letterSpacing: '0.04em',
                                         textTransform: 'uppercase',
                                     }}
-                                    aria-haspopup={link.children ? 'menu' : undefined}
-                                    aria-expanded={link.children ? (activeDropdown === link.label).toString() : undefined}
+                                        aria-haspopup={link.children ? 'menu' : undefined}
+                                        aria-expanded={link.children ? (activeDropdown === link.label).toString() : undefined}
                                     >
                                         {link.label}
                                         {link.children && <ChevronDown size={14} style={{
@@ -222,125 +222,159 @@ const Navbar = () => {
                             whileTap={{ scale: 0.9 }}
                             onClick={() => setIsOpen(!isOpen)}
                             style={{
-                                background: scrolled ? 'var(--white)' : 'var(--surface)',
+                                background: scrolled ? 'var(--white)' : 'var(--surface-alt)',
                                 border: '1px solid var(--divider)',
-                                borderRadius: '12px',
-                                padding: '10px',
+                                borderRadius: '10px',
+                                padding: '8px',
                                 cursor: 'pointer',
-                                boxShadow: 'var(--shadow-xs)'
+                                boxShadow: scrolled ? 'var(--shadow-xs)' : 'none'
                             }}
                             aria-label="Menu"
                         >
-                            {isOpen ? <X size={22} /> : <Menu size={22} />}
+                            {isOpen ? <X size={0} /> : <Menu size={20} />}
                         </Motion.button>
                     </div>
                 </div>
             </Motion.nav>
 
-            {/* Mobile Drawer */}
+            {/* Mobile Menu Pro Overlay */}
             <AnimatePresence>
                 {isOpen && (
-                    <>
-                        <Motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setIsOpen(false)}
-                            style={{
-                                position: 'fixed', inset: 0, zIndex: 1001,
-                                background: 'rgba(28,28,30,0.4)',
-                                backdropFilter: 'blur(8px)',
-                            }}
-                        />
-                        <Motion.div
-                            initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-                            transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-                            style={{
-                                position: 'fixed', right: 0, top: 0, bottom: 0,
-                                width: 'min(380px, 92vw)',
-                                background: 'var(--background)',
-                                zIndex: 1002,
-                                padding: 'clamp(32px, 8vw, 60px) clamp(24px, 6vw, 40px)',
-                                display: 'flex', flexDirection: 'column',
-                                boxShadow: '-10px 0 50px rgba(0,0,0,0.1)',
-                            }}
-                        >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '60px' }}>
-                                <div>
-                                    <div style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1.6rem', fontWeight: 700, letterSpacing: '3px' }}>ÉVELINE</div>
-                                    <div style={{ fontSize: '0.5rem', letterSpacing: '4px', color: 'var(--accent)', fontWeight: 700 }}>PARIS</div>
-                                </div>
-                                <button onClick={() => setIsOpen(false)} style={{ background: 'var(--surface)', border: 'none', width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                    <X size={24} />
-                                </button>
-                            </div>
+                    <Motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                        style={{
+                            position: 'fixed',
+                            inset: 0,
+                            zIndex: 2000,
+                            background: 'var(--background)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            overflow: 'hidden',
+                        }}
+                    >
+                        {/* Background Decorative Shapes */}
+                        <div className="floating-shape" style={{ top: '-10%', right: '-10%', width: '600px', height: '600px', background: 'var(--grad-blush)', opacity: 0.3 }} />
+                        <div className="floating-shape" style={{ bottom: '-10%', left: '-10%', width: '500px', height: '500px', background: 'var(--grad-gold)', opacity: 0.15 }} />
 
-                            <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                        {/* Top Header in Menu */}
+                        <div className="container" style={{
+                            height: '90px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            borderBottom: '1px solid rgba(0,0,0,0.03)',
+                            position: 'relative',
+                            zIndex: 10,
+                        }}>
+                            <div>
+                                <div style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1.4rem', fontWeight: 700, letterSpacing: '4px' }}>ÉVELINE</div>
+                                <div style={{ fontSize: '0.45rem', letterSpacing: '3px', color: 'var(--accent)', fontWeight: 700 }}>PARIS</div>
+                            </div>
+                            <Motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => setIsOpen(false)}
+                                style={{
+                                    background: 'var(--surface-alt)',
+                                    border: 'none',
+                                    padding: '12px',
+                                    borderRadius: '50%',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    boxShadow: 'var(--shadow-xs)'
+                                }}
+                            >
+                                <X size={20} />
+                            </Motion.button>
+                        </div>
+
+                        {/* Centered Main Nav */}
+                        <div className="container" style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            position: 'relative',
+                            zIndex: 10,
+                            paddingBottom: '40px'
+                        }}>
+                            <nav style={{ display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'center' }}>
                                 {navLinks.map((link, i) => (
                                     <Motion.div
                                         key={link.label}
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: 0.1 + i * 0.05 }}
+                                        initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
+                                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                                        transition={{ delay: 0.2 + i * 0.08, duration: 0.6 }}
                                     >
                                         <a
                                             href={link.href}
                                             style={{
-                                                fontSize: 'clamp(1.8rem, 5vw, 2.2rem)',
-                                                fontWeight: 800,
+                                                fontSize: 'clamp(2.5rem, 10vw, 4rem)',
+                                                fontWeight: 400,
                                                 color: 'var(--text-main)',
                                                 textDecoration: 'none',
-                                                padding: '16px 0',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
                                                 fontFamily: "'Cormorant Garant', serif",
-                                                borderBottom: '1px solid var(--divider)',
-                                                transition: 'color 0.3s'
+                                                display: 'block',
+                                                textAlign: 'center',
+                                                transition: 'all 0.4s',
+                                                position: 'relative',
                                             }}
                                             onClick={() => setIsOpen(false)}
+                                            onMouseEnter={e => {
+                                                e.currentTarget.style.color = 'var(--accent)';
+                                                e.currentTarget.style.transform = 'scale(1.05)';
+                                            }}
+                                            onMouseLeave={e => {
+                                                e.currentTarget.style.color = 'var(--text-main)';
+                                                e.currentTarget.style.transform = 'scale(1)';
+                                            }}
                                         >
                                             {link.label}
-                                            <ArrowRight size={20} style={{ opacity: 0.3 }} />
                                         </a>
                                     </Motion.div>
                                 ))}
                             </nav>
 
-                            <div style={{ marginTop: 'auto', paddingTop: '40px' }}>
-                                <div style={{ display: 'flex', gap: '16px', marginBottom: '32px' }}>
-                                    {[Instagram, Facebook, Youtube].map((Icon, i) => (
-                                        <a key={i} href="#" style={{
-                                            width: '48px', height: '48px', borderRadius: '14px',
-                                            background: 'var(--surface)', display: 'flex',
-                                            alignItems: 'center', justifyContent: 'center',
-                                            color: 'var(--text-main)', transition: 'all 0.3s',
-                                            border: '1px solid var(--divider)'
-                                        }}>
-                                            <Icon size={20} />
-                                        </a>
-                                    ))}
-                                </div>
-                                <div style={{
-                                    padding: '24px',
-                                    background: 'var(--grad-surface)',
-                                    borderRadius: '24px',
-                                    border: '1px solid var(--divider)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '16px'
-                                }}>
-                                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                                        <Phone size={18} />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '1px' }}>Service Client</div>
-                                        <div style={{ fontWeight: 700, color: 'var(--text-main)', fontSize: '1rem' }}>+33 1 23 45 67 89</div>
-                                    </div>
-                                </div>
+                            <Motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.6 }}
+                                style={{ marginTop: '60px', display: 'flex', gap: '16px' }}
+                            >
+                                <a href="/login" className="btn btn-secondary" onClick={() => setIsOpen(false)} style={{ height: '52px', padding: '0 32px' }}>
+                                    <User size={18} /> Compte
+                                </a>
+                                <a href="/cart" className="btn btn-dark" onClick={() => setIsOpen(false)} style={{ height: '52px', padding: '0 32px' }}>
+                                    <ShoppingBag size={18} /> Panier ({cartCount})
+                                </a>
+                            </Motion.div>
+                        </div>
+
+                        {/* Footer in Menu */}
+                        <div className="container" style={{
+                            paddingBottom: '40px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: '24px',
+                            position: 'relative',
+                            zIndex: 10,
+                        }}>
+                            <div style={{ display: 'flex', gap: '20px' }}>
+                                {[Instagram, Facebook, Youtube].map((Icon, i) => (
+                                    <a key={i} href="#" style={{ color: 'var(--text-muted)' }}><Icon size={20} /></a>
+                                ))}
                             </div>
-                        </Motion.div>
-                    </>
+                            <div style={{ fontSize: '0.65rem', letterSpacing: '2px', color: 'var(--text-light)', textTransform: 'uppercase', textAlign: 'center' }}>
+                                Éveline Skincare Paris · Haute Boutique
+                            </div>
+                        </div>
+                    </Motion.div>
                 )}
             </AnimatePresence>
 
