@@ -1,8 +1,13 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import BottomNav from './components/BottomNav';
+import AdminLayout from './components/AdminLayout';
+import AdminRoute from './components/AdminRoute';
+import ProtectedRoute from './components/ProtectedRoute';
+import RouterEventBridge from './components/RouterEventBridge';
 
 const Home = lazy(() => import('./pages/Home'));
 const Shop = lazy(() => import('./pages/Shop'));
@@ -11,6 +16,15 @@ const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Auth = lazy(() => import('./pages/Auth'));
 const Cart = lazy(() => import('./pages/Cart'));
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
+const AdminProducts = lazy(() => import('./pages/admin/Products'));
+const AdminOrders = lazy(() => import('./pages/admin/Orders'));
+const AdminCustomers = lazy(() => import('./pages/admin/Customers'));
+const AdminAnalytics = lazy(() => import('./pages/admin/Analytics'));
+const AdminSettings = lazy(() => import('./pages/admin/Settings'));
+const AccountProfile = lazy(() => import('./pages/account/Profile'));
+const AccountOrders = lazy(() => import('./pages/account/Orders'));
+const AccountAddresses = lazy(() => import('./pages/account/Addresses'));
 
 const Loader = () => (
   <div style={{
@@ -36,27 +50,49 @@ const Loader = () => (
 
 function App() {
   return (
-    <Router>
-      <div className="app" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Navbar />
-        <main style={{ flex: 1 }}>
-          <Suspense fallback={<Loader />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/product/:id" element={<ProductDetail />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/login" element={<Auth />} />
-              <Route path="/cart" element={<Cart />} />
-              <Route path="*" element={<Home />} />
-            </Routes>
-          </Suspense>
-        </main>
-        <BottomNav />
-        <Footer />
-      </div>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <RouterEventBridge />
+        <div className="app" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          <Navbar />
+          <main style={{ flex: 1 }}>
+            <Suspense fallback={<Loader />}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/product/:id" element={<ProductDetail />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/login" element={<Auth />} />
+                <Route path="/cart" element={<Cart />} />
+                {/* Zone client "Mon compte" */}
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/account">
+                    <Route index element={<AccountProfile />} />
+                    <Route path="commandes" element={<AccountOrders />} />
+                    <Route path="adresses" element={<AccountAddresses />} />
+                  </Route>
+                </Route>
+                {/* Zone administration protégée */}
+                <Route element={<AdminRoute />}>
+                  <Route path="/admin" element={<AdminLayout />}>
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="produits" element={<AdminProducts />} />
+                    <Route path="commandes" element={<AdminOrders />} />
+                    <Route path="clients" element={<AdminCustomers />} />
+                    <Route path="statistiques" element={<AdminAnalytics />} />
+                    <Route path="parametres" element={<AdminSettings />} />
+                  </Route>
+                </Route>
+                <Route path="*" element={<Home />} />
+              </Routes>
+            </Suspense>
+          </main>
+          <BottomNav />
+          <Footer />
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 

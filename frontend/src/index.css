@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
 
 /* =========================================
@@ -669,6 +673,16 @@ select.input {
   }
 }
 
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes floatReverse {
 
   0%,
@@ -740,17 +754,28 @@ a:focus {
 /* Auth Specific */
 .auth-layout {
   display: grid;
-  grid-template-columns: minmax(400px, 0.8fr) 1.2fr;
+  grid-template-columns: minmax(400px, 1fr) minmax(400px, 1fr);
   min-height: 100vh;
 }
 
 @media (max-width: 1024px) {
   .auth-layout {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
   }
 
   .auth-visual-side {
     display: none !important;
+  }
+
+  .auth-form-side {
+    padding: 40px 24px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .auth-form-side {
+    padding: 32px 20px !important;
   }
 }
 
@@ -763,15 +788,16 @@ a:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 60px;
+  padding: clamp(40px, 8vw, 80px);
 }
 
 .auth-form-side {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 60px 40px;
+  padding: clamp(40px, 8vw, 80px) clamp(24px, 5vw, 40px);
   background: var(--background);
+  overflow-y: auto;
 }
 
 .floating-shape {

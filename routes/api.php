@@ -56,7 +56,6 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
-    // ... existing code...
 
     // Routes pour les paiements
     Route::prefix('payments')->name('api.payments.')->group(function () {

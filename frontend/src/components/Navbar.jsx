@@ -1,16 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Search, User, Menu, X, ChevronDown, Instagram, Facebook, Youtube, Phone, ArrowRight } from 'lucide-react';
-import { motion as Motion, AnimatePresence } from 'framer-motion';
+import React, {useState, useEffect} from 'react';
+import {
+    ShoppingBag,
+    Search,
+    User,
+    Menu,
+    X,
+    ChevronDown,
+    Instagram,
+    Facebook,
+    Youtube,
+    Phone,
+    ArrowRight,
+    LogOut
+} from 'lucide-react';
+import {motion as Motion, AnimatePresence} from 'framer-motion';
+import { useLocation, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
-const navLinks = [
-    { label: 'Accueil', href: '/' },
-    { label: 'Boutique', href: '/shop' },
+// Navigation links for non-authenticated users
+const publicNavLinks = [
+    {label: 'Accueil', href: '/'},
+    {label: 'Boutique', href: '/shop'},
     {
         label: 'Catégories', href: '#',
         children: ['Nettoyants', 'Sérums', 'Hydratants', 'SPF & Solaires']
     },
-    { label: 'À Propos', href: '/about' },
-    { label: 'Contact', href: '/contact' },
+    {label: 'À Propos', href: '/about'},
+    {label: 'Contact', href: '/contact'},
+];
+
+// Navigation links for authenticated normal users
+const authenticatedNavLinks = [
+    {label: 'Boutique', href: '/shop'},
+    {label: 'Mes commandes', href: '/account/commandes'},
 ];
 
 const Navbar = () => {
@@ -18,19 +40,33 @@ const Navbar = () => {
     const [scrolled, setScrolled] = useState(false);
     const [cartCount] = useState(2);
     const [activeDropdown, setActiveDropdown] = useState(null);
+    const [showUserMenu, setShowUserMenu] = useState(false);
+    
+    const { user, isAuthenticated, isAdmin, logout, loading } = useAuth();
+    const location = useLocation();
+
+    const handleLogout = async () => {
+        await logout();
+        setShowUserMenu(false);
+    };
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 40);
-        window.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('scroll', handleScroll, {passive: true});
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    // Si un admin est sur une route /admin, on masque complètement la navbar
+    if (isAdmin && location.pathname.startsWith('/admin')) {
+        return null;
+    }
 
     return (
         <>
             <Motion.nav
-                initial={{ y: -100, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                initial={{y: -100, opacity: 0}}
+                animate={{y: 0, opacity: 1}}
+                transition={{duration: 0.7, ease: [0.22, 1, 0.36, 1]}}
                 role="navigation"
                 aria-label="Navigation principale"
                 style={{
@@ -50,15 +86,16 @@ const Navbar = () => {
                     boxShadow: scrolled ? 'var(--shadow-sm)' : 'none',
                 }}
             >
-                <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="container"
+                     style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
                     {/* Left: Logo + Nav Links */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(24px, 4vw, 60px)' }}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: 'clamp(24px, 4vw, 60px)'}}>
                         {/* Brand */}
-                        <a href="/" style={{ textDecoration: 'none', transition: 'transform 0.3s var(--ease-out)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Link to="/" style={{textDecoration: 'none', transition: 'transform 0.3s var(--ease-out)'}}>
+                            <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
                                 {/* Logo image placed before brand text. Asset from public/logo1.png served at '/logo1.png' */}
                                 {/*<img src="/logo2.png" alt="Éveline logo" style={{ height: '48px', width: 'auto', display: 'block', borderRadius: '6px' }} />*/}
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
                                     <span style={{
                                         fontFamily: "'Cormorant Garant', serif",
                                         fontSize: 'clamp(1.5rem, 3vw, 1.85rem)',
@@ -77,41 +114,65 @@ const Navbar = () => {
                                     }}>Cosmetics</span>
                                 </div>
                             </div>
-                        </a>
+                        </Link>
 
                         {/* Desktop Nav */}
-                        <ul className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                            {navLinks.map((link) => (
-                                <li key={link.label} style={{ position: 'relative' }}
+                        <ul className="hide-mobile" style={{display: 'flex', alignItems: 'center', gap: '32px'}}>
+                            {(isAuthenticated && !isAdmin ? authenticatedNavLinks : publicNavLinks).map((link) => (
+                                <li key={link.label} style={{position: 'relative'}}
                                     onMouseEnter={() => link.children && setActiveDropdown(link.label)}
                                     onMouseLeave={() => setActiveDropdown(null)}
                                 >
-                                    <a href={link.href} className="nav-link" style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '6px',
-                                        fontSize: '0.82rem',
-                                        fontWeight: 500,
-                                        letterSpacing: '0.04em',
-                                        textTransform: 'uppercase',
-                                    }}
-                                        aria-haspopup={link.children ? 'menu' : undefined}
-                                        aria-expanded={link.children ? (activeDropdown === link.label).toString() : undefined}
-                                    >
-                                        {link.label}
-                                        {link.children && <ChevronDown size={14} style={{
-                                            transition: 'transform 0.3s var(--ease-out)',
-                                            transform: activeDropdown === link.label ? 'rotate(180deg)' : 'rotate(0deg)'
-                                        }} />}
-                                    </a>
+                                    {link.children ? (
+                                        <button
+                                            type="button"
+                                            className="nav-link"
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                fontSize: '0.82rem',
+                                                fontWeight: 500,
+                                                letterSpacing: '0.04em',
+                                                textTransform: 'uppercase',
+                                                background: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                            }}
+                                            aria-haspopup="menu"
+                                            aria-expanded={(activeDropdown === link.label).toString()}
+                                        >
+                                            {link.label}
+                                            <ChevronDown size={14} style={{
+                                                transition: 'transform 0.3s var(--ease-out)',
+                                                transform: activeDropdown === link.label ? 'rotate(180deg)' : 'rotate(0deg)'
+                                            }}/>
+                                        </button>
+                                    ) : (
+                                        <Link
+                                            to={link.href}
+                                            className="nav-link"
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '6px',
+                                                fontSize: '0.82rem',
+                                                fontWeight: 500,
+                                                letterSpacing: '0.04em',
+                                                textTransform: 'uppercase',
+                                            }}
+                                        >
+                                            {link.label}
+                                        </Link>
+                                    )}
 
                                     <AnimatePresence>
                                         {link.children && activeDropdown === link.label && (
                                             <Motion.div
-                                                initial={{ opacity: 0, y: 12 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: 12 }}
-                                                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                                                initial={{opacity: 0, y: 12}}
+                                                animate={{opacity: 1, y: 0}}
+                                                exit={{opacity: 0, y: 12}}
+                                                transition={{duration: 0.3, ease: [0.22, 1, 0.36, 1]}}
                                                 role="menu"
                                                 aria-label={`${link.label} sous-menu`}
                                                 style={{
@@ -128,7 +189,7 @@ const Navbar = () => {
                                                 }}
                                             >
                                                 {link.children.map((child) => (
-                                                    <a key={child} href={`/shop?cat=${child.toLowerCase()}`} style={{
+                                                    <Link key={child} to={`/shop?cat=${child.toLowerCase()}`} style={{
                                                         display: 'block',
                                                         padding: '12px 16px',
                                                         borderRadius: '10px',
@@ -136,17 +197,17 @@ const Navbar = () => {
                                                         color: 'var(--text-muted)',
                                                         transition: 'all 0.2s',
                                                     }}
-                                                        onMouseEnter={e => {
-                                                            e.currentTarget.style.background = 'var(--surface)';
-                                                            e.currentTarget.style.color = 'var(--accent-deep)';
-                                                            e.currentTarget.style.paddingLeft = '20px';
-                                                        }}
-                                                        onMouseLeave={e => {
-                                                            e.currentTarget.style.background = 'transparent';
-                                                            e.currentTarget.style.color = 'var(--text-muted)';
-                                                            e.currentTarget.style.paddingLeft = '16px';
-                                                        }}
-                                                    >{child}</a>
+                                                       onMouseEnter={e => {
+                                                           e.currentTarget.style.background = 'var(--surface)';
+                                                           e.currentTarget.style.color = 'var(--accent-deep)';
+                                                           e.currentTarget.style.paddingLeft = '20px';
+                                                       }}
+                                                       onMouseLeave={e => {
+                                                           e.currentTarget.style.background = 'transparent';
+                                                           e.currentTarget.style.color = 'var(--text-muted)';
+                                                           e.currentTarget.style.paddingLeft = '16px';
+                                                       }}
+                                                    >{child}</Link>
                                                 ))}
                                             </Motion.div>
                                         )}
@@ -157,35 +218,130 @@ const Navbar = () => {
                     </div>
 
                     {/* Right: Actions */}
-                    <div className="flex-row-stack" style={{ gap: '20px' }}>
+                    <div className="flex-row-stack" style={{gap: '20px'}}>
                         {/* Search (Desktop only, mobile has it in BottomNav) */}
                         <Motion.button
-                            whileHover={{ scale: 1.1, color: 'var(--accent)' }}
-                            whileTap={{ scale: 0.9 }}
+                            whileHover={{scale: 1.1, color: 'var(--accent)'}}
+                            whileTap={{scale: 0.9}}
                             className="btn-icon hide-mobile"
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', color: 'var(--text-muted)' }}
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                color: 'var(--text-muted)'
+                            }}
                             aria-label="Rechercher"
                         >
-                            <Search size={20} />
+                            <Search size={20}/>
                         </Motion.button>
 
                         {/* Account (Desktop only) */}
-                        <a href="/login" style={{ display: 'flex' }} className="hide-mobile">
-                            <Motion.button
-                                whileHover={{ scale: 1.1, color: 'var(--accent)' }}
-                                whileTap={{ scale: 0.9 }}
-                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', color: 'var(--text-muted)' }}
-                                aria-label="Mon compte"
-                            >
-                                <User size={20} />
-                            </Motion.button>
-                        </a>
+                        {!loading && (
+                            <div style={{ position: 'relative', display: 'flex' }} className="hide-mobile">
+                                {isAuthenticated ? (
+                                    <>
+                                        <Motion.button
+                                            whileHover={{scale: 1.1, color: 'var(--accent)'}}
+                                            whileTap={{scale: 0.9}}
+                                            onClick={() => setShowUserMenu(!showUserMenu)}
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px',
+                                                color: 'var(--text-muted)',
+                                                fontSize: '0.85rem',
+                                                fontWeight: 500
+                                            }}
+                                            aria-label="Mon compte"
+                                        >
+                                            <User size={20}/>
+                                            <span>{user?.first_name || 'Compte'}</span>
+                                            <ChevronDown size={14} style={{
+                                                transition: 'transform 0.3s var(--ease-out)',
+                                                transform: showUserMenu ? 'rotate(180deg)' : 'rotate(0deg)'
+                                            }}/>
+                                        </Motion.button>
+
+                                        <AnimatePresence>
+                                            {showUserMenu && (
+                                                <Motion.div
+                                                    initial={{opacity: 0, y: 12}}
+                                                    animate={{opacity: 1, y: 0}}
+                                                    exit={{opacity: 0, y: 12}}
+                                                    transition={{duration: 0.3, ease: [0.22, 1, 0.36, 1]}}
+                                                    className="absolute top-[calc(100%+20px)] right-0 min-w-[220px] bg-white border border-[var(--divider)] rounded-2xl p-3 shadow-[var(--shadow-lg)] z-[100]"
+                                                >
+                                                    <div className="px-3 py-2 text-xs text-[var(--text-muted)] border-b border-[var(--divider)] mb-2">
+                                                        {user?.email}
+                                                    </div>
+
+                                                    {!isAdmin && (
+                                                        <div className="grid gap-1 mb-2">
+                                                            <Link
+                                                                to="/account"
+                                                                onClick={() => setShowUserMenu(false)}
+                                                                className="px-3 py-2 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--accent-deep)] transition"
+                                                            >
+                                                                Mon profil
+                                                            </Link>
+                                                            <Link
+                                                                to="/account/commandes"
+                                                                onClick={() => setShowUserMenu(false)}
+                                                                className="px-3 py-2 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--accent-deep)] transition"
+                                                            >
+                                                                Mes commandes
+                                                            </Link>
+                                                            <Link
+                                                                to="/account/adresses"
+                                                                onClick={() => setShowUserMenu(false)}
+                                                                className="px-3 py-2 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--accent-deep)] transition"
+                                                            >
+                                                                Mes adresses
+                                                            </Link>
+                                                        </div>
+                                                    )}
+
+                                                    <button
+                                                        onClick={handleLogout}
+                                                        className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-sm font-semibold text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--error)] transition"
+                                                    >
+                                                        <LogOut size={16}/>
+                                                        Déconnexion
+                                                    </button>
+                                                </Motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </>
+                                ) : (
+                                    <Link to="/login" style={{display: 'flex'}}>
+                                        <Motion.button
+                                            whileHover={{scale: 1.1, color: 'var(--accent)'}}
+                                            whileTap={{scale: 0.9}}
+                                            style={{
+                                                background: 'transparent',
+                                                border: 'none',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                color: 'var(--text-muted)'
+                                            }}
+                                            aria-label="Mon compte"
+                                        >
+                                            <User size={20}/>
+                                        </Motion.button>
+                                    </Link>
+                                )}
+                            </div>
+                        )}
 
                         {/* Cart (Desktop only, mobile version in BottomNav) */}
-                        <a href="/cart" style={{ display: 'flex' }} className="hide-mobile">
+                        <Link to="/cart" style={{display: 'flex'}} className="hide-mobile">
                             <Motion.button
-                                whileHover={{ scale: 1.05, boxShadow: 'var(--shadow-md)' }}
-                                whileTap={{ scale: 0.95 }}
+                                whileHover={{scale: 1.05, boxShadow: 'var(--shadow-md)'}}
+                                whileTap={{scale: 0.95}}
                                 className="btn btn-dark"
                                 style={{
                                     borderRadius: 'var(--radius-pill)',
@@ -199,7 +355,7 @@ const Navbar = () => {
                                 }}
                                 aria-label="Panier"
                             >
-                                <ShoppingBag size={18} />
+                                <ShoppingBag size={18}/>
                                 <span>PANIER</span>
                                 <span style={{
                                     background: 'var(--accent)',
@@ -214,25 +370,27 @@ const Navbar = () => {
                                     justifyContent: 'center',
                                 }}>{cartCount}</span>
                             </Motion.button>
-                        </a>
+                        </Link>
 
                         {/* Mobile hamburger (keeps Categories and About accessible) */}
-                        <Motion.button
-                            className="show-mobile"
-                            whileTap={{ scale: 0.9 }}
-                            onClick={() => setIsOpen(!isOpen)}
-                            style={{
-                                background: scrolled ? 'var(--white)' : 'var(--surface-alt)',
-                                border: '1px solid var(--divider)',
-                                borderRadius: '10px',
-                                padding: '8px',
-                                cursor: 'pointer',
-                                boxShadow: scrolled ? 'var(--shadow-xs)' : 'none'
-                            }}
-                            aria-label="Menu"
-                        >
-                            {isOpen ? <X size={0} /> : <Menu size={20} />}
-                        </Motion.button>
+                        <div className={""} style={{display: 'grid', placeItems: 'end'}}>
+                            <Motion.button
+                                className="show-mobile"
+                                whileTap={{scale: 0.9}}
+                                onClick={() => setIsOpen(!isOpen)}
+                                style={{
+                                    background: scrolled ? 'var(--white)' : 'var(--surface-alt)',
+                                    border: '1px solid var(--divider)',
+                                    borderRadius: '10px',
+                                    padding: '8px',
+                                    cursor: 'pointer',
+                                    boxShadow: scrolled ? 'var(--shadow-xs)' : 'none'
+                                }}
+                                aria-label="Menu"
+                            >
+                                {isOpen ? <X size={0}/> : <Menu size={20}/>}
+                            </Motion.button>
+                        </div>
                     </div>
                 </div>
             </Motion.nav>
@@ -241,10 +399,11 @@ const Navbar = () => {
             <AnimatePresence>
                 {isOpen && (
                     <Motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                        initial={{opacity: 0}}
+                        animate={{opacity: 1}}
+                        exit={{opacity: 0}}
+                        transition={{duration: 0.5, ease: [0.22, 1, 0.36, 1]}}
+                        onClick={() => setShowUserMenu(false)}
                         style={{
                             position: 'fixed',
                             inset: 0,
@@ -256,8 +415,22 @@ const Navbar = () => {
                         }}
                     >
                         {/* Background Decorative Shapes */}
-                        <div className="floating-shape" style={{ top: '-10%', right: '-10%', width: '600px', height: '600px', background: 'var(--grad-blush)', opacity: 0.3 }} />
-                        <div className="floating-shape" style={{ bottom: '-10%', left: '-10%', width: '500px', height: '500px', background: 'var(--grad-gold)', opacity: 0.15 }} />
+                        <div className="floating-shape" style={{
+                            top: '-10%',
+                            right: '-10%',
+                            width: '600px',
+                            height: '600px',
+                            background: 'var(--grad-blush)',
+                            opacity: 0.3
+                        }}/>
+                        <div className="floating-shape" style={{
+                            bottom: '-10%',
+                            left: '-10%',
+                            width: '500px',
+                            height: '500px',
+                            background: 'var(--grad-gold)',
+                            opacity: 0.15
+                        }}/>
 
                         {/* Top Header in Menu */}
                         <div className="container" style={{
@@ -270,11 +443,23 @@ const Navbar = () => {
                             zIndex: 10,
                         }}>
                             <div>
-                                <div style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1.4rem', fontWeight: 700, letterSpacing: '4px' }}>ÉVELINE</div>
-                                <div style={{ fontSize: '0.45rem', letterSpacing: '3px', color: 'var(--accent)', fontWeight: 700 }}>PARIS</div>
+                                <div style={{
+                                    fontFamily: "'Cormorant Garant', serif",
+                                    fontSize: '1.4rem',
+                                    fontWeight: 700,
+                                    letterSpacing: '4px'
+                                }}>ÉVELINE
+                                </div>
+                                <div style={{
+                                    fontSize: '0.45rem',
+                                    letterSpacing: '3px',
+                                    color: 'var(--accent)',
+                                    fontWeight: 700
+                                }}>PARIS
+                                </div>
                             </div>
                             <Motion.button
-                                whileTap={{ scale: 0.9 }}
+                                whileTap={{scale: 0.9}}
                                 onClick={() => setIsOpen(false)}
                                 style={{
                                     background: 'var(--surface-alt)',
@@ -288,7 +473,7 @@ const Navbar = () => {
                                     boxShadow: 'var(--shadow-xs)'
                                 }}
                             >
-                                <X size={20} />
+                                <X size={20}/>
                             </Motion.button>
                         </div>
 
@@ -303,17 +488,38 @@ const Navbar = () => {
                             zIndex: 10,
                             paddingBottom: '40px'
                         }}>
-                            <nav style={{ display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'center' }}>
-                                {navLinks.map((link, i) => (
+                            <nav style={{display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'center'}}>
+                                {(isAuthenticated && !isAdmin ? authenticatedNavLinks : publicNavLinks).map((link, i) => (
                                     <Motion.div
                                         key={link.label}
-                                        initial={{ opacity: 0, y: 30, filter: 'blur(10px)' }}
-                                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                                        transition={{ delay: 0.2 + i * 0.08, duration: 0.6 }}
+                                        initial={{opacity: 0, y: 30, filter: 'blur(10px)'}}
+                                        animate={{opacity: 1, y: 0, filter: 'blur(0px)'}}
+                                        transition={{delay: 0.2 + i * 0.08, duration: 0.6}}
                                     >
-                                        <a
-                                            href={link.href}
-                                            style={{
+                                        {link.children ? (
+                                            <button
+                                                type="button"
+                                                style={{
+                                                    fontSize: 'clamp(2.5rem, 10vw, 4rem)',
+                                                    fontWeight: 400,
+                                                    color: 'var(--text-main)',
+                                                    background: 'transparent',
+                                                    border: 'none',
+                                                    cursor: 'default',
+                                                    fontFamily: "'Cormorant Garant', serif",
+                                                    display: 'block',
+                                                    textAlign: 'center',
+                                                    transition: 'all 0.4s',
+                                                    position: 'relative',
+                                                }}
+                                                onClick={() => setIsOpen(false)}
+                                            >
+                                                {link.label}
+                                            </button>
+                                        ) : (
+                                            <Link
+                                                to={link.href}
+                                                style={{
                                                 fontSize: 'clamp(2.5rem, 10vw, 4rem)',
                                                 fontWeight: 400,
                                                 color: 'var(--text-main)',
@@ -323,35 +529,79 @@ const Navbar = () => {
                                                 textAlign: 'center',
                                                 transition: 'all 0.4s',
                                                 position: 'relative',
-                                            }}
-                                            onClick={() => setIsOpen(false)}
-                                            onMouseEnter={e => {
-                                                e.currentTarget.style.color = 'var(--accent)';
-                                                e.currentTarget.style.transform = 'scale(1.05)';
-                                            }}
-                                            onMouseLeave={e => {
-                                                e.currentTarget.style.color = 'var(--text-main)';
-                                                e.currentTarget.style.transform = 'scale(1)';
-                                            }}
-                                        >
-                                            {link.label}
-                                        </a>
+                                                }}
+                                                onClick={() => setIsOpen(false)}
+                                                onMouseEnter={e => {
+                                                    e.currentTarget.style.color = 'var(--accent)';
+                                                    e.currentTarget.style.transform = 'scale(1.05)';
+                                                }}
+                                                onMouseLeave={e => {
+                                                    e.currentTarget.style.color = 'var(--text-main)';
+                                                    e.currentTarget.style.transform = 'scale(1)';
+                                                }}
+                                            >
+                                                {link.label}
+                                            </Link>
+                                        )}
                                     </Motion.div>
                                 ))}
                             </nav>
 
                             <Motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ delay: 0.6 }}
-                                style={{ marginTop: '60px', display: 'flex', gap: '16px' }}
+                                initial={{opacity: 0, scale: 0.9}}
+                                animate={{opacity: 1, scale: 1}}
+                                transition={{delay: 0.6}}
+                                style={{marginTop: '60px', display: 'flex', gap: '16px'}}
                             >
-                                <a href="/login" className="btn btn-secondary" onClick={() => setIsOpen(false)} style={{ height: '52px', padding: '0 32px' }}>
-                                    <User size={18} /> Compte
-                                </a>
-                                <a href="/cart" className="btn btn-dark" onClick={() => setIsOpen(false)} style={{ height: '52px', padding: '0 32px' }}>
-                                    <ShoppingBag size={18} /> Panier ({cartCount})
-                                </a>
+                                {!loading && (
+                                    <>
+                                        {isAuthenticated ? (
+                                            <>
+                                                <div style={{
+                                                    padding: '16px 24px',
+                                                    background: 'var(--surface)',
+                                                    borderRadius: '16px',
+                                                    textAlign: 'center',
+                                                    minWidth: '150px'
+                                                }}>
+                                                    <div style={{
+                                                        fontSize: '0.75rem',
+                                                        color: 'var(--text-muted)',
+                                                        marginBottom: '4px'
+                                                    }}>
+                                                        Bienvenue
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: '0.9rem',
+                                                        fontWeight: 600,
+                                                        color: 'var(--text-main)'
+                                                    }}>
+                                                        {user?.first_name}
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    className="btn btn-secondary" 
+                                                    onClick={() => {
+                                                        handleLogout();
+                                                        setIsOpen(false);
+                                                    }}
+                                                    style={{height: '52px', padding: '0 32px'}}
+                                                >
+                                                    <LogOut size={18}/> Déconnexion
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <Link to="/login" className="btn btn-secondary" onClick={() => setIsOpen(false)}
+                                               style={{height: '52px', padding: '0 32px'}}>
+                                                <User size={18}/> Compte
+                                            </Link>
+                                        )}
+                                    </>
+                                )}
+                                <Link to="/cart" className="btn btn-dark" onClick={() => setIsOpen(false)}
+                                   style={{height: '52px', padding: '0 32px'}}>
+                                    <ShoppingBag size={18}/> Panier ({cartCount})
+                                </Link>
                             </Motion.div>
                         </div>
 
@@ -365,12 +615,18 @@ const Navbar = () => {
                             position: 'relative',
                             zIndex: 10,
                         }}>
-                            <div style={{ display: 'flex', gap: '20px' }}>
+                            <div style={{display: 'flex', gap: '20px'}}>
                                 {[Instagram, Facebook, Youtube].map((Icon, i) => (
-                                    <a key={i} href="#" style={{ color: 'var(--text-muted)' }}><Icon size={20} /></a>
+                                    <a key={i} href="#" style={{color: 'var(--text-muted)'}}><Icon size={20}/></a>
                                 ))}
                             </div>
-                            <div style={{ fontSize: '0.65rem', letterSpacing: '2px', color: 'var(--text-light)', textTransform: 'uppercase', textAlign: 'center' }}>
+                            <div style={{
+                                fontSize: '0.65rem',
+                                letterSpacing: '2px',
+                                color: 'var(--text-light)',
+                                textTransform: 'uppercase',
+                                textAlign: 'center'
+                            }}>
                                 Éveline Skincare Paris · Haute Boutique
                             </div>
                         </div>
@@ -379,7 +635,7 @@ const Navbar = () => {
             </AnimatePresence>
 
             {/* Navbar spacer */}
-            <div style={{ height: scrolled ? '65px' : '90px', transition: 'height 0.4s var(--ease-out)' }} />
+            <div style={{height: scrolled ? '65px' : '90px', transition: 'height 0.4s var(--ease-out)'}}/>
         </>
     );
 };

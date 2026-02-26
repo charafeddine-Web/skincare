@@ -29,7 +29,7 @@ return new class extends Migration
             $table->timestamp('authorized_at')->nullable();
             $table->timestamp('captured_at')->nullable();
             $table->timestamp('failed_at')->nullable();
-            $table->ip_address('ip_address')->nullable();
+            $table->ipAddress('ip_address')->nullable();
             $table->text('metadata')->nullable(); // JSON additional data
             $table->timestamps();
 

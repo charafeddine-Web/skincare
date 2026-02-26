@@ -2,16 +2,24 @@ import React from 'react';
 import { Home, ShoppingBag, ShoppingCart, User, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLocation, Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const BottomNav = () => {
     const location = useLocation();
+    const { isAuthenticated, isAdmin } = useAuth();
     const cartCount = 2; // Mock cart count
+
+    // Cacher complètement la bottom nav dans l'espace admin
+    if (isAdmin && location.pathname.startsWith('/admin')) {
+        return null;
+    }
 
     const navItems = [
         { icon: Home, label: 'Accueil', path: '/' },
         { icon: Search, label: 'Découvrir', path: '/shop' },
         { icon: ShoppingCart, label: 'Panier', path: '/cart', count: cartCount },
-        { icon: User, label: 'Compte', path: '/login' },
+        // Pour un user connecté on laisse "Compte" mais la page /login va rediriger selon le rôle
+        { icon: User, label: isAuthenticated ? 'Compte' : 'Connexion', path: isAuthenticated ? '/account' : '/login' },
     ];
 
     return (

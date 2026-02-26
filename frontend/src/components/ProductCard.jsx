@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ShoppingBag, Heart, Eye, Star } from 'lucide-react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 const StarRating = ({ rating = 4.5, count }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -21,6 +22,7 @@ const StarRating = ({ rating = 4.5, count }) => (
 );
 
 const ProductCard = ({ product }) => {
+    const navigate = useNavigate();
     const [wishlisted, setWishlisted] = useState(false);
     const [addedToCart, setAddedToCart] = useState(false);
 
@@ -50,6 +52,12 @@ const ProductCard = ({ product }) => {
             whileHover={{ y: -8 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="card"
+            role="link"
+            tabIndex={0}
+            onClick={() => navigate(`/product/${product.id}`)}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') navigate(`/product/${product.id}`);
+            }}
             style={{
                 background: 'var(--white)',
                 border: '1px solid var(--divider)',
@@ -143,6 +151,10 @@ const ProductCard = ({ product }) => {
                         className="btn-icon"
                         style={{ background: 'white', boxShadow: 'var(--shadow-md)' }}
                         aria-label="Aperçu du produit"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/product/${product.id}`);
+                        }}
                     >
                         <Eye size={16} />
                     </Motion.button>

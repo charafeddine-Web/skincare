@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Heart, Star, ArrowLeft, Plus, Minus, Leaf, Shield, Truck } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 
 /* ── MOCK DATA ── */
 const productsData = {
@@ -68,6 +68,7 @@ const guarantee = [
 /* ── COMPONENT ── */
 const ProductDetail = () => {
     const { id } = useParams();
+    const navigate = useNavigate();
     const product = useMemo(() => (productsData[id] || { ...FALLBACK_PRODUCT, name: `Produit #${id}` }), [id]);
 
     React.useEffect(() => {
@@ -128,15 +129,23 @@ const ProductDetail = () => {
                 background: 'var(--surface)',
             }}>
                 <div className="container" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    <a href="/" style={{ color: 'var(--text-muted)', transition: 'color 0.2s' }}
-                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-main)'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-                    >Accueil</a>
+                    <Link
+                        to="/"
+                        style={{ color: 'var(--text-muted)', transition: 'color 0.2s' }}
+                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-main)')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                    >
+                        Accueil
+                    </Link>
                     <span>/</span>
-                    <a href="/shop" style={{ color: 'var(--text-muted)', transition: 'color 0.2s' }}
-                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-main)'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-                    >Boutique</a>
+                    <Link
+                        to="/shop"
+                        style={{ color: 'var(--text-muted)', transition: 'color 0.2s' }}
+                        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-main)')}
+                        onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}
+                    >
+                        Boutique
+                    </Link>
                     <span>/</span>
                     <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>{product.name}</span>
                 </div>
@@ -144,20 +153,24 @@ const ProductDetail = () => {
 
             <div className="container" style={{ padding: 'clamp(20px, 5vw, 60px) var(--container-pad)' }}>
                 {/* ── Back link ── */}
-                <Motion.a
-                    href="/shop"
+                <Motion.button
+                    type="button"
+                    onClick={() => navigate('/shop')}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     style={{
                         display: 'inline-flex', alignItems: 'center', gap: '8px',
                         fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '32px',
                         fontWeight: 500, transition: 'color 0.2s',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
                     }}
                     onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
                     <ArrowLeft size={16} /> Retour à la boutique
-                </Motion.a>
+                </Motion.button>
 
                 {/* ── Main: Image + Info ── */}
                 <div className="split-grid" style={{ marginBottom: 'clamp(60px, 8vw, 100px)', alignItems: 'flex-start' }}>

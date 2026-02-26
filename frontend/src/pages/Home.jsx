@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
 import { ArrowRight, Quote, Droplets, Sun, Shield, Zap, Leaf } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 /* ── DATA ── */
 const products = [
@@ -77,6 +78,7 @@ const stagger = {
 
 /* ── COMPONENT ── */
 const Home = () => {
+    const navigate = useNavigate();
     return (
         <div className="page-enter">
             <Hero />
@@ -96,9 +98,9 @@ const Home = () => {
                         <span className="section-label">Explorer</span>
                         <h2>Parcourir par Catégorie</h2>
                     </div>
-                    <a href="/shop" className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Link to="/shop" className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         Voir tout <ArrowRight size={14} />
-                    </a>
+                    </Link>
                 </motion.div>
 
                 <motion.div
@@ -107,9 +109,14 @@ const Home = () => {
                     className="mobile-scroller no-scrollbar"
                 >
                     {categories.map((cat) => (
-                        <motion.a
+                        <motion.div
                             key={cat.name}
-                            href={`/shop?cat=${cat.name.toLowerCase()}`}
+                            role="link"
+                            tabIndex={0}
+                            onClick={() => navigate(`/shop?cat=${cat.name.toLowerCase()}`)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') navigate(`/shop?cat=${cat.name.toLowerCase()}`);
+                            }}
                             variants={fadeUp}
                             whileHover={{ y: -8, scale: 1.01 }}
                             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -158,7 +165,7 @@ const Home = () => {
                                     Explorer <ArrowRight size={13} />
                                 </div>
                             </div>
-                        </motion.a>
+                        </motion.div>
                     ))}
                 </motion.div>
             </section>
@@ -178,9 +185,9 @@ const Home = () => {
                             <span className="section-label">Sélection</span>
                             <h2>Les Essentiels Éveline</h2>
                         </div>
-                        <a href="/shop" className="btn btn-secondary btn-sm">
+                        <Link to="/shop" className="btn btn-secondary btn-sm">
                             Voir la collection <ArrowRight size={14} />
-                        </a>
+                        </Link>
                     </motion.div>
 
                     <motion.div

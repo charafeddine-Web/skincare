@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Leaf, Award, Users, Globe, ArrowRight, Heart, Star, CheckCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const fadeUp = {
     hidden: { opacity: 0, y: 40 },
@@ -303,9 +304,9 @@ const About = () => (
                 <p style={{ color: 'rgba(255,255,255,0.5)', marginBottom: '36px', fontSize: '1rem' }}>
                     Découvrez notre collection complète et trouvez la routine idéale pour votre peau.
                 </p>
-                <a href="/shop" className="btn btn-primary btn-lg">
+                <Link to="/shop" className="btn btn-primary btn-lg">
                     Explorer la boutique <ArrowRight size={16} />
-                </a>
+                </Link>
             </motion.div>
         </section>
     </div>

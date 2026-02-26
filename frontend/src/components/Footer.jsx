@@ -1,6 +1,7 @@
 import React from 'react';
 import { Instagram, Facebook, Youtube, Mail, Phone, MapPin, Shield, Leaf, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 
 const trustItems = [
     { icon: Shield, label: 'Paiement Sécurisé', sub: 'SSL & 3D Secure' },
@@ -75,9 +76,16 @@ const Footer = () => {
                     <div className="footer-nav-col">
                         <h4 style={{ fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '28px' }}>Explorer</h4>
                         <ul className="footer-links" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                            {['Accueil', 'Boutique', 'À Propos', 'Conseils', 'Engagement', 'Contact'].map(label => (
+                            {[
+                                { label: 'Accueil', to: '/' },
+                                { label: 'Boutique', to: '/shop' },
+                                { label: 'À Propos', to: '/about' },
+                                { label: 'Contact', to: '/contact' },
+                            ].map(({ label, to }) => (
                                 <li key={label}>
-                                    <a href="#" style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', transition: 'color 0.2s' }}>{label}</a>
+                                    <Link to={to} style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', transition: 'color 0.2s' }}>
+                                        {label}
+                                    </Link>
                                 </li>
                             ))}
                         </ul>

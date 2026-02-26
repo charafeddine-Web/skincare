@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowDown, Leaf, Rabbit, Truck, Sparkles, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const trustPills = [
     { icon: Leaf, text: '100% Naturel' },
@@ -91,8 +92,8 @@ const Hero = () => {
                         transition={{ duration: 0.8, delay: 0.65 }}
                         className="flex-row-stack mb-40"
                     >
-                        <a href="/shop" className="btn btn-primary">Découvrir la Collection</a>
-                        <a href="/about" className="btn btn-secondary">Notre Philosophie →</a>
+                        <Link to="/shop" className="btn btn-primary">Découvrir la Collection</Link>
+                        <Link to="/about" className="btn btn-secondary">Notre Philosophie →</Link>
                     </motion.div>
 
                     {/* Trust Pills */}

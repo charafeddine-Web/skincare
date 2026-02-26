@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, ShieldCheck, Truck, RotateCcw, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Cart = () => {
     const [items, setItems] = useState([
@@ -81,7 +82,7 @@ const Cart = () => {
                             <p style={{ color: 'var(--text-muted)', marginBottom: '40px', maxWidth: '400px', marginInline: 'auto', fontSize: '1.1rem' }}>
                                 Il semble que vous n'ayez pas encore ajouté de trésors à votre routine beauté.
                             </p>
-                            <a href="/shop" className="btn btn-primary btn-lg">Découvrir la collection</a>
+                            <Link to="/shop" className="btn btn-primary btn-lg">Découvrir la collection</Link>
                         </motion.div>
                     ) : (
                         <div className="cart-grid">
