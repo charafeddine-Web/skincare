@@ -13,7 +13,8 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Order::with(['user', 'address', 'items.product']);
+        // Optimisation : On ne charge que ce qui est affiché dans la liste admin (user) au lieu des adresses et produits
+        $query = Order::with(['user:id,first_name,last_name,email']);
 
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
