@@ -13,13 +13,13 @@ use Exception;
 class CMIService
 {
     private Client $httpClient;
-    private string $merchantId;
-    private string $merchantUsername;
-    private string $merchantPassword;
-    private string $baseUrl;
-    private string $paymentUrl;
-    private string $currency;
-    private string $mode;
+    private ?string $merchantId = null;
+    private ?string $merchantUsername = null;
+    private ?string $merchantPassword = null;
+    private string $baseUrl = '';
+    private string $paymentUrl = '';
+    private string $currency = 'MAD';
+    private string $mode = 'sandbox';
 
     public function __construct()
     {
