@@ -30,7 +30,17 @@ class ProductController extends Controller
             });
         }
 
-        return response()->json($query->get(), 200);
+        if ($request->has('low_stock')) {
+            $query->whereColumn('stock_quantity', '<=', 'low_stock_threshold');
+        }
+
+        if ($request->has('sort_stock')) {
+            $query->orderBy('stock_quantity', $request->sort_stock === 'asc' ? 'asc' : 'desc');
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        return response()->json($query->paginate($request->per_page ?? 10), 200);
     }
 
     /**
@@ -52,6 +62,7 @@ class ProductController extends Controller
             'stock_quantity' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
             'is_active' => 'boolean',
+            'low_stock_threshold' => 'integer|min:0',
         ]);
 
         if (!isset($validated['slug'])) {
@@ -90,6 +101,7 @@ class ProductController extends Controller
             'stock_quantity' => 'sometimes|integer|min:0',
             'category_id' => 'sometimes|exists:categories,id',
             'is_active' => 'sometimes|boolean',
+            'low_stock_threshold' => 'sometimes|integer|min:0',
         ]);
 
         if (isset($validated['name']) && !isset($validated['slug'])) {

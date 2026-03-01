@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { orderService } from '../../services/api';
-import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, AlertTriangle, Package, CheckCircle, XCircle } from 'lucide-react';
+import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, AlertTriangle, Package, CheckCircle, XCircle, FileText } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
 import AdminModal from '../../components/AdminModal';
 
@@ -12,6 +12,8 @@ const Orders = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState('');
+  const [minAmount, setMinAmount] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -21,86 +23,55 @@ const Orders = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
 
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await orderService.list();
-        if (isMounted) {
-          setOrders(Array.isArray(data) ? data : []);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err.message || "Impossible de charger les commandes");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const params = {
+        page: currentPage,
+        per_page: itemsPerPage,
+        status: statusFilter || undefined,
+        min_amount: minAmount || undefined,
+        max_amount: maxAmount || undefined,
+        search: search.trim() || undefined,
+        date: dateFilter || undefined,
+      };
+
+      const response = await orderService.list(params);
+
+      if (response && response.data) {
+        setOrders(response.data);
+        setTotalPages(response.last_page || 1);
+        setTotalResults(response.total || 0);
+      } else {
+        setOrders(Array.isArray(response) ? response : []);
+        setTotalPages(1);
+        setTotalResults(Array.isArray(response) ? response.length : 0);
       }
-    };
+    } catch (err) {
+      setError(err.message || "Impossible de charger les commandes");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchOrders();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      const createdAt = order.created_at ? new Date(order.created_at) : null;
-
-      if (statusFilter) {
-        if (order.status !== statusFilter) {
-          return false;
-        }
-      }
-
-      if (dateFilter && createdAt) {
-        const filterDate = new Date(dateFilter);
-        const sameDay =
-          createdAt.getFullYear() === filterDate.getFullYear() &&
-          createdAt.getMonth() === filterDate.getMonth() &&
-          createdAt.getDate() === filterDate.getDate();
-        if (!sameDay) {
-          return false;
-        }
-      }
-
-      const term = search.trim().toLowerCase();
-      if (term) {
-        const idText = String(order.id);
-        const customerName = `${order.user?.first_name || ''} ${order.user?.last_name || ''}`.trim().toLowerCase();
-        if (!idText.includes(term) && !customerName.includes(term)) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [orders, statusFilter, search, dateFilter]);
-
-  // Reset page to 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, search, dateFilter]);
+  }, [statusFilter, search, dateFilter, minAmount, maxAmount]);
 
-  const paginatedOrders = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredOrders.slice(start, start + itemsPerPage);
-  }, [filteredOrders, currentPage]);
+  useEffect(() => {
+    fetchOrders();
+  }, [currentPage, statusFilter, search, dateFilter, minAmount, maxAmount]);
 
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const paginatedOrders = orders;
 
   const confirmDeleteOrder = async () => {
     if (!deleteId) return;
     try {
-      // Simulate delete if API not ready
-      // await orderService.remove(deleteId);
+      await orderService.remove(deleteId);
       setOrders(prev => prev.filter(o => o.id !== deleteId));
       setDeleteId(null);
       toast.success('Commande supprimée avec succès', {
@@ -119,7 +90,7 @@ const Orders = () => {
     if (!editOrder) return;
     try {
       setIsUpdating(true);
-      // await orderService.update(editOrder.id, { status: newStatus });
+      await orderService.updateStatus(editOrder.id, newStatus);
       setOrders((prev) => prev.map(o => o.id === editOrder.id ? { ...o, status: newStatus } : o));
       setEditOrder(null);
       toast.success('Statut de la commande mis à jour avec succès', {
@@ -134,6 +105,11 @@ const Orders = () => {
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  const handleDownloadInvoice = (orderId) => {
+    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/orders/${orderId}/invoice`;
+    window.open(url, '_blank');
   };
 
   const formatStatus = (status) => {
@@ -233,6 +209,35 @@ const Orders = () => {
               fontSize: '0.85rem',
             }}
           />
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <input
+              type="number"
+              placeholder="Min €"
+              value={minAmount}
+              onChange={(e) => setMinAmount(e.target.value)}
+              style={{
+                width: '100px',
+                borderRadius: '999px',
+                border: '1px solid var(--divider)',
+                padding: '8px 14px',
+                fontSize: '0.85rem',
+              }}
+            />
+            <span style={{ color: 'var(--text-light)' }}>—</span>
+            <input
+              type="number"
+              placeholder="Max €"
+              value={maxAmount}
+              onChange={(e) => setMaxAmount(e.target.value)}
+              style={{
+                width: '100px',
+                borderRadius: '999px',
+                border: '1px solid var(--divider)',
+                padding: '8px 14px',
+                fontSize: '0.85rem',
+              }}
+            />
+          </div>
           <input
             type="search"
             placeholder="Rechercher une commande ou un client…"
@@ -273,7 +278,7 @@ const Orders = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {!loading && filteredOrders.map((o) => {
+                  {!loading && paginatedOrders.map((o) => {
                     const createdAt = o.created_at ? new Date(o.created_at) : null;
                     const dateLabel = createdAt
                       ? createdAt.toLocaleDateString('fr-FR')
@@ -346,7 +351,7 @@ const Orders = () => {
             {totalPages > 1 && (
               <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--divider)' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>
-                  Affiche {(currentPage - 1) * itemsPerPage + 1} à {Math.min(currentPage * itemsPerPage, filteredOrders.length)} sur {filteredOrders.length}
+                  Affiche {(currentPage - 1) * itemsPerPage + 1} à {Math.min(currentPage * itemsPerPage, totalResults)} sur {totalResults}
                 </span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
@@ -399,6 +404,29 @@ const Orders = () => {
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ fontSize: '0.85rem' }}>Paiement:</span>
                   <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{viewOrder.payment_method || '—'}</span>
+                </div>
+                <div style={{ marginTop: 12, borderTop: '1px solid var(--divider)', paddingTop: 12 }}>
+                  <button
+                    onClick={() => handleDownloadInvoice(viewOrder.id)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 8,
+                      padding: '10px',
+                      borderRadius: 12,
+                      border: '1px solid var(--accent-deep)',
+                      background: 'rgba(197, 160, 89, 0.05)',
+                      color: 'var(--accent-deep)',
+                      fontWeight: 600,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <FileText size={16} />
+                    Télécharger la Facture PDF
+                  </button>
                 </div>
               </div>
             </div>

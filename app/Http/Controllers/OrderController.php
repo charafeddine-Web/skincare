@@ -24,7 +24,48 @@ class OrderController extends Controller
             $query->where('status', $request->status);
         }
 
-        return response()->json($query->get(), 200);
+        if ($request->has('min_amount')) {
+            $query->where('total_amount', '>=', $request->min_amount);
+        }
+
+        if ($request->has('max_amount')) {
+            $query->where('total_amount', '<=', $request->max_amount);
+        }
+
+        if ($request->has('search')) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('id', 'like', '%' . $searchTerm . '%')
+                  ->orWhereHas('user', function ($uq) use ($searchTerm) {
+                      $uq->where('first_name', 'like', '%' . $searchTerm . '%')
+                         ->orWhere('last_name', 'like', '%' . $searchTerm . '%')
+                         ->orWhere('email', 'like', '%' . $searchTerm . '%');
+                  });
+            });
+        }
+
+        if ($request->has('date')) {
+            $query->whereDate('created_at', $request->date);
+        }
+
+        return response()->json($query->orderBy('created_at', 'desc')->paginate($request->per_page ?? 10), 200);
+    }
+
+    /**
+     * Met à jour uniquement le statut d'une commande
+     */
+    public function updateStatus(Request $request, Order $order)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:pending,paid,shipped,delivered,cancelled',
+        ]);
+
+        $order->update(['status' => $validated['status']]);
+
+        return response()->json([
+            'message' => 'Statut de la commande mis à jour avec succès',
+            'order' => $order
+        ], 200);
     }
 
     /**
@@ -101,6 +142,15 @@ class OrderController extends Controller
     {
         $order->delete();
         return response()->json(['message' => 'Commande supprimée'], 200);
+    }
+
+    /**
+     * Génère une facture PDF/Imprimable
+     */
+    public function invoice(Order $order)
+    {
+        $order->load(['user', 'items.product', 'address']);
+        return view('invoices.order', compact('order'));
     }
 }
 

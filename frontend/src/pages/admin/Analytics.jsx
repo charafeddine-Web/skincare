@@ -171,15 +171,15 @@ const Analytics = () => {
                 }}
               >
                 {analytics.sales_chart && analytics.sales_chart.length > 0 ? (
-                  <svg width="100%" height={chartHeight} style={{ overflow: 'visible' }}>
+                  <svg width="100%" height={chartHeight} viewBox="0 0 1000 180" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
                     {/* Grid lines */}
                     {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
                       <line
                         key={ratio}
-                        x1={chartPadding}
-                        y1={chartPadding + ratio * (chartHeight - chartPadding * 2)}
-                        x2="100%"
-                        y2={chartPadding + ratio * (chartHeight - chartPadding * 2)}
+                        x1="0"
+                        y1={ratio * chartHeight}
+                        x2="1000"
+                        y2={ratio * chartHeight}
                         stroke="var(--divider)"
                         strokeWidth="1"
                         strokeDasharray="2,2"
@@ -189,41 +189,27 @@ const Analytics = () => {
                     <polyline
                       points={analytics.sales_chart
                         .map((d, i) => {
-                          const x = chartPadding + (i / (analytics.sales_chart.length - 1 || 1)) * (100 - chartPadding * 2) + '%';
-                          const y = chartHeight - chartPadding - ((d.revenue || 0) / maxRevenue) * (chartHeight - chartPadding * 2);
+                          const x = (i / (analytics.sales_chart.length - 1 || 1)) * 1000;
+                          const y = chartHeight - ((d.revenue || 0) / (maxRevenue || 1)) * chartHeight;
                           return `${x},${y}`;
                         })
                         .join(' ')}
                       fill="none"
                       stroke="var(--accent-deep)"
-                      strokeWidth="2"
+                      strokeWidth="3"
                     />
                     {/* Chart area fill */}
                     <polygon
-                      points={`${chartPadding},${chartHeight - chartPadding} ${analytics.sales_chart
+                      points={`0,${chartHeight} ${analytics.sales_chart
                         .map((d, i) => {
-                          const x = chartPadding + (i / (analytics.sales_chart.length - 1 || 1)) * (100 - chartPadding * 2) + '%';
-                          const y = chartHeight - chartPadding - ((d.revenue || 0) / maxRevenue) * (chartHeight - chartPadding * 2);
+                          const x = (i / (analytics.sales_chart.length - 1 || 1)) * 1000;
+                          const y = chartHeight - ((d.revenue || 0) / (maxRevenue || 1)) * chartHeight;
                           return `${x},${y}`;
                         })
-                        .join(' ')} ${100 - chartPadding}%,${chartHeight - chartPadding}`}
+                        .join(' ')} 1000,${chartHeight}`}
                       fill="var(--accent-deep)"
                       fillOpacity="0.1"
                     />
-                    {/* Data points */}
-                    {analytics.sales_chart.map((d, i) => {
-                      const x = chartPadding + (i / (analytics.sales_chart.length - 1 || 1)) * (100 - chartPadding * 2) + '%';
-                      const y = chartHeight - chartPadding - ((d.revenue || 0) / maxRevenue) * (chartHeight - chartPadding * 2);
-                      return (
-                        <circle
-                          key={i}
-                          cx={x}
-                          cy={y}
-                          r="3"
-                          fill="var(--accent-deep)"
-                        />
-                      );
-                    })}
                   </svg>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-light)', fontSize: '0.8rem' }}>

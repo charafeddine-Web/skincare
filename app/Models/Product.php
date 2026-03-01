@@ -23,11 +23,13 @@ class Product extends Model
         'stock_quantity',
         'category_id',
         'is_active',
+        'low_stock_threshold',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'is_active' => 'boolean',
+        'low_stock_threshold' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

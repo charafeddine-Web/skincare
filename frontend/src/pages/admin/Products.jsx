@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { categoryService, productImageService, productService } from '../../services/api';
-import { Eye, Edit, Trash2, Image as ImageIcon, ChevronLeft, ChevronRight, AlertTriangle, Package, Download, Upload } from 'lucide-react';
+import { Eye, Edit, Trash2, Image as ImageIcon, ChevronLeft, ChevronRight, AlertTriangle, Package, Download, Upload, Star } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
 import AdminModal from '../../components/AdminModal';
 
@@ -44,6 +44,7 @@ const Products = () => {
     usage_instructions: '',
     skin_type: '',
     application_time: '',
+    low_stock_threshold: 10,
   });
 
   const [imageModalProduct, setImageModalProduct] = useState(null);
@@ -54,86 +55,69 @@ const Products = () => {
   const [imagePreviews, setImagePreviews] = useState([]);
   const imageFileInputRef = useRef(null);
   const createImageFileInputRef = useRef(null);
+  const editImageFileInputRef = useRef(null);
+
+  const [editImageUrl, setEditImageUrl] = useState('');
+  const [editImageIsMain, setEditImageIsMain] = useState(false);
+  const [editFormError, setEditFormError] = useState(null);
+  const [editImageError, setEditImageError] = useState(null);
+
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        page: currentPage,
+        per_page: itemsPerPage,
+        search: search.trim() || undefined,
+        category_id: filterCategory || undefined,
+        is_active: filterStatus === 'active' ? 1 : (filterStatus === 'inactive' ? 0 : undefined),
+        sort_stock: sortStock || undefined,
+      };
+
+      const response = await productService.list(params);
+
+      // Laravel pagination structure
+      if (response && response.data) {
+        setProducts(response.data);
+        setTotalPages(response.last_page || 1);
+        setTotalResults(response.total || 0);
+      } else {
+        setProducts(Array.isArray(response) ? response : []);
+        setTotalPages(1);
+        setTotalResults(Array.isArray(response) ? response.length : 0);
+      }
+    } catch (err) {
+      const message = err?.message || err?.error || "Impossible de charger les produits";
+      setError(typeof message === 'string' ? message : "Impossible de charger les produits");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const fetchInitialData = async () => {
+    const fetchCategories = async () => {
       try {
-        setLoading(true);
-        setError(null);
-
-        const [productsData, categoriesData] = await Promise.all([
-          productService.list(),
-          categoryService.list(),
-        ]);
-
-        if (!isMounted) return;
-
-        setProducts(Array.isArray(productsData) ? productsData : []);
+        const categoriesData = await categoryService.list();
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       } catch (err) {
-        if (isMounted) {
-          const message = err?.message || err?.error || "Impossible de charger les produits";
-          setError(typeof message === 'string' ? message : "Impossible de charger les produits");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        console.error("Categories load error", err);
       }
     };
-
-    fetchInitialData();
-
-    return () => {
-      isMounted = false;
-    };
+    fetchCategories();
   }, []);
 
-  const filteredProducts = useMemo(() => {
-    let result = products;
-
-    const term = search.trim().toLowerCase();
-    if (term) {
-      result = result.filter((p) => {
-        const name = (p.name || '').toLowerCase();
-        const sku = (p.sku || '').toLowerCase();
-        const categoryName = (p.category?.name || '').toLowerCase();
-        return name.includes(term) || sku.includes(term) || categoryName.includes(term);
-      });
-    }
-
-    if (filterCategory) {
-      result = result.filter((p) => Number(p.category_id) === Number(filterCategory) || Number(p.category?.id) === Number(filterCategory));
-    }
-
-    if (filterStatus === 'active') {
-      result = result.filter((p) => p.is_active);
-    } else if (filterStatus === 'inactive') {
-      result = result.filter((p) => !p.is_active);
-    }
-
-    if (sortStock === 'asc') {
-      result = [...result].sort((a, b) => (Number(a.stock_quantity) || 0) - (Number(b.stock_quantity) || 0));
-    } else if (sortStock === 'desc') {
-      result = [...result].sort((a, b) => (Number(b.stock_quantity) || 0) - (Number(a.stock_quantity) || 0));
-    }
-
-    return result;
-  }, [products, search, filterCategory, filterStatus, sortStock]);
-
-  // Réinitialiser la page si les filtres changent
   useEffect(() => {
     setCurrentPage(1);
   }, [search, filterCategory, filterStatus, sortStock]);
 
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredProducts.slice(start, start + itemsPerPage);
-  }, [filteredProducts, currentPage]);
+  useEffect(() => {
+    fetchProducts();
+  }, [currentPage, search, filterCategory, filterStatus, sortStock]);
 
-  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const paginatedProducts = products;
 
   const handleOpenModal = () => {
     setFormError(null);
@@ -155,6 +139,7 @@ const Products = () => {
       usage_instructions: '',
       skin_type: '',
       application_time: '',
+      low_stock_threshold: 10,
     });
     setIsModalOpen(true);
   };
@@ -378,39 +363,6 @@ const Products = () => {
     }
   };
 
-  const handleUpdateProduct = async (e) => {
-    e.preventDefault();
-    if (!editProduct) return;
-    try {
-      setIsUpdating(true);
-      const updated = await productService.update(editProduct.id, {
-        name: editProduct.name,
-        price: editProduct.price,
-        stock_quantity: editProduct.stock_quantity,
-        is_active: editProduct.is_active,
-        category_id: editProduct.category_id,
-        description: editProduct.description,
-        active_ingredients: editProduct.active_ingredients || '',
-        inci_list: editProduct.inci_list || '',
-        usage_instructions: editProduct.usage_instructions || '',
-        skin_type: editProduct.skin_type || null,
-        application_time: editProduct.application_time || null,
-      });
-      setProducts((prev) => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p));
-      setEditProduct(null);
-      toast.success('Produit mis à jour avec succès', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
-    } catch (err) {
-      toast.error('Erreur lors de la mise à jour: ' + (err.message || 'Erreur inconnue'), {
-        position: 'top-right',
-        autoClose: 4000,
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
 
   const handleCreateProduct = async (e) => {
     e.preventDefault();
@@ -466,81 +418,159 @@ const Products = () => {
     }
   };
 
-  const openImagesModal = (product) => {
-    setImageError(null);
-    setImageUrl('');
-    setImageIsMain(true);
-    setImageModalProduct(product);
-  };
-
-  const handleAddImage = async (e) => {
+  const handleUpdateProduct = async (e) => {
     e.preventDefault();
-    if (!imageModalProduct) return;
+    if (!editProduct) return;
 
-    const files = imageFileInputRef.current?.files;
+    setEditFormError(null);
+    setEditImageError(null);
 
-    if ((!files || files.length === 0) && !imageUrl) {
-      setImageError("Choisissez au moins un fichier ou renseignez une URL d'image.");
+    if (!editProduct.name || !editProduct.sku || !editProduct.price || !editProduct.category_id) {
+      setEditFormError('Merci de remplir au minimum le nom, le SKU, le prix et la catégorie.');
       return;
     }
 
     try {
-      setImageSubmitting(true);
-      setImageError(null);
+      setIsSubmitting(true);
+      const updatedProduct = await productService.update(editProduct.id, editProduct);
 
-      let createdImages = [];
-
-      // Priorité à l'upload de fichiers vers Cloudinary
+      // Handle image uploads for the edit modal
+      const files = editImageFileInputRef.current?.files;
+      let uploadedImages = [];
       if (files && files.length > 0) {
-        createdImages = await productImageService.uploadFiles(imageModalProduct.id, files, {
-          is_main: imageIsMain,
+        uploadedImages = await productImageService.uploadFiles(editProduct.id, Array.from(files), {
+          is_main: editImageIsMain,
         });
-      } else if (imageUrl) {
+        if (!Array.isArray(uploadedImages)) {
+          uploadedImages = [uploadedImages];
+        }
+      } else if (editImageUrl) {
         const created = await productImageService.create({
-          product_id: imageModalProduct.id,
-          image_url: imageUrl,
-          is_main: imageIsMain,
+          product_id: editProduct.id,
+          image_url: editImageUrl,
+          is_main: editImageIsMain,
         });
-        createdImages = [created];
+        uploadedImages = [created];
       }
 
-      if (!Array.isArray(createdImages)) {
-        createdImages = [createdImages];
-      }
-
+      // Update product images in state
       setProducts((prev) =>
         prev.map((p) => {
-          if (p.id !== imageModalProduct.id) return p;
-          let currentImages = Array.isArray(p.images) ? p.images : [];
+          if (p.id === updatedProduct.id) {
+            let currentImages = Array.isArray(p.images) ? p.images : [];
+            let newImages = [...currentImages];
 
-          createdImages.forEach((img) => {
-            if (img.is_main) {
-              currentImages = currentImages.map((existing) => ({ ...existing, is_main: false }));
-            }
-            currentImages = [...currentImages, img];
-          });
+            uploadedImages.forEach((img) => {
+              if (img.is_main) {
+                newImages = newImages.map((existing) => ({ ...existing, is_main: false }));
+              }
+              newImages.push(img);
+            });
 
-          return {
-            ...p,
-            images: currentImages,
-          };
-        }),
+            return { ...updatedProduct, images: newImages };
+          }
+          return p;
+        })
       );
 
-      setImageUrl('');
-      if (imageFileInputRef.current) {
-        imageFileInputRef.current.value = '';
+      setEditProduct(null);
+      setEditImageUrl('');
+      if (editImageFileInputRef.current) {
+        editImageFileInputRef.current.value = '';
       }
-      setImageIsMain(false);
+      setEditImageIsMain(false);
+
+      toast.success('Produit mis à jour avec succès', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } catch (err) {
       const apiError = err?.message || err?.error || err?.errors;
       if (typeof apiError === 'string') {
-        setImageError(apiError);
+        setEditFormError(apiError);
+      } else if (apiError && typeof apiError === 'object') {
+        const firstKey = Object.keys(apiError)[0];
+        const firstMsg = Array.isArray(apiError[firstKey]) ? apiError[firstKey][0] : apiError[firstKey];
+        setEditFormError(firstMsg || "Erreur lors de la mise à jour du produit");
       } else {
-        setImageError("Erreur lors de l'ajout de l'image");
+        setEditFormError("Erreur lors de la mise à jour du produit");
       }
     } finally {
-      setImageSubmitting(false);
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRemoveImage = async (productId, imageId) => {
+    try {
+      await productImageService.remove(productId, imageId);
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === productId
+            ? { ...p, images: p.images.filter((img) => img.id !== imageId) }
+            : p
+        )
+      );
+      setEditProduct((prev) =>
+        prev ? { ...prev, images: prev.images.filter((img) => img.id !== imageId) } : null
+      );
+      toast.success('Image supprimée avec succès', {
+        position: 'top-right',
+        autoClose: 2000,
+      });
+    } catch (err) {
+      toast.error('Erreur lors de la suppression de l\'image: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handleSetMainImage = async (productId, imageId) => {
+    try {
+      await productImageService.setMain(productId, imageId);
+      setProducts((prev) =>
+        prev.map((p) => {
+          if (p.id === productId) {
+            return {
+              ...p,
+              images: p.images.map((img) => ({
+                ...img,
+                is_main: img.id === imageId,
+              })),
+            };
+          }
+          return p;
+        })
+      );
+      setEditProduct((prev) =>
+        prev
+          ? {
+            ...prev,
+            images: prev.images.map((img) => ({
+              ...img,
+              is_main: img.id === imageId,
+            })),
+          }
+          : null
+      );
+      toast.success('Image principale définie avec succès', {
+        position: 'top-right',
+        autoClose: 2000,
+      });
+    } catch (err) {
+      toast.error('Erreur lors de la définition de l\'image principale: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 3000,
+      });
+    }
+  };
+
+  const handleViewProduct = async (id) => {
+    try {
+      const fullProduct = await productService.get(id);
+      setViewProduct(fullProduct);
+    } catch (err) {
+      toast.error("Erreur lors de la récupération des détails");
     }
   };
 
@@ -713,7 +743,7 @@ const Products = () => {
           </div>
 
           <div style={{ fontSize: '0.8rem', color: 'var(--text-light)', display: 'flex', justifyContent: 'flex-end', fontWeight: 500 }}>
-            {loading ? '...' : `${paginatedProducts.length} résultat(s) affiché(s) sur ${filteredProducts.length}`}
+            {loading ? '...' : `${paginatedProducts.length} résultat(s) affiché(s) sur ${totalResults}`}
           </div>
         </div>
 
@@ -820,17 +850,9 @@ const Products = () => {
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)', textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
                             <button
-                              title="Images du produit"
-                              type="button"
-                              onClick={() => openImagesModal(p)}
-                              style={{ border: 'none', background: 'var(--surface)', padding: '8px', borderRadius: '10px', color: 'var(--text-main)', cursor: 'pointer', display: 'flex' }}
-                            >
-                              <ImageIcon size={16} />
-                            </button>
-                            <button
                               title="Analyser le produit (Détails)"
                               type="button"
-                              onClick={() => setViewProduct(p)}
+                              onClick={() => handleViewProduct(p.id)}
                               style={{ border: 'none', background: 'var(--surface)', padding: '8px', borderRadius: '10px', color: 'var(--text-main)', cursor: 'pointer', display: 'flex' }}
                             >
                               <Eye size={16} />
@@ -864,7 +886,7 @@ const Products = () => {
             {totalPages > 1 && (
               <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--divider)' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>
-                  Affiche {(currentPage - 1) * itemsPerPage + 1} à {Math.min(currentPage * itemsPerPage, filteredProducts.length)} sur {filteredProducts.length}
+                  Affiche {(currentPage - 1) * itemsPerPage + 1} à {Math.min(currentPage * itemsPerPage, totalResults)} sur {totalResults}
                 </span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
@@ -1285,214 +1307,6 @@ const Products = () => {
         </div>
       )}
 
-      {/* Modal gestion des images produit */}
-      {imageModalProduct && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.35)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 40,
-            padding: '16px',
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: 600,
-              borderRadius: 20,
-              background: 'var(--white)',
-              boxShadow: 'var(--shadow-md)',
-              border: '1px solid var(--divider)',
-              padding: '20px 22px',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <div>
-                <div style={{ fontSize: '0.7rem', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-light)', marginBottom: 4 }}>
-                  Images produit
-                </div>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>{imageModalProduct.name}</h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
-                  Ajoutez des URLs d&apos;images hébergées (CDN, Cloudinary, etc.).
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => !imageSubmitting && setImageModalProduct(null)}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  fontSize: '0.9rem',
-                  color: 'var(--text-light)',
-                  cursor: 'pointer',
-                }}
-              >
-                Fermer
-              </button>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)', gap: 16 }}>
-              <div style={{ maxHeight: 260, overflow: 'auto', paddingRight: 6 }}>
-                <div style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: 6 }}>Images existantes</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {Array.isArray(imageModalProduct.images) && imageModalProduct.images.length > 0 ? (
-                    imageModalProduct.images.map((img) => (
-                      <div
-                        key={img.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          padding: '6px 8px',
-                          borderRadius: 12,
-                          border: '1px solid var(--divider)',
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: 40,
-                            height: 40,
-                            borderRadius: 10,
-                            backgroundImage: `url(${img.image_url})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            backgroundColor: 'var(--surface)',
-                          }}
-                        />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
-                              fontSize: '0.78rem',
-                              color: 'var(--text-muted)',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {img.image_url}
-                          </div>
-                          {img.is_main && (
-                            <span
-                              style={{
-                                fontSize: '0.7rem',
-                                padding: '2px 8px',
-                                borderRadius: 999,
-                                background: 'rgba(34, 197, 94, 0.12)',
-                                color: '#166534',
-                                fontWeight: 600,
-                              }}
-                            >
-                              Principale
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Aucune image pour le moment.</div>
-                  )}
-                </div>
-              </div>
-
-              <form onSubmit={handleAddImage} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
-                      Upload d&apos;images (Cloudinary)
-                    </label>
-                    <input
-                      ref={imageFileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      style={{
-                        width: '100%',
-                        marginTop: 4,
-                        fontSize: '0.8rem',
-                      }}
-                    />
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginTop: 2 }}>
-                      Vous pouvez sélectionner une ou plusieurs images. Elles seront stockées sur Cloudinary.
-                    </div>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Ou URL directe (optionnel)</label>
-                    <input
-                      type="url"
-                      placeholder="https://..."
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      style={{
-                        width: '100%',
-                        marginTop: 4,
-                        borderRadius: 999,
-                        border: '1px solid var(--divider)',
-                        padding: '8px 14px',
-                        fontSize: '0.85rem',
-                      }}
-                    />
-                  </div>
-                </div>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--text-main)' }}>
-                  <input
-                    type="checkbox"
-                    checked={imageIsMain}
-                    onChange={(e) => setImageIsMain(e.target.checked)}
-                  />
-                  Définir comme image principale
-                </label>
-
-                {imageError && (
-                  <div style={{ fontSize: '0.8rem', color: '#b91c1c' }}>
-                    {imageError}
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => !imageSubmitting && setImageModalProduct(null)}
-                    style={{
-                      padding: '8px 16px',
-                      borderRadius: 999,
-                      border: '1px solid var(--divider)',
-                      background: 'white',
-                      fontSize: '0.8rem',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Fermer
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={imageSubmitting}
-                    style={{
-                      padding: '8px 18px',
-                      borderRadius: 999,
-                      border: 'none',
-                      background: 'var(--accent-deep)',
-                      color: 'white',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      opacity: imageSubmitting ? 0.6 : 1,
-                    }}
-                  >
-                    {imageSubmitting ? 'Ajout…' : 'Ajouter l&apos;image'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* View Product Modal */}
       <AdminModal
         isOpen={!!viewProduct}
@@ -1536,6 +1350,32 @@ const Products = () => {
                 <p style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{viewProduct.description || 'Aucune description disponible.'}</p>
               </div>
             )}
+
+            <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 16 }}>
+              <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 12 }}>Avis clients récents</h4>
+              {viewProduct.reviews && viewProduct.reviews.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {viewProduct.reviews.slice(0, 3).map(review => (
+                    <div key={review.id} style={{ padding: '12px', background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--divider)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{review.user?.first_name} {review.user?.last_name?.[0]}.</span>
+                        <div style={{ display: 'flex', gap: 2 }}>
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} size={10} fill={i < review.rating ? "#C5A059" : "none"} color={i < review.rating ? "#C5A059" : "#D4C9BF"} />
+                          ))}
+                        </div>
+                      </div>
+                      <p style={{ fontSize: '0.8rem', color: 'var(--text-main)', margin: 0 }}>{review.comment}</p>
+                    </div>
+                  ))}
+                  {viewProduct.reviews.length > 3 && (
+                    <p style={{ fontSize: '0.75rem', color: 'var(--accent-deep)', textAlign: 'center', margin: 0 }}>+ {viewProduct.reviews.length - 3} autres avis</p>
+                  )}
+                </div>
+              ) : (
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', textAlign: 'center' }}>Aucun avis pour ce produit.</p>
+              )}
+            </div>
           </div>
         )}
       </AdminModal>
@@ -1580,6 +1420,16 @@ const Products = () => {
                   min="0"
                   value={editProduct.stock_quantity}
                   onChange={(e) => setEditProduct({ ...editProduct, stock_quantity: e.target.value })}
+                  style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Seuil Alerte Stock</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editProduct.low_stock_threshold}
+                  onChange={(e) => setEditProduct({ ...editProduct, low_stock_threshold: e.target.value })}
                   style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)' }}
                 />
               </div>
@@ -1663,15 +1513,76 @@ const Products = () => {
                 style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)', resize: 'vertical' }}
               />
             </div>
-            <div>
-              <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Mode d'emploi et fréquence</label>
-              <textarea
-                value={editProduct.usage_instructions || ''}
-                onChange={(e) => setEditProduct({ ...editProduct, usage_instructions: e.target.value })}
-                rows={3}
-                style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)', resize: 'vertical' }}
-              />
+
+            {/* Section Gestion des Images */}
+            <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 16 }}>
+              <label style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', display: 'block', marginBottom: 12 }}>
+                Gestion des Images
+              </label>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 12, marginBottom: 16 }}>
+                {editProduct.images && editProduct.images.map((img) => (
+                  <div key={img.id} style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--divider)', aspectRatio: '1/1' }}>
+                    <img
+                      src={img.image_url}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    {img.is_main && (
+                      <div style={{ position: 'absolute', top: 4, left: 4, background: '#166534', color: 'white', fontSize: '10px', padding: '2px 6px', borderRadius: 4, fontWeight: 'bold' }}>
+                        Principale
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(editProduct.id, img.id)}
+                      style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', padding: 4, borderRadius: 6, cursor: 'pointer', display: 'flex' }}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                    {!img.is_main && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetMainImage(editProduct.id, img.id)}
+                        style={{ position: 'absolute', bottom: 4, left: 4, right: 4, background: 'rgba(255, 255, 255, 0.9)', color: 'var(--text-main)', border: '1px solid var(--divider)', fontSize: '9px', padding: '2px', borderRadius: 4, cursor: 'pointer' }}
+                      >
+                        Principale
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {(!editProduct.images || editProduct.images.length === 0) && (
+                  <div style={{ gridColumn: 'span 12', padding: '20px', border: '1px dashed var(--divider)', borderRadius: 12, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    Aucune image enregistrée
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 8, display: 'block' }}>Ajouter de nouvelles images</label>
+                <div style={{ border: '1px dashed var(--divider)', borderRadius: 12, padding: '16px', textAlign: 'center', background: 'var(--surface)' }}>
+                  <input
+                    ref={editImageFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    style={{ display: 'none' }}
+                    id="edit-product-images"
+                  />
+                  <label htmlFor="edit-product-images" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <Upload size={24} color="var(--accent-deep)" />
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Parcourir les fichiers</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Glissez-déposez vos images ici</span>
+                  </label>
+                </div>
+              </div>
             </div>
+
+            {editFormError && (
+              <div style={{ color: '#ef4444', fontSize: '0.85rem', marginTop: 8 }}>{editFormError}</div>
+            )}
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
               <button
                 type="button"
@@ -1682,10 +1593,10 @@ const Products = () => {
               </button>
               <button
                 type="submit"
-                disabled={isUpdating}
-                style={{ padding: '10px 24px', borderRadius: 999, border: 'none', background: 'var(--accent-deep)', color: 'white', cursor: 'pointer', fontWeight: 600, opacity: isUpdating ? 0.7 : 1 }}
+                disabled={isSubmitting}
+                style={{ padding: '10px 24px', borderRadius: 999, border: 'none', background: 'var(--accent-deep)', color: 'white', cursor: 'pointer', fontWeight: 600, opacity: isSubmitting ? 0.7 : 1 }}
               >
-                {isUpdating ? 'Sauvegarde...' : 'Enregistrer'}
+                {isSubmitting ? 'Sauvegarde...' : 'Enregistrer'}
               </button>
             </div>
           </form>
@@ -1721,7 +1632,7 @@ const Products = () => {
           </button>
         </div>
       </AdminModal>
-    </div>
+    </div >
   );
 };
 

@@ -22,7 +22,11 @@ class ReviewController extends Controller
             $query->where('user_id', $request->user_id);
         }
 
-        return response()->json($query->get(), 200);
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        return response()->json($query->orderBy('created_at', 'desc')->paginate($request->per_page ?? 10), 200);
     }
 
     /**
@@ -58,6 +62,7 @@ class ReviewController extends Controller
         $validated = $request->validate([
             'rating' => 'sometimes|integer|min:1|max:5',
             'comment' => 'sometimes|nullable|string',
+            'status' => 'sometimes|in:pending,approved,rejected',
         ]);
 
         $review->update($validated);

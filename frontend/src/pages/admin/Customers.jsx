@@ -20,56 +20,45 @@ const Customers = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
 
-    const fetchCustomers = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await userService.list();
-        if (isMounted) {
-          setCustomers(Array.isArray(data) ? data : []);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err.message || "Impossible de charger les clientes");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const params = {
+        page: currentPage,
+        per_page: itemsPerPage,
+        search: search.trim() || undefined,
+      };
+      const response = await userService.list(params);
+
+      if (response && response.data) {
+        setCustomers(response.data);
+        setTotalPages(response.last_page || 1);
+        setTotalResults(response.total || 0);
+      } else {
+        setCustomers(Array.isArray(response) ? response : []);
+        setTotalPages(1);
+        setTotalResults(Array.isArray(response) ? response.length : 0);
       }
-    };
-
-    fetchCustomers();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const filteredCustomers = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return customers;
-
-    return customers.filter((c) => {
-      const fullName = `${c.first_name || ''} ${c.last_name || ''}`.trim().toLowerCase();
-      const email = (c.email || '').toLowerCase();
-      return fullName.includes(term) || email.includes(term);
-    });
-  }, [customers, search]);
+    } catch (err) {
+      setError(err.message || "Impossible de charger les clientes");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     setCurrentPage(1);
   }, [search]);
 
-  const paginatedCustomers = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredCustomers.slice(start, start + itemsPerPage);
-  }, [filteredCustomers, currentPage]);
+  useEffect(() => {
+    fetchCustomers();
+  }, [currentPage, search]);
 
-  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
+  const paginatedCustomers = customers;
 
   const getDisplayName = (customer) => {
     const fullName = `${customer.first_name || ''} ${customer.last_name || ''}`.trim();
@@ -94,7 +83,7 @@ const Customers = () => {
   const confirmDeleteCustomer = async () => {
     if (!deleteId) return;
     try {
-      // await userService.remove(deleteId); 
+      await userService.remove(deleteId);
       setCustomers(prev => prev.filter(c => c.id !== deleteId));
       setDeleteId(null);
       toast.success('Client supprimé avec succès', {
@@ -114,8 +103,13 @@ const Customers = () => {
     if (!editCustomer) return;
     try {
       setIsUpdating(true);
-      // Simulation of update API
-      setCustomers((prev) => prev.map(c => c.id === editCustomer.id ? editCustomer : c));
+      const updated = await userService.update(editCustomer.id, {
+        first_name: editCustomer.first_name,
+        last_name: editCustomer.last_name,
+        phone: editCustomer.phone,
+        role: editCustomer.role,
+      });
+      setCustomers((prev) => prev.map(c => c.id === updated.id ? updated : c));
       setEditCustomer(null);
       toast.success('Client mis à jour avec succès', {
         position: 'top-right',
@@ -211,7 +205,7 @@ const Customers = () => {
             }}
           />
           <span style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
-            {loading ? '...' : `${filteredCustomers.length} clientes`}
+            {loading ? '...' : `${paginatedCustomers.length} clientes sur ${totalResults}`}
           </span>
         </div>
 
@@ -284,7 +278,7 @@ const Customers = () => {
             {totalPages > 1 && (
               <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--divider)' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>
-                  Affiche {(currentPage - 1) * itemsPerPage + 1} à {Math.min(currentPage * itemsPerPage, filteredCustomers.length)} sur {filteredCustomers.length}
+                  Affiche {(currentPage - 1) * itemsPerPage + 1} à {Math.min(currentPage * itemsPerPage, totalResults)} sur {totalResults}
                 </span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button

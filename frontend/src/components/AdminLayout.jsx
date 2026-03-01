@@ -17,7 +17,8 @@ import {
   ChevronRight,
   User,
   Globe,
-  Sparkles
+  Sparkles,
+  MessageSquare
 } from 'lucide-react';
 
 const menuItems = [
@@ -27,6 +28,7 @@ const menuItems = [
   { to: '/admin/commandes', label: 'Commandes', icon: ShoppingBag },
   { to: '/admin/clients', label: 'Portefeuille Clients', icon: Users },
   { to: '/admin/statistiques', label: 'Analyses & Insights', icon: BarChart3 },
+  { to: '/admin/avis', label: 'Avis & Modération', icon: MessageSquare },
   { to: '/admin/parametres', label: 'Configuration', icon: Settings },
 ];
 
@@ -209,7 +211,7 @@ const AdminLayout = () => {
         </main>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         

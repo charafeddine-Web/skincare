@@ -129,6 +129,16 @@ export const productService = {
     }
   },
 
+  // Récupérer un seul produit
+  get: async (id) => {
+    try {
+      const response = await api.get(`/products/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la récupération du produit' };
+    }
+  },
+
   // Création d'un produit (zone admin)
   create: async (productData) => {
     try {
@@ -210,6 +220,15 @@ export const orderService = {
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Erreur lors du chargement des commandes' };
+    }
+  },
+
+  get: async (id) => {
+    try {
+      const response = await api.get(`/orders/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la récupération de la commande' };
     }
   },
 
@@ -436,6 +455,66 @@ export const productImageService = {
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Erreur lors de la suppression de l\'image produit' };
+    }
+  },
+};
+
+// Service Avis Clients (admin)
+export const reviewService = {
+  list: async (params = {}) => {
+    try {
+      const response = await api.get('/reviews', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des avis' };
+    }
+  },
+
+  get: async (id) => {
+    try {
+      const response = await api.get(`/reviews/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la récupération de l\'avis' };
+    }
+  },
+
+  updateStatus: async (id, status) => {
+    try {
+      const response = await api.put(`/reviews/${id}`, { status });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la modération de l\'avis' };
+    }
+  },
+
+  remove: async (id) => {
+    try {
+      const response = await api.delete(`/reviews/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la suppression de l\'avis' };
+    }
+  },
+};
+
+// Service Paramètres Boutique
+export const shopSettingsService = {
+  getShippingMethods: async () => {
+    try {
+      const response = await api.get('/admin/settings/shipping');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des modes de livraison' };
+    }
+  },
+
+  updateShippingMethods: async (methods) => {
+    try {
+      const response = await api.put('/admin/settings/shipping', { methods });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la mise à jour des modes de livraison' };
     }
   },
 };

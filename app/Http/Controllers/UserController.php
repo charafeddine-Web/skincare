@@ -12,11 +12,21 @@ class UserController extends Controller
     /**
      * Affiche tous les utilisateurs
      */
-    public function index()
+    public function index(Request $request)
     {
-        // On charge uniquement les utilisateurs pour optimiser les performances de la liste
+        $query = User::query();
+
+        if ($request->has('search')) {
+            $searchTerm = $request->search;
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('first_name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('last_name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('email', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
         return response()->json(
-            User::all(),
+            $query->orderBy('created_at', 'desc')->paginate($request->per_page ?? 10),
             200
         );
     }

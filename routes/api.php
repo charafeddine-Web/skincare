@@ -92,9 +92,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/admin/best-sellers', [AdminDashboardController::class, 'bestSellers']);
     Route::get('/admin/analytics', [AdminDashboardController::class, 'analytics']);
 
+    // Routes pour les paramètres de livraison
+    Route::get('/admin/settings/shipping', [\App\Http\Controllers\ShippingMethodController::class, 'index']);
+    Route::put('/admin/settings/shipping', [\App\Http\Controllers\ShippingMethodController::class, 'updateSettings']);
+
     // Routes pour les commandes
-    Route::apiResource('orders', OrderController::class);
     Route::get('/orders/user/{userId}', [OrderController::class, 'index']);
+    Route::get('/orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
+    Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status');
+    Route::apiResource('orders', OrderController::class);
 
     // Routes pour les articles de commande
     Route::apiResource('order-items', OrderItemController::class);
