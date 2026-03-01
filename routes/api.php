@@ -77,6 +77,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
 
     // Routes pour les produits (admin)
+    // IMPORTANT: Les routes export/import doivent être définies AVANT apiResource pour éviter les conflits
+    Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
+    Route::post('/products/import', [ProductController::class, 'import'])->name('products.import');
     Route::apiResource('products', ProductController::class)->except(['index', 'show']);
 
     // Routes pour les images de produits
@@ -85,6 +88,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Tableau de bord admin (métriques légères)
     Route::get('/admin/metrics', [AdminDashboardController::class, 'metrics']);
+    Route::get('/admin/best-sellers', [AdminDashboardController::class, 'bestSellers']);
+    Route::get('/admin/analytics', [AdminDashboardController::class, 'analytics']);
 
     // Routes pour les commandes
     Route::apiResource('orders', OrderController::class);

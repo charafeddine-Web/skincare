@@ -137,6 +137,11 @@ export const productService = {
         // slug optionnel : généré côté backend si omis
         sku: productData.sku,
         description: productData.description || '',
+        active_ingredients: productData.active_ingredients || null,
+        inci_list: productData.inci_list || null,
+        usage_instructions: productData.usage_instructions || null,
+        skin_type: productData.skin_type || null,
+        application_time: productData.application_time || null,
         price: Number(productData.price),
         stock_quantity: Number(productData.stock_quantity || 0),
         category_id: Number(productData.category_id),
@@ -165,6 +170,34 @@ export const productService = {
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Erreur lors de la suppression du produit' };
+    }
+  },
+
+  // Export CSV
+  exportCSV: async () => {
+    try {
+      const response = await api.get('/products/export', {
+        responseType: 'blob',
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de l\'export CSV' };
+    }
+  },
+
+  // Import CSV
+  importCSV: async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await api.post('/products/import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de l\'import CSV' };
     }
   },
 };
@@ -218,6 +251,24 @@ export const adminService = {
       throw error.response?.data || { message: 'Erreur lors du chargement des métriques admin' };
     }
   },
+
+  getBestSellers: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/best-sellers', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des meilleures ventes' };
+    }
+  },
+
+  getAnalytics: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/analytics', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des analytics' };
+    }
+  },
 };
 
 // Service Utilisateurs / Clients (admin)
@@ -228,6 +279,15 @@ export const userService = {
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Erreur lors du chargement des clients' };
+    }
+  },
+
+  get: async (id) => {
+    try {
+      const response = await api.get(`/users/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement du client' };
     }
   },
 
@@ -266,6 +326,7 @@ export const categoryService = {
       const response = await api.post('/categories', {
         name: data.name,
         slug: data.slug || undefined,
+        parent_id: data.parent_id || undefined,
       });
       return response.data;
     } catch (error) {

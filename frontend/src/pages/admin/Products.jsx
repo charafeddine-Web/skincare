@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'react-toastify';
 import { categoryService, productImageService, productService } from '../../services/api';
 import { Eye, Edit, Trash2, Image as ImageIcon, ChevronLeft, ChevronRight, AlertTriangle, Package } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
@@ -38,6 +39,11 @@ const Products = () => {
     category_id: '',
     is_active: true,
     description: '',
+    active_ingredients: '',
+    inci_list: '',
+    usage_instructions: '',
+    skin_type: '',
+    application_time: '',
   });
 
   const [imageModalProduct, setImageModalProduct] = useState(null);
@@ -144,6 +150,11 @@ const Products = () => {
       category_id: categories[0]?.id || '',
       is_active: true,
       description: '',
+      active_ingredients: '',
+      inci_list: '',
+      usage_instructions: '',
+      skin_type: '',
+      application_time: '',
     });
     setIsModalOpen(true);
   };
@@ -162,14 +173,208 @@ const Products = () => {
     setImagePreviews(previews);
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        toast.error('Vous devez être connecté pour exporter les produits', {
+          position: 'top-right',
+          autoClose: 3000,
+        });
+        return;
+      }
+
+      toast.info('Export en cours...', {
+        position: 'top-right',
+        autoClose: 2000,
+      });
+
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+      const response = await fetch(`${apiUrl}/products/export`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'text/csv, application/csv',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erreur lors de l\'export' }));
+        throw new Error(errorData.message || `Erreur ${response.status}: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `products_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('Export CSV réussi ! Le fichier a été téléchargé.', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
+    } catch (err) {
+      console.error('Export CSV error:', err);
+      toast.error('Erreur lors de l\'export CSV: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 5000,
+      });
+    }
+  };
+
+  const handleImportCSV = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.csv') && !file.name.endsWith('.txt')) {
+      toast.error('Veuillez sélectionner un fichier CSV (.csv ou .txt)', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
+      e.target.value = '';
+      return;
+    }
+
+    // Demander confirmation avant l'import
+    const confirmed = window.confirm('Voulez-vous importer ce fichier CSV ?\n\nLes produits existants avec le même SKU seront mis à jour.\nLes nouveaux produits seront créés.');
+    if (!confirmed) {
+      e.target.value = '';
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        toast.error('Vous devez être connecté pour importer des produits', {
+          position: 'top-right',
+          autoClose: 3000,
+        });
+        e.target.value = '';
+        return;
+      }
+
+      toast.info('Import en cours...', {
+        position: 'top-right',
+        autoClose: false,
+        toastId: 'import-progress',
+      });
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+      const response = await fetch(`${apiUrl}/products/import`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        const text = await response.text();
+        throw new Error(`Erreur serveur: ${text || response.statusText}`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || `Erreur ${response.status}: ${response.statusText}`);
+      }
+
+      // Refresh products list
+      const productsData = await productService.list();
+      setProducts(Array.isArray(productsData) ? productsData : []);
+
+      toast.dismiss('import-progress');
+
+      // Afficher le résultat de l'import avec les erreurs détaillées
+      const importedCount = data.imported || 0;
+      const updatedCount = data.updated || 0;
+      const errorCount = data.errors?.length || 0;
+
+      if (errorCount > 0) {
+        toast.warning(
+          <div>
+            <div style={{ fontWeight: 600, marginBottom: '8px' }}>
+              Import terminé avec {errorCount} erreur(s)
+            </div>
+            <div style={{ fontSize: '0.85rem', marginBottom: '8px' }}>
+              • {importedCount} produit(s) créé(s)
+              <br />
+              • {updatedCount} produit(s) mis à jour
+            </div>
+            <details style={{ fontSize: '0.8rem', marginTop: '8px' }}>
+              <summary style={{ cursor: 'pointer', color: 'var(--accent-deep)', fontWeight: 600 }}>
+                Voir les erreurs ({errorCount})
+              </summary>
+              <div style={{ marginTop: '8px', maxHeight: '200px', overflowY: 'auto', background: 'rgba(0,0,0,0.05)', padding: '8px', borderRadius: '6px' }}>
+                {data.errors.slice(0, 10).map((error, idx) => (
+                  <div key={idx} style={{ marginBottom: '4px', fontSize: '0.75rem' }}>
+                    • {error}
+                  </div>
+                ))}
+                {data.errors.length > 10 && (
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginTop: '4px' }}>
+                    ... et {data.errors.length - 10} autres erreurs
+                  </div>
+                )}
+              </div>
+            </details>
+          </div>,
+          {
+            position: 'top-right',
+            autoClose: 10000,
+          }
+        );
+      } else {
+        toast.success(
+          <div>
+            <div style={{ fontWeight: 600, marginBottom: '4px' }}>Import réussi !</div>
+            <div style={{ fontSize: '0.85rem' }}>
+              • {importedCount} produit(s) créé(s)
+              <br />
+              • {updatedCount} produit(s) mis à jour
+            </div>
+          </div>,
+          {
+            position: 'top-right',
+            autoClose: 5000,
+          }
+        );
+      }
+    } catch (err) {
+      console.error('Import CSV error:', err);
+      toast.dismiss('import-progress');
+      toast.error('Erreur lors de l\'import CSV: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 6000,
+      });
+    } finally {
+      e.target.value = '';
+    }
+  };
+
   const confirmDeleteProduct = async () => {
     if (!deleteId) return;
     try {
       await productService.remove(deleteId);
       setProducts((prev) => prev.filter((p) => p.id !== deleteId));
       setDeleteId(null);
+      toast.success('Produit supprimé avec succès', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } catch (err) {
-      alert("Erreur lors de la suppression du produit.");
+      toast.error('Erreur lors de la suppression du produit: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 4000,
+      });
     }
   };
 
@@ -185,11 +390,23 @@ const Products = () => {
         is_active: editProduct.is_active,
         category_id: editProduct.category_id,
         description: editProduct.description,
+        active_ingredients: editProduct.active_ingredients || '',
+        inci_list: editProduct.inci_list || '',
+        usage_instructions: editProduct.usage_instructions || '',
+        skin_type: editProduct.skin_type || null,
+        application_time: editProduct.application_time || null,
       });
       setProducts((prev) => prev.map(p => p.id === updated.id ? { ...p, ...updated } : p));
       setEditProduct(null);
+      toast.success('Produit mis à jour avec succès', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } catch (err) {
-      alert("Erreur lors de la mise à jour");
+      toast.error('Erreur lors de la mise à jour: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 4000,
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -354,6 +571,43 @@ const Products = () => {
           </div>
           <button
             type="button"
+            onClick={handleExportCSV}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '999px',
+              border: '1px solid var(--divider)',
+              background: 'white',
+              color: 'var(--text-main)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Export CSV
+          </button>
+          <label
+            style={{
+              padding: '10px 18px',
+              borderRadius: '999px',
+              border: '1px solid var(--divider)',
+              background: 'white',
+              color: 'var(--text-main)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-block',
+            }}
+          >
+            Import CSV
+            <input
+              type="file"
+              accept=".csv,.txt"
+              onChange={handleImportCSV}
+              style={{ display: 'none' }}
+            />
+          </label>
+          <button
+            type="button"
             style={{
               padding: '10px 18px',
               borderRadius: '999px',
@@ -441,7 +695,7 @@ const Products = () => {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-                  style={{
+          style={{
                     padding: '10px 36px 10px 14px',
                     borderRadius: '12px',
                     border: '1px solid var(--divider)',
@@ -468,11 +722,11 @@ const Products = () => {
                 <select
                   value={sortStock}
                   onChange={(e) => setSortStock(e.target.value)}
-                  style={{
+            style={{
                     padding: '10px 36px 10px 14px',
                     borderRadius: '12px',
-                    border: '1px solid var(--divider)',
-                    fontSize: '0.85rem',
+              border: '1px solid var(--divider)',
+              fontSize: '0.85rem',
                     background: 'var(--white)',
                     color: 'var(--text-main)',
                     cursor: 'pointer',
@@ -509,18 +763,18 @@ const Products = () => {
           <>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ minWidth: '800px', width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                <thead>
-                  <tr style={{ background: 'var(--surface)' }}>
+          <thead>
+            <tr style={{ background: 'var(--surface)' }}>
                     <th style={{ width: 56, padding: '10px 16px' }}></th>
-                    <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Produit</th>
-                    <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Catégorie</th>
-                    <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Prix</th>
-                    <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Stock</th>
-                    <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Statut</th>
+              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Produit</th>
+              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Catégorie</th>
+              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Prix</th>
+              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Stock</th>
+              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Statut</th>
                     <th style={{ width: 150 }} />
-                  </tr>
-                </thead>
-                <tbody>
+            </tr>
+          </thead>
+          <tbody>
                   {!loading && paginatedProducts.map((p) => {
                     const stock = p.stock_quantity ?? 0;
                     const categoryName = p.category?.name || '—';
@@ -551,7 +805,7 @@ const Products = () => {
                       : null;
 
                     return (
-                      <tr key={p.id}>
+              <tr key={p.id}>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
                           <div
                             style={{
@@ -572,8 +826,8 @@ const Products = () => {
                             {!mainImage && 'No img'}
                           </div>
                         </td>
-                        <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
-                          <div style={{ fontWeight: 500 }}>{p.name}</div>
+                <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
+                  <div style={{ fontWeight: 500 }}>{p.name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
                             ID : {p.id} · SKU : {p.sku || '—'}
                           </div>
@@ -581,21 +835,21 @@ const Products = () => {
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>{categoryName}</td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)', fontWeight: 600 }}>
                           {Number(p.price).toFixed(2)} €
-                        </td>
-                        <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
-                          <span
-                            style={{
-                              fontSize: '0.8rem',
-                              padding: '2px 10px',
-                              borderRadius: '999px',
+                </td>
+                <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
+                  <span
+                    style={{
+                      fontSize: '0.8rem',
+                      padding: '2px 10px',
+                      borderRadius: '999px',
                               background: stockBadgeBg,
                               color: stockBadgeColor,
-                              fontWeight: 600,
-                            }}
-                          >
+                      fontWeight: 600,
+                    }}
+                  >
                             {stockLabel}
-                          </span>
-                        </td>
+                  </span>
+                </td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>{statusLabel}</td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)', textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -863,6 +1117,111 @@ const Products = () => {
                 />
               </div>
 
+              {/* New Product Detail Fields */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Type de peau</label>
+                  <select
+                    value={newProduct.skin_type}
+                    onChange={(e) => setNewProduct((prev) => ({ ...prev, skin_type: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      marginTop: 6,
+                      borderRadius: 12,
+                      border: '1px solid var(--divider)',
+                      padding: '10px 14px',
+                      fontSize: '0.9rem',
+                      background: 'var(--surface)'
+                    }}
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="sèche">Sèche</option>
+                    <option value="grasse">Grasse</option>
+                    <option value="mixte">Mixte</option>
+                    <option value="sensible">Sensible</option>
+                    <option value="normale">Normale</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Moment d'application</label>
+                  <select
+                    value={newProduct.application_time}
+                    onChange={(e) => setNewProduct((prev) => ({ ...prev, application_time: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      marginTop: 6,
+                      borderRadius: 12,
+                      border: '1px solid var(--divider)',
+                      padding: '10px 14px',
+                      fontSize: '0.9rem',
+                      background: 'var(--surface)'
+                    }}
+                  >
+                    <option value="">Sélectionner...</option>
+                    <option value="matin">Matin</option>
+                    <option value="soir">Soir</option>
+                    <option value="jour/nuit">Jour/Nuit</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Ingrédients actifs principaux</label>
+                <textarea
+                  value={newProduct.active_ingredients}
+                  onChange={(e) => setNewProduct((prev) => ({ ...prev, active_ingredients: e.target.value }))}
+                  placeholder="Ex: Acide hyaluronique, Vitamine C, Niacinamide..."
+                  rows={2}
+                  style={{
+                    width: '100%',
+                    marginTop: 6,
+                    borderRadius: 12,
+                    border: '1px solid var(--divider)',
+                    padding: '10px 14px',
+                    fontSize: '0.85rem',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Liste INCI complète</label>
+                <textarea
+                  value={newProduct.inci_list}
+                  onChange={(e) => setNewProduct((prev) => ({ ...prev, inci_list: e.target.value }))}
+                  placeholder="Liste INCI complète des ingrédients (nomenclature internationale)..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    marginTop: 6,
+                    borderRadius: 12,
+                    border: '1px solid var(--divider)',
+                    padding: '10px 14px',
+                    fontSize: '0.85rem',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Mode d'emploi et fréquence</label>
+                <textarea
+                  value={newProduct.usage_instructions}
+                  onChange={(e) => setNewProduct((prev) => ({ ...prev, usage_instructions: e.target.value }))}
+                  placeholder="Ex: Appliquer matin et soir sur peau propre. Masser délicatement jusqu'à pénétration complète..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    marginTop: 6,
+                    borderRadius: 12,
+                    border: '1px solid var(--divider)',
+                    padding: '10px 14px',
+                    fontSize: '0.85rem',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+
               <div style={{ padding: '16px', background: 'var(--surface)', borderRadius: 16, border: '1px dashed var(--divider)' }}>
                 <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Images du produit</label>
                 <input
@@ -996,12 +1355,12 @@ const Products = () => {
                   Ajoutez des URLs d&apos;images hébergées (CDN, Cloudinary, etc.).
                 </p>
               </div>
-              <button
-                type="button"
+                  <button
+                    type="button"
                 onClick={() => !imageSubmitting && setImageModalProduct(null)}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
                   fontSize: '0.9rem',
                   color: 'var(--text-light)',
                   cursor: 'pointer',
@@ -1257,7 +1616,7 @@ const Products = () => {
                   onChange={(e) => setEditProduct({ ...editProduct, stock_quantity: e.target.value })}
                   style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)' }}
                 />
-              </div>
+      </div>
             </div>
             <div>
               <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Catégorie</label>
@@ -1286,6 +1645,63 @@ const Products = () => {
               <textarea
                 value={editProduct.description || ''}
                 onChange={(e) => setEditProduct({ ...editProduct, description: e.target.value })}
+                rows={3}
+                style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)', resize: 'vertical' }}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Type de peau</label>
+                <select
+                  value={editProduct.skin_type || ''}
+                  onChange={(e) => setEditProduct({ ...editProduct, skin_type: e.target.value || null })}
+                  style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)' }}
+                >
+                  <option value="">Sélectionner...</option>
+                  <option value="sèche">Sèche</option>
+                  <option value="grasse">Grasse</option>
+                  <option value="mixte">Mixte</option>
+                  <option value="sensible">Sensible</option>
+                  <option value="normale">Normale</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Moment d'application</label>
+                <select
+                  value={editProduct.application_time || ''}
+                  onChange={(e) => setEditProduct({ ...editProduct, application_time: e.target.value || null })}
+                  style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)' }}
+                >
+                  <option value="">Sélectionner...</option>
+                  <option value="matin">Matin</option>
+                  <option value="soir">Soir</option>
+                  <option value="jour/nuit">Jour/Nuit</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Ingrédients actifs principaux</label>
+              <textarea
+                value={editProduct.active_ingredients || ''}
+                onChange={(e) => setEditProduct({ ...editProduct, active_ingredients: e.target.value })}
+                rows={2}
+                style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)', resize: 'vertical' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Liste INCI complète</label>
+              <textarea
+                value={editProduct.inci_list || ''}
+                onChange={(e) => setEditProduct({ ...editProduct, inci_list: e.target.value })}
+                rows={3}
+                style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)', resize: 'vertical' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Mode d'emploi et fréquence</label>
+              <textarea
+                value={editProduct.usage_instructions || ''}
+                onChange={(e) => setEditProduct({ ...editProduct, usage_instructions: e.target.value })}
                 rows={3}
                 style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)', resize: 'vertical' }}
               />

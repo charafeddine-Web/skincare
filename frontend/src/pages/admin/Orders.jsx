@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import { orderService } from '../../services/api';
 import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, AlertTriangle, Package, CheckCircle, XCircle } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
@@ -102,8 +103,15 @@ const Orders = () => {
       // await orderService.remove(deleteId);
       setOrders(prev => prev.filter(o => o.id !== deleteId));
       setDeleteId(null);
+      toast.success('Commande supprimée avec succès', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } catch (err) {
-      alert("Erreur lors de la suppression de la commande.");
+      toast.error('Erreur lors de la suppression de la commande: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 4000,
+      });
     }
   };
 
@@ -114,8 +122,15 @@ const Orders = () => {
       // await orderService.update(editOrder.id, { status: newStatus });
       setOrders((prev) => prev.map(o => o.id === editOrder.id ? { ...o, status: newStatus } : o));
       setEditOrder(null);
+      toast.success('Statut de la commande mis à jour avec succès', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } catch (err) {
-      alert("Erreur lors de la mise à jour du statut");
+      toast.error('Erreur lors de la mise à jour du statut: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 4000,
+      });
     } finally {
       setIsUpdating(false);
     }

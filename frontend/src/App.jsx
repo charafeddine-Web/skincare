@@ -1,5 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -93,6 +95,36 @@ function App() {
           <BottomNav />
           <Footer />
         </div>
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={true}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="light"
+          limit={5}
+          style={{
+            top: '20px',
+            right: '20px',
+            zIndex: 9999,
+          }}
+          toastStyle={{
+            borderRadius: '14px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+            fontSize: '0.9rem',
+            padding: '14px 18px',
+            fontFamily: 'inherit',
+            border: '1px solid rgba(0, 0, 0, 0.05)',
+          }}
+          progressStyle={{
+            background: 'var(--accent-deep)',
+            height: '3px',
+          }}
+        />
       </Router>
     </AuthProvider>
   );

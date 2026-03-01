@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import { userService } from '../../services/api';
 import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, AlertTriangle, User } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
@@ -75,14 +76,36 @@ const Customers = () => {
     return fullName || customer.email || `Client #${customer.id}`;
   };
 
+  const handleViewCustomer = async (customer) => {
+    try {
+      // Fetch full customer details with orders
+      const fullDetails = await userService.get(customer.id);
+      setViewCustomer(fullDetails);
+    } catch (err) {
+      // Fallback to basic customer data if API fails
+      setViewCustomer(customer);
+      toast.error('Erreur lors du chargement des détails: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 4000,
+      });
+    }
+  };
+
   const confirmDeleteCustomer = async () => {
     if (!deleteId) return;
     try {
       // await userService.remove(deleteId); 
       setCustomers(prev => prev.filter(c => c.id !== deleteId));
       setDeleteId(null);
+      toast.success('Client supprimé avec succès', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } catch (err) {
-      alert("Erreur lors de la suppression.");
+      toast.error('Erreur lors de la suppression: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 4000,
+      });
     }
   };
 
@@ -94,8 +117,15 @@ const Customers = () => {
       // Simulation of update API
       setCustomers((prev) => prev.map(c => c.id === editCustomer.id ? editCustomer : c));
       setEditCustomer(null);
+      toast.success('Client mis à jour avec succès', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } catch (err) {
-      alert("Erreur lors de la mise à jour");
+      toast.error('Erreur lors de la mise à jour: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 4000,
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -210,7 +240,7 @@ const Customers = () => {
                           <button
                             title="Voir détails"
                             type="button"
-                            onClick={() => setViewCustomer(c)}
+                            onClick={() => handleViewCustomer(c)}
                             style={{ border: 'none', background: 'var(--surface)', padding: '8px', borderRadius: '10px', color: 'var(--text-main)', cursor: 'pointer', display: 'flex' }}
                           >
                             <Eye size={16} />
@@ -292,6 +322,91 @@ const Customers = () => {
                 </span>
               </div>
             </div>
+
+            {/* Customer Statistics */}
+            {viewCustomer.statistics && (
+              <div style={{ padding: '16px', background: 'var(--surface)', borderRadius: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 8 }}>Statistiques d'achat</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <span style={{ color: 'var(--text-light)', fontSize: '0.85rem', display: 'block' }}>Montant total dépensé</span>
+                    <strong style={{ fontSize: '1rem', color: 'var(--accent-deep)' }}>{viewCustomer.statistics.total_spent || '0 €'}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-light)', fontSize: '0.85rem', display: 'block' }}>Nombre de commandes</span>
+                    <strong style={{ fontSize: '1rem' }}>{viewCustomer.statistics.orders_count || 0}</strong>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Purchase History */}
+            {viewCustomer.orders && viewCustomer.orders.length > 0 ? (
+              <div>
+                <h4 style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 12 }}>Historique d'achat</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '400px', overflowY: 'auto' }}>
+                  {viewCustomer.orders.map((order) => {
+                    let badgeBg = 'rgba(148, 163, 184, 0.18)';
+                    let badgeColor = '#4b5563';
+
+                    if (order.status === 'paid') {
+                      badgeBg = 'rgba(46, 189, 133, 0.12)';
+                      badgeColor = '#15803d';
+                    } else if (order.status === 'cancelled') {
+                      badgeBg = 'rgba(248, 113, 113, 0.12)';
+                      badgeColor = '#b91c1c';
+                    }
+
+                    return (
+                      <div
+                        key={order.id}
+                        style={{
+                          padding: '12px',
+                          background: 'var(--surface)',
+                          borderRadius: 12,
+                          border: '1px solid var(--divider)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>Commande #{order.id}</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{order.created_at}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 4 }}>{order.total_amount}</div>
+                            <span
+                              style={{
+                                fontSize: '0.75rem',
+                                padding: '4px 8px',
+                                borderRadius: '999px',
+                                background: badgeBg,
+                                color: badgeColor,
+                                fontWeight: 600,
+                              }}
+                            >
+                              {order.status_label || order.status}
+                            </span>
+                          </div>
+                        </div>
+                        {order.items && order.items.length > 0 && (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-light)', marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--divider)' }}>
+                            {order.items.map((item, idx) => (
+                              <div key={idx} style={{ marginBottom: 4 }}>
+                                {item.quantity}x {item.product_name} - {item.price}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding: '20px', textAlign: 'center', background: 'var(--surface)', borderRadius: 12, color: 'var(--text-light)', fontSize: '0.85rem' }}>
+                Aucun historique d'achat
+              </div>
+            )}
           </div>
         )}
       </AdminModal>

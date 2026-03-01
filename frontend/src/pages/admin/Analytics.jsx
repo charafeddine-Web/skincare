@@ -1,6 +1,53 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { adminService } from '../../services/api';
+import AdminLoader from '../../components/AdminLoader';
 
 const Analytics = () => {
+  const [analytics, setAnalytics] = useState({
+    revenue: '0 €',
+    orders_count: 0,
+    conversion_rate: '0 %',
+    average_cart: '0 €',
+    sales_chart: [],
+    top_categories: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await adminService.getAnalytics({ days: 30 });
+        if (!isMounted) return;
+        setAnalytics(data || {});
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || "Impossible de charger les analytics");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchAnalytics();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Calculate chart dimensions and max value
+  const chartHeight = 180;
+  const chartPadding = 40;
+  const chartWidth = 100;
+  const maxRevenue = Math.max(...(analytics.sales_chart || []).map(d => d.revenue || 0), 1);
+
   return (
     <div>
       <header style={{ marginBottom: '24px' }}>
@@ -21,102 +68,206 @@ const Analytics = () => {
         </p>
       </header>
 
-      <section
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px',
-        }}
-      >
-        {[
-          { label: 'Revenu 30 derniers jours', value: '32 480 €' },
-          { label: 'Commandes 30 derniers jours', value: '842' },
-          { label: 'Taux de conversion', value: '3,4 %' },
-          { label: 'Panier moyen', value: '38,5 €' },
-        ].map((s) => (
-          <article
-            key={s.label}
-            style={{
-              padding: '16px 18px',
-              borderRadius: '18px',
-              border: '1px solid var(--divider)',
-              background: 'var(--white)',
-            }}
-          >
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '6px' }}>{s.label}</p>
-            <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>{s.value}</p>
-          </article>
-        ))}
-      </section>
-
-      <section
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
-          gap: '20px',
-        }}
-      >
+      {error && (
         <div
           style={{
-            borderRadius: '18px',
-            border: '1px solid var(--divider)',
-            background: 'var(--white)',
-            padding: '16px 18px',
+            marginBottom: 16,
+            padding: '10px 14px',
+            borderRadius: 999,
+            background: 'rgba(248, 113, 113, 0.06)',
+            border: '1px solid rgba(248, 113, 113, 0.35)',
+            fontSize: '0.8rem',
+            color: '#b91c1c',
           }}
         >
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '6px' }}>Courbe des ventes</h3>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '16px' }}>
-            Exemple de courbe — à connecter à l&apos;API pour les vraies données.
-          </p>
-          <div
-            style={{
-              height: 180,
-              borderRadius: '14px',
-              border: '1px dashed var(--divider)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--text-light)',
-              fontSize: '0.8rem',
-            }}
-          >
-            Zone graphique (Chart.js / Recharts)
-          </div>
+          {error}
         </div>
+      )}
 
-        <div
-          style={{
-            borderRadius: '18px',
-            border: '1px solid var(--divider)',
-            background: 'var(--white)',
-            padding: '16px 18px',
-          }}
-        >
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '6px' }}>Top catégories</h3>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {[
-              { name: 'Sérums & ampoules', share: '32 %' },
-              { name: 'Crèmes hydratantes', share: '26 %' },
-              { name: 'Protections solaires', share: '18 %' },
-              { name: 'Nettoyants visage', share: '14 %' },
-            ].map((c) => (
-              <li
-                key={c.name}
+      {loading ? (
+        <AdminLoader message="Chargement des analytics..." />
+      ) : (
+        <>
+          <section
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+              gap: '16px',
+              marginBottom: '24px',
+            }}
+          >
+            <article
+              style={{
+                padding: '16px 18px',
+                borderRadius: '18px',
+                border: '1px solid var(--divider)',
+                background: 'var(--white)',
+              }}
+            >
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '6px' }}>Revenu 30 derniers jours</p>
+              <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>{analytics.revenue || '0 €'}</p>
+            </article>
+            <article
+              style={{
+                padding: '16px 18px',
+                borderRadius: '18px',
+                border: '1px solid var(--divider)',
+                background: 'var(--white)',
+              }}
+            >
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '6px' }}>Commandes 30 derniers jours</p>
+              <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>{analytics.orders_count || 0}</p>
+            </article>
+            <article
+              style={{
+                padding: '16px 18px',
+                borderRadius: '18px',
+                border: '1px solid var(--divider)',
+                background: 'var(--white)',
+              }}
+            >
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '6px' }}>Taux de conversion</p>
+              <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>{analytics.conversion_rate || '0 %'}</p>
+            </article>
+            <article
+              style={{
+                padding: '16px 18px',
+                borderRadius: '18px',
+                border: '1px solid var(--divider)',
+                background: 'var(--white)',
+              }}
+            >
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '6px' }}>Panier moyen</p>
+              <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>{analytics.average_cart || '0 €'}</p>
+            </article>
+          </section>
+
+          <section
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
+              gap: '20px',
+            }}
+          >
+            <div
+              style={{
+                borderRadius: '18px',
+                border: '1px solid var(--divider)',
+                background: 'var(--white)',
+                padding: '16px 18px',
+              }}
+            >
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '6px' }}>Courbe des ventes</h3>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '16px' }}>
+                Revenus quotidiens sur les 30 derniers jours
+              </p>
+              <div
                 style={{
-                  padding: '8px 0',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: '0.85rem',
+                  height: chartHeight,
+                  borderRadius: '14px',
+                  border: '1px solid var(--divider)',
+                  padding: '12px',
+                  position: 'relative',
                 }}
               >
-                <span>{c.name}</span>
-                <span style={{ fontWeight: 600 }}>{c.share}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
+                {analytics.sales_chart && analytics.sales_chart.length > 0 ? (
+                  <svg width="100%" height={chartHeight} style={{ overflow: 'visible' }}>
+                    {/* Grid lines */}
+                    {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
+                      <line
+                        key={ratio}
+                        x1={chartPadding}
+                        y1={chartPadding + ratio * (chartHeight - chartPadding * 2)}
+                        x2="100%"
+                        y2={chartPadding + ratio * (chartHeight - chartPadding * 2)}
+                        stroke="var(--divider)"
+                        strokeWidth="1"
+                        strokeDasharray="2,2"
+                      />
+                    ))}
+                    {/* Chart line */}
+                    <polyline
+                      points={analytics.sales_chart
+                        .map((d, i) => {
+                          const x = chartPadding + (i / (analytics.sales_chart.length - 1 || 1)) * (100 - chartPadding * 2) + '%';
+                          const y = chartHeight - chartPadding - ((d.revenue || 0) / maxRevenue) * (chartHeight - chartPadding * 2);
+                          return `${x},${y}`;
+                        })
+                        .join(' ')}
+                      fill="none"
+                      stroke="var(--accent-deep)"
+                      strokeWidth="2"
+                    />
+                    {/* Chart area fill */}
+                    <polygon
+                      points={`${chartPadding},${chartHeight - chartPadding} ${analytics.sales_chart
+                        .map((d, i) => {
+                          const x = chartPadding + (i / (analytics.sales_chart.length - 1 || 1)) * (100 - chartPadding * 2) + '%';
+                          const y = chartHeight - chartPadding - ((d.revenue || 0) / maxRevenue) * (chartHeight - chartPadding * 2);
+                          return `${x},${y}`;
+                        })
+                        .join(' ')} ${100 - chartPadding}%,${chartHeight - chartPadding}`}
+                      fill="var(--accent-deep)"
+                      fillOpacity="0.1"
+                    />
+                    {/* Data points */}
+                    {analytics.sales_chart.map((d, i) => {
+                      const x = chartPadding + (i / (analytics.sales_chart.length - 1 || 1)) * (100 - chartPadding * 2) + '%';
+                      const y = chartHeight - chartPadding - ((d.revenue || 0) / maxRevenue) * (chartHeight - chartPadding * 2);
+                      return (
+                        <circle
+                          key={i}
+                          cx={x}
+                          cy={y}
+                          r="3"
+                          fill="var(--accent-deep)"
+                        />
+                      );
+                    })}
+                  </svg>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-light)', fontSize: '0.8rem' }}>
+                    Aucune donnée disponible
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div
+              style={{
+                borderRadius: '18px',
+                border: '1px solid var(--divider)',
+                background: 'var(--white)',
+                padding: '16px 18px',
+              }}
+            >
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '6px' }}>Top catégories</h3>
+              {analytics.top_categories && analytics.top_categories.length > 0 ? (
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {analytics.top_categories.map((c) => (
+                    <li
+                      key={c.id}
+                      style={{
+                        padding: '8px 0',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      <span>{c.name}</span>
+                      <span style={{ fontWeight: 600 }}>{c.share}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-light)', textAlign: 'center', padding: '20px' }}>
+                  Aucune donnée disponible
+                </div>
+              )}
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 };

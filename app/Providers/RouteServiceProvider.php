@@ -28,6 +28,12 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Contraintes de route pour éviter que 'export' et 'import' soient interprétés comme des IDs
+        Route::pattern('product', '[0-9]+');
+        Route::pattern('category', '[0-9]+');
+        Route::pattern('productImage', '[0-9]+');
+        Route::pattern('review', '[0-9]+');
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

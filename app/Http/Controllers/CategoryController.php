@@ -14,7 +14,9 @@ class CategoryController extends Controller
     public function index()
     {
         $categories = cache()->remember('categories.with_count', 60, function () {
-            return Category::withCount('products')->get();
+            return Category::with(['parent', 'children'])
+                ->withCount('products')
+                ->get();
         });
 
         return response()->json($categories, 200);
@@ -28,6 +30,7 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|unique:categories',
             'slug' => 'nullable|string|unique:categories',
+            'parent_id' => 'nullable|exists:categories,id',
         ]);
 
         if (!isset($validated['slug'])) {
@@ -55,6 +58,7 @@ class CategoryController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|unique:categories,name,' . $category->id,
             'slug' => 'sometimes|string|unique:categories,slug,' . $category->id,
+            'parent_id' => 'nullable|exists:categories,id|not_in:' . $category->id, // Prevent self-reference
         ]);
 
         if (isset($validated['name']) && !isset($validated['slug'])) {

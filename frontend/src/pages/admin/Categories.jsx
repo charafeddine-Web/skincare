@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { toast } from 'react-toastify';
 import { categoryService } from '../../services/api';
 import { Edit, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
@@ -18,6 +19,7 @@ const Categories = () => {
   const [newCategory, setNewCategory] = useState({
     name: '',
     slug: '',
+    parent_id: '',
   });
 
   // Action states
@@ -82,8 +84,15 @@ const Categories = () => {
       await categoryService.remove(deleteId);
       setCategories((prev) => prev.filter((c) => c.id !== deleteId));
       setDeleteId(null);
+      toast.success('Catégorie supprimée avec succès', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } catch (err) {
-      alert("Erreur lors de la suppression. Assurez-vous qu'aucun produit n'y est rattaché.");
+      toast.error("Erreur lors de la suppression. Assurez-vous qu'aucun produit n'y est rattaché: " + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 5000,
+      });
     }
   };
 
@@ -94,12 +103,20 @@ const Categories = () => {
       setIsUpdating(true);
       const updated = await categoryService.update(editCategory.id, {
         name: editCategory.name,
-        slug: editCategory.slug
+        slug: editCategory.slug,
+        parent_id: editCategory.parent_id || null,
       });
       setCategories((prev) => prev.map(c => c.id === updated.id ? updated : c));
       setEditCategory(null);
+      toast.success('Catégorie mise à jour avec succès', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
     } catch (err) {
-      alert("Erreur lors de la mise à jour");
+      toast.error('Erreur lors de la mise à jour: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 4000,
+      });
     } finally {
       setIsUpdating(false);
     }
@@ -118,7 +135,7 @@ const Categories = () => {
       setIsSubmitting(true);
       const created = await categoryService.create(newCategory);
       setCategories((prev) => [created, ...prev]);
-      setNewCategory({ name: '', slug: '' });
+      setNewCategory({ name: '', slug: '', parent_id: '' });
     } catch (err) {
       const apiError = err?.message || err?.error || err?.errors;
       if (typeof apiError === 'string') {
@@ -267,6 +284,7 @@ const Categories = () => {
                 <thead>
                   <tr style={{ background: 'var(--surface)' }}>
                     <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Nom</th>
+                    <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Parent</th>
                     <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Slug</th>
                     <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Produits</th>
                     <th style={{ width: 100 }}></th>
@@ -276,8 +294,14 @@ const Categories = () => {
                   {!loading && paginatedCategories.map((c) => (
                     <tr key={c.id}>
                       <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
-                        <div style={{ fontWeight: 500 }}>{c.name}</div>
+                        <div style={{ fontWeight: 500, paddingLeft: c.parent_id ? '20px' : '0' }}>
+                          {c.parent_id && <span style={{ color: 'var(--text-light)', marginRight: '6px' }}>└</span>}
+                          {c.name}
+                        </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>ID : {c.id}</div>
+                      </td>
+                      <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
+                        {c.parent?.name || <span style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>—</span>}
                       </td>
                       <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>{c.slug}</td>
                       <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
@@ -354,6 +378,21 @@ const Categories = () => {
                 style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)' }}
                 required
               />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Catégorie parente</label>
+              <select
+                value={editCategory.parent_id || ''}
+                onChange={(e) => setEditCategory({ ...editCategory, parent_id: e.target.value || null })}
+                style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)' }}
+              >
+                <option value="">Catégorie principale</option>
+                {categories.filter(c => c.id !== editCategory.id && !c.parent_id).map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Slug (optionnel)</label>

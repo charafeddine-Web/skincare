@@ -11,6 +11,7 @@ const Dashboard = () => {
     out_of_stock_count: 0,
     recent_orders: [],
   });
+  const [bestSellers, setBestSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -22,9 +23,14 @@ const Dashboard = () => {
         setLoading(true);
         setError(null);
 
-        const data = await adminService.getMetrics();
+        const [metricsData, bestSellersData] = await Promise.all([
+          adminService.getMetrics(),
+          adminService.getBestSellers({ limit: 5 }),
+        ]);
+        
         if (!isMounted) return;
-        setMetrics((prev) => ({ ...prev, ...(data || {}) }));
+        setMetrics((prev) => ({ ...prev, ...(metricsData || {}) }));
+        setBestSellers(Array.isArray(bestSellersData) ? bestSellersData : []);
       } catch (err) {
         if (isMounted) {
           setError(err.message || "Impossible de charger les statistiques");
@@ -286,30 +292,36 @@ const Dashboard = () => {
               }}
             >
               <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '10px' }}>Meilleures ventes skincare</h3>
-              <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {[
-                  { name: 'Sérum Éclat Vitamine C', category: 'Sérums', revenue: '12 300 €' },
-                  { name: 'Crème Hydratante Intense', category: 'Hydratants', revenue: '9 780 €' },
-                  { name: 'Protection Solaire SPF 50', category: 'SPF', revenue: '7 210 €' },
-                ].map((p) => (
-                  <li
-                    key={p.name}
-                    style={{
-                      padding: '10px 8px',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{p.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{p.category}</div>
-                    </div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{p.revenue}</div>
-                  </li>
-                ))}
-              </ul>
+              {loading ? (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-light)', textAlign: 'center', padding: '20px' }}>
+                  Chargement...
+                </div>
+              ) : bestSellers.length > 0 ? (
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {bestSellers.map((p) => (
+                    <li
+                      key={p.id}
+                      style={{
+                        padding: '10px 8px',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{p.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{p.category}</div>
+                      </div>
+                      <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{p.revenue}</div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-light)', textAlign: 'center', padding: '20px' }}>
+                  Aucune vente enregistrée
+                </div>
+              )}
             </div>
           </section>
         </>
