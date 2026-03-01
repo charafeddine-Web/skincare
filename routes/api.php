@@ -68,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Routes pour les utilisateurs
+    Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
     Route::apiResource('users', UserController::class);
 
     // Routes pour les adresses

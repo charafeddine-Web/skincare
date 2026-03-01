@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './contexts/AuthContext';
@@ -51,83 +51,104 @@ const Loader = () => (
   </div>
 );
 
+// Composant pour gérer l'affichage conditionnel
+const AppContent = () => {
+  const location = useLocation();
+  const isAdminPath = location.pathname.startsWith('/admin');
+
+  return (
+    <div className="app" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {!isAdminPath && <Navbar />}
+
+      <main style={{ flex: 1 }}>
+        <Suspense fallback={<Loader />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/cart" element={<Cart />} />
+
+            {/* Zone client "Mon compte" */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/account">
+                <Route index element={<AccountProfile />} />
+                <Route path="commandes" element={<AccountOrders />} />
+                <Route path="adresses" element={<AccountAddresses />} />
+              </Route>
+            </Route>
+
+            {/* Zone administration protégée */}
+            <Route element={<AdminRoute />}>
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="produits" element={<AdminProducts />} />
+                <Route path="categories" element={<AdminCategories />} />
+                <Route path="commandes" element={<AdminOrders />} />
+                <Route path="clients" element={<AdminCustomers />} />
+                <Route path="statistiques" element={<AdminAnalytics />} />
+                <Route path="parametres" element={<AdminSettings />} />
+              </Route>
+            </Route>
+
+            <Route path="*" element={<Home />} />
+          </Routes>
+        </Suspense>
+      </main>
+
+      {!isAdminPath && (
+        <>
+          <BottomNav />
+          <Footer />
+        </>
+      )}
+
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        limit={5}
+        style={{
+          top: '20px',
+          right: '20px',
+          zIndex: 9999,
+        }}
+        toastStyle={{
+          borderRadius: '14px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+          fontSize: '0.9rem',
+          padding: '14px 18px',
+          fontFamily: 'inherit',
+          border: '1px solid rgba(0, 0, 0, 0.05)',
+        }}
+        progressStyle={{
+          background: 'var(--accent-deep)',
+          height: '3px',
+        }}
+      />
+    </div>
+  );
+};
+
 function App() {
   return (
     <AuthProvider>
       <Router>
         <RouterEventBridge />
-        <div className="app" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          <Navbar />
-          <main style={{ flex: 1 }}>
-            <Suspense fallback={<Loader />}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/product/:id" element={<ProductDetail />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
-                <Route path="/login" element={<Auth />} />
-                <Route path="/cart" element={<Cart />} />
-                {/* Zone client "Mon compte" */}
-                <Route element={<ProtectedRoute />}>
-                  <Route path="/account">
-                    <Route index element={<AccountProfile />} />
-                    <Route path="commandes" element={<AccountOrders />} />
-                    <Route path="adresses" element={<AccountAddresses />} />
-                  </Route>
-                </Route>
-                {/* Zone administration protégée */}
-                <Route element={<AdminRoute />}>
-                  <Route path="/admin" element={<AdminLayout />}>
-                    <Route index element={<AdminDashboard />} />
-                    <Route path="produits" element={<AdminProducts />} />
-                    <Route path="categories" element={<AdminCategories />} />
-                    <Route path="commandes" element={<AdminOrders />} />
-                    <Route path="clients" element={<AdminCustomers />} />
-                    <Route path="statistiques" element={<AdminAnalytics />} />
-                    <Route path="parametres" element={<AdminSettings />} />
-                  </Route>
-                </Route>
-                <Route path="*" element={<Home />} />
-              </Routes>
-            </Suspense>
-          </main>
-          <BottomNav />
-          <Footer />
-        </div>
-        <ToastContainer
-          position="top-right"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop={true}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-          limit={5}
-          style={{
-            top: '20px',
-            right: '20px',
-            zIndex: 9999,
-          }}
-          toastStyle={{
-            borderRadius: '14px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-            fontSize: '0.9rem',
-            padding: '14px 18px',
-            fontFamily: 'inherit',
-            border: '1px solid rgba(0, 0, 0, 0.05)',
-          }}
-          progressStyle={{
-            background: 'var(--accent-deep)',
-            height: '3px',
-          }}
-        />
+        <AppContent />
       </Router>
     </AuthProvider>
   );
 }
 
 export default App;
+

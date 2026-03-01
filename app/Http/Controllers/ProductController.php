@@ -266,29 +266,36 @@ class ProductController extends Controller
 
             try {
                 // Map CSV columns (assuming same order as export: ID, Nom, SKU, Description, etc.)
+                $name = isset($row[1]) ? trim($row[1]) : '';
+                $sku = isset($row[2]) ? trim($row[2]) : '';
+                
                 $data = [
-                    'name' => isset($row[1]) ? trim($row[1]) : '',
-                    'sku' => isset($row[2]) ? trim($row[2]) : '',
+                    'name' => $name,
+                    'sku' => $sku,
                     'description' => isset($row[3]) ? trim($row[3]) : '',
                     'active_ingredients' => isset($row[4]) && !empty(trim($row[4])) ? trim($row[4]) : null,
                     'inci_list' => isset($row[5]) && !empty(trim($row[5])) ? trim($row[5]) : null,
                     'usage_instructions' => isset($row[6]) && !empty(trim($row[6])) ? trim($row[6]) : null,
-                    'skin_type' => isset($row[7]) && !empty(trim($row[7])) ? trim($row[7]) : null,
-                    'application_time' => isset($row[8]) && !empty(trim($row[8])) ? trim($row[8]) : null,
+                    'skin_type' => isset($row[7]) && !empty(trim($row[7])) ? strtolower(trim($row[7])) : null,
+                    'application_time' => isset($row[8]) && !empty(trim($row[8])) ? strtolower(trim($row[8])) : null,
                     'price' => isset($row[9]) && !empty(trim($row[9])) ? floatval(str_replace([',', ' '], ['.', ''], $row[9])) : 0,
                     'stock_quantity' => isset($row[10]) && !empty(trim($row[10])) ? intval($row[10]) : 0,
-                    'is_active' => isset($row[12]) && strtolower(trim($row[12])) === 'actif',
+                    'is_active' => isset($row[12]) && (strtolower(trim($row[12])) === 'actif' || $row[12] == '1' || strtolower(trim($row[12])) === 'true'),
                 ];
 
-                // Find category by name
+                // Generate slug if not present or for new products
+                $data['slug'] = Str::slug($name);
+
+                // Find category by name (case-insensitive)
                 $categoryId = null;
                 if (isset($row[11]) && !empty(trim($row[11]))) {
-                    $category = \App\Models\Category::where('name', trim($row[11]))->first();
+                    $categoryName = trim($row[11]);
+                    $category = \App\Models\Category::whereRaw('LOWER(name) = ?', [strtolower($categoryName)])->first();
                     if ($category) {
                         $categoryId = $category->id;
                         $data['category_id'] = $categoryId;
                     } else {
-                        $errors[] = "Ligne {$lineNumber} (SKU: {$data['sku']}): Catégorie '{$row[11]}' introuvable";
+                        $errors[] = "Ligne {$lineNumber} (SKU: {$sku}): Catégorie '{$categoryName}' introuvable";
                     }
                 }
 
@@ -307,12 +314,17 @@ class ProductController extends Controller
                 $product = Product::where('sku', $data['sku'])->first();
 
                 if ($product) {
-                    // Update existing product (only update category_id if provided)
-                    if ($categoryId) {
-                        $data['category_id'] = $categoryId;
-                    } else {
-                        unset($data['category_id']); // Don't update category if not provided
+                    // Update existing product
+                    // If slug exists on another product, append a short random string
+                    $existingSlug = Product::where('slug', $data['slug'])->where('id', '!=', $product->id)->exists();
+                    if ($existingSlug) {
+                        $data['slug'] = $data['slug'] . '-' . Str::random(4);
                     }
+
+                    if (!$categoryId) {
+                        unset($data['category_id']); // Don't nullify category if not provided in CSV
+                    }
+                    
                     $product->update($data);
                     $updated++;
                 } else {
@@ -321,6 +333,13 @@ class ProductController extends Controller
                         $errors[] = "Ligne {$lineNumber} (SKU: {$data['sku']}): Catégorie requise pour créer un nouveau produit";
                         continue;
                     }
+
+                    // Check if slug exists
+                    $existingSlug = Product::where('slug', $data['slug'])->exists();
+                    if ($existingSlug) {
+                        $data['slug'] = $data['slug'] . '-' . Str::random(4);
+                    }
+
                     $data['category_id'] = $categoryId;
                     Product::create($data);
                     $imported++;

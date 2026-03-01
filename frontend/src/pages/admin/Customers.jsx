@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { userService } from '../../services/api';
-import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, AlertTriangle, User } from 'lucide-react';
+import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, AlertTriangle, User, Download } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
 import AdminModal from '../../components/AdminModal';
 
@@ -131,6 +131,25 @@ const Customers = () => {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      toast.info('Préparation de l\'exportation...', {
+        position: 'top-right',
+        autoClose: 2000,
+      });
+      await userService.exportUsersCSV();
+      toast.success('Fichier exporté avec succès', {
+        position: 'top-right',
+        autoClose: 3000,
+      });
+    } catch (err) {
+      toast.error('Erreur lors de l\'exportation: ' + (err.message || 'Erreur inconnue'), {
+        position: 'top-right',
+        autoClose: 4000,
+      });
+    }
+  };
+
   return (
     <div>
       <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
@@ -147,22 +166,14 @@ const Customers = () => {
             Clients
           </p>
           <h2 style={{ fontSize: '1.6rem', fontWeight: 600 }}>Base clients</h2>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Consultez la base clients issue de votre boutique (API `/api/users`).
-          </p>
         </div>
         <button
           type="button"
-          style={{
-            padding: '10px 18px',
-            borderRadius: '999px',
-            border: '1px solid var(--divider)',
-            background: 'white',
-            fontSize: '0.85rem',
-            cursor: 'pointer',
-          }}
+          onClick={handleExportCSV}
+          className="btn-pro-gold-outline"
         >
-          Export CSV
+          <Download size={14} />
+          Exporter clients
         </button>
       </header>
 

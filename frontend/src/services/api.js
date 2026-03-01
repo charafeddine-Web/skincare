@@ -308,6 +308,29 @@ export const userService = {
       throw error.response?.data || { message: 'Erreur lors de la suppression de l\'utilisateur' };
     }
   },
+
+  // Export CSV Clients
+  exportUsersCSV: async () => {
+    try {
+      const response = await api.get('/users/export', {
+        responseType: 'blob'
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `users_export_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      return true;
+    } catch (error) {
+      console.error('Export CSV error:', error);
+      throw error.response?.data || { message: 'Erreur lors de l\'exportation CSV' };
+    }
+  },
 };
 
 // Service Catégories (utile pour la gestion de catalogue)

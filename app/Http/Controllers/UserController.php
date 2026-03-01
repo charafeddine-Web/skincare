@@ -128,5 +128,69 @@ class UserController extends Controller
         $user->delete();
         return response()->json(['message' => 'Utilisateur supprimé'], 200);
     }
+
+    /**
+     * Exporte les utilisateurs en CSV
+     */
+    public function export(Request $request)
+    {
+        try {
+            // Vérifier l'authentification
+            $user = $request->user();
+            if (!$user || $user->role !== 'admin') {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            $users = User::all();
+
+            $filename = 'users_export_' . date('Y-m-d_His') . '.csv';
+            
+            // Créer le contenu CSV en mémoire
+            $output = fopen('php://temp', 'r+');
+            
+            // BOM pour UTF-8 (Excel compatibility)
+            fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+            
+            // Headers
+            fputcsv($output, [
+                'ID',
+                'Prénom',
+                'Nom',
+                'Email',
+                'Téléphone',
+                'Rôle',
+                'Date d\'inscription',
+            ], ';');
+            
+            // Data
+            foreach ($users as $u) {
+                fputcsv($output, [
+                    $u->id,
+                    $u->first_name,
+                    $u->last_name,
+                    $u->email,
+                    $u->phone,
+                    $u->role === 'admin' ? 'Administrateur' : 'Client',
+                    $u->created_at->format('d/m/Y H:i'),
+                ], ';');
+            }
+            
+            rewind($output);
+            $csv = stream_get_contents($output);
+            fclose($output);
+            
+            return response($csv)
+                ->header('Content-Type', 'text/csv; charset=UTF-8')
+                ->header('Content-Disposition', "attachment; filename=\"$filename\"")
+                ->header('Pragma', 'no-cache')
+                ->header('Expires', '0');
+                
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur lors de l\'exportation',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
 

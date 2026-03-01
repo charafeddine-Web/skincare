@@ -27,7 +27,7 @@ const Dashboard = () => {
           adminService.getMetrics(),
           adminService.getBestSellers({ limit: 5 }),
         ]);
-        
+
         if (!isMounted) return;
         setMetrics((prev) => ({ ...prev, ...(metricsData || {}) }));
         setBestSellers(Array.isArray(bestSellersData) ? bestSellersData : []);
@@ -84,37 +84,27 @@ const Dashboard = () => {
 
   return (
     <div>
-      <header style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
-        <p
-          style={{
-            fontSize: '0.7rem',
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            color: 'var(--text-light)',
-            marginBottom: '6px',
-          }}
-        >
-          Vue d&apos;ensemble
-        </p>
-        <div>
-          <h2 style={{ fontSize: '1.7rem', fontWeight: 600 }}>Tableau de bord</h2>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-            Suivez en temps réel les ventes, commandes et performances de la boutique Éveline (données API).
-          </p>
+      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'white', padding: '10px 20px', borderRadius: '100px', border: '1px solid var(--divider)', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+          <div style={{
+            width: 10,
+            height: 10,
+            borderRadius: 999,
+            background: loading ? '#f97316' : '#22c55e',
+            boxShadow: loading ? '0 0 0 4px rgba(249, 115, 22, 0.2)' : '0 0 0 4px rgba(34, 197, 94, 0.18)',
+            animation: loading ? 'pulse 2s infinite' : 'none'
+          }} />
+          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '0.5px' }}>
+            {loading ? 'CHARGEMENT DES SYSTÈMES…' : 'SYSTÈMES OPÉRATIONNELS'}
+          </span>
         </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 999,
-              background: loading ? '#f97316' : '#22c55e',
-              boxShadow: loading ? '0 0 0 4px rgba(249, 115, 22, 0.2)' : '0 0 0 4px rgba(34, 197, 94, 0.18)',
-            }}
-          />
-          {loading ? 'Chargement des données…' : 'Données synchronisées'}
+
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="hidden sm:block text-[11px] font-bold text-[var(--accent-deep)] bg-[var(--accent-light)]/30 px-3 py-1.5 rounded-full border border-[var(--accent-light)]">
+            Dernière mise à jour: {new Date().toLocaleTimeString()}
+          </div>
         </div>
-      </header>
+      </div>
 
       {error && (
         <div

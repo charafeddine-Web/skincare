@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { categoryService, productImageService, productService } from '../../services/api';
-import { Eye, Edit, Trash2, Image as ImageIcon, ChevronLeft, ChevronRight, AlertTriangle, Package } from 'lucide-react';
+import { Eye, Edit, Trash2, Image as ImageIcon, ChevronLeft, ChevronRight, AlertTriangle, Package, Download, Upload } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
 import AdminModal from '../../components/AdminModal';
 
@@ -565,39 +565,16 @@ const Products = () => {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-light)', maxWidth: 320 }}>
-            Les données sont chargées depuis l&apos;API Laravel (`/api/products`). Vous devez être connecté en admin
-            pour créer ou modifier des produits.
-          </div>
           <button
             type="button"
             onClick={handleExportCSV}
-            style={{
-              padding: '10px 18px',
-              borderRadius: '999px',
-              border: '1px solid var(--divider)',
-              background: 'white',
-              color: 'var(--text-main)',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className="btn-export-pro"
           >
+            <Download size={18} />
             Export CSV
           </button>
-          <label
-            style={{
-              padding: '10px 18px',
-              borderRadius: '999px',
-              border: '1px solid var(--divider)',
-              background: 'white',
-              color: 'var(--text-main)',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'inline-block',
-            }}
-          >
+          <label className="btn-import-pro">
+            <Upload size={18} />
             Import CSV
             <input
               type="file"
@@ -608,18 +585,7 @@ const Products = () => {
           </label>
           <button
             type="button"
-            style={{
-              padding: '10px 18px',
-              borderRadius: '999px',
-              border: 'none',
-              background: 'var(--accent-deep)',
-              color: 'white',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              opacity: 0.95,
-              boxShadow: 'var(--shadow-sm)',
-            }}
+            className="btn-new-pro"
             onClick={handleOpenModal}
           >
             + Nouveau produit
@@ -695,7 +661,7 @@ const Products = () => {
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
-          style={{
+                  style={{
                     padding: '10px 36px 10px 14px',
                     borderRadius: '12px',
                     border: '1px solid var(--divider)',
@@ -722,11 +688,11 @@ const Products = () => {
                 <select
                   value={sortStock}
                   onChange={(e) => setSortStock(e.target.value)}
-            style={{
+                  style={{
                     padding: '10px 36px 10px 14px',
                     borderRadius: '12px',
-              border: '1px solid var(--divider)',
-              fontSize: '0.85rem',
+                    border: '1px solid var(--divider)',
+                    fontSize: '0.85rem',
                     background: 'var(--white)',
                     color: 'var(--text-main)',
                     cursor: 'pointer',
@@ -763,18 +729,18 @@ const Products = () => {
           <>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ minWidth: '800px', width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-          <thead>
-            <tr style={{ background: 'var(--surface)' }}>
+                <thead>
+                  <tr style={{ background: 'var(--surface)' }}>
                     <th style={{ width: 56, padding: '10px 16px' }}></th>
-              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Produit</th>
-              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Catégorie</th>
-              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Prix</th>
-              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Stock</th>
-              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Statut</th>
+                    <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Produit</th>
+                    <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Catégorie</th>
+                    <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Prix</th>
+                    <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Stock</th>
+                    <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 500, color: 'var(--text-light)' }}>Statut</th>
                     <th style={{ width: 150 }} />
-            </tr>
-          </thead>
-          <tbody>
+                  </tr>
+                </thead>
+                <tbody>
                   {!loading && paginatedProducts.map((p) => {
                     const stock = p.stock_quantity ?? 0;
                     const categoryName = p.category?.name || '—';
@@ -805,7 +771,7 @@ const Products = () => {
                       : null;
 
                     return (
-              <tr key={p.id}>
+                      <tr key={p.id}>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
                           <div
                             style={{
@@ -826,8 +792,8 @@ const Products = () => {
                             {!mainImage && 'No img'}
                           </div>
                         </td>
-                <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
-                  <div style={{ fontWeight: 500 }}>{p.name}</div>
+                        <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
+                          <div style={{ fontWeight: 500 }}>{p.name}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
                             ID : {p.id} · SKU : {p.sku || '—'}
                           </div>
@@ -835,21 +801,21 @@ const Products = () => {
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>{categoryName}</td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)', fontWeight: 600 }}>
                           {Number(p.price).toFixed(2)} €
-                </td>
-                <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
-                  <span
-                    style={{
-                      fontSize: '0.8rem',
-                      padding: '2px 10px',
-                      borderRadius: '999px',
+                        </td>
+                        <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
+                          <span
+                            style={{
+                              fontSize: '0.8rem',
+                              padding: '2px 10px',
+                              borderRadius: '999px',
                               background: stockBadgeBg,
                               color: stockBadgeColor,
-                      fontWeight: 600,
-                    }}
-                  >
+                              fontWeight: 600,
+                            }}
+                          >
                             {stockLabel}
-                  </span>
-                </td>
+                          </span>
+                        </td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>{statusLabel}</td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)', textAlign: 'right' }}>
                           <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -1355,12 +1321,12 @@ const Products = () => {
                   Ajoutez des URLs d&apos;images hébergées (CDN, Cloudinary, etc.).
                 </p>
               </div>
-                  <button
-                    type="button"
+              <button
+                type="button"
                 onClick={() => !imageSubmitting && setImageModalProduct(null)}
-                    style={{
-                      border: 'none',
-                      background: 'transparent',
+                style={{
+                  border: 'none',
+                  background: 'transparent',
                   fontSize: '0.9rem',
                   color: 'var(--text-light)',
                   cursor: 'pointer',
@@ -1616,7 +1582,7 @@ const Products = () => {
                   onChange={(e) => setEditProduct({ ...editProduct, stock_quantity: e.target.value })}
                   style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)' }}
                 />
-      </div>
+              </div>
             </div>
             <div>
               <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Catégorie</label>
