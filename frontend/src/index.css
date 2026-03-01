@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
 
@@ -261,6 +259,25 @@ p {
 .btn-primary:hover {
   transform: translateY(-3px);
   box-shadow: var(--shadow-glow-gold);
+}
+
+/* =========================================
+   ADMIN DASHBOARD LAYOUT (Responsive)
+   ========================================= */
+.admin-dashboard-main-grid {
+  align-items: flex-start;
+}
+
+@media (max-width: 900px) {
+  .admin-dashboard-main-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-dashboard-stats-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
 }
 
 .btn-secondary {

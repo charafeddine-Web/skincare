@@ -13,7 +13,11 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        return response()->json(Category::withCount('products')->get(), 200);
+        $categories = cache()->remember('categories.with_count', 60, function () {
+            return Category::withCount('products')->get();
+        });
+
+        return response()->json($categories, 200);
     }
 
     /**

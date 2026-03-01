@@ -8,6 +8,7 @@ use App\Http\Controllers\AddressController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProductImageController;
+use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\ReviewController;
@@ -80,6 +81,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Routes pour les images de produits
     Route::apiResource('product-images', ProductImageController::class);
+    Route::post('/products/{product}/images/upload', [ProductImageController::class, 'upload']);
+
+    // Tableau de bord admin (métriques légères)
+    Route::get('/admin/metrics', [AdminDashboardController::class, 'metrics']);
 
     // Routes pour les commandes
     Route::apiResource('orders', OrderController::class);

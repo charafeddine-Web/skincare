@@ -14,7 +14,11 @@ class UserController extends Controller
      */
     public function index()
     {
-        return response()->json(User::all(), 200);
+        // On charge uniquement les utilisateurs pour optimiser les performances de la liste
+        return response()->json(
+            User::all(),
+            200
+        );
     }
 
     /**

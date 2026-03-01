@@ -117,4 +117,243 @@ export const authService = {
   },
 };
 
+// Service Produits (admin & public)
+export const productService = {
+  // Liste des produits (avec filtres éventuels : search, category_id, is_active)
+  list: async (params = {}) => {
+    try {
+      const response = await api.get('/products', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des produits' };
+    }
+  },
+
+  // Création d'un produit (zone admin)
+  create: async (productData) => {
+    try {
+      const response = await api.post('/products', {
+        name: productData.name,
+        // slug optionnel : généré côté backend si omis
+        sku: productData.sku,
+        description: productData.description || '',
+        price: Number(productData.price),
+        stock_quantity: Number(productData.stock_quantity || 0),
+        category_id: Number(productData.category_id),
+        is_active: productData.is_active ?? true,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la création du produit' };
+    }
+  },
+
+  // Mise à jour d'un produit
+  update: async (id, updates) => {
+    try {
+      const response = await api.put(`/products/${id}`, updates);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la mise à jour du produit' };
+    }
+  },
+
+  // Suppression d'un produit
+  remove: async (id) => {
+    try {
+      const response = await api.delete(`/products/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la suppression du produit' };
+    }
+  },
+};
+
+// Service Commandes (admin)
+export const orderService = {
+  list: async (params = {}) => {
+    try {
+      const response = await api.get('/orders', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des commandes' };
+    }
+  },
+
+  update: async (id, data) => {
+    try {
+      const response = await api.put(`/orders/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la mise à jour de la commande' };
+    }
+  },
+
+  updateStatus: async (id, status) => {
+    try {
+      const response = await api.put(`/orders/${id}/status`, { status });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la mise à jour du statut' };
+    }
+  },
+
+  remove: async (id) => {
+    try {
+      const response = await api.delete(`/orders/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la suppression de la commande' };
+    }
+  },
+};
+
+// Service Admin (metrics dashboard)
+export const adminService = {
+  getMetrics: async () => {
+    try {
+      const response = await api.get('/admin/metrics');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des métriques admin' };
+    }
+  },
+};
+
+// Service Utilisateurs / Clients (admin)
+export const userService = {
+  list: async () => {
+    try {
+      const response = await api.get('/users');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des clients' };
+    }
+  },
+
+  update: async (id, data) => {
+    try {
+      const response = await api.put(`/users/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la mise à jour de l\'utilisateur' };
+    }
+  },
+
+  remove: async (id) => {
+    try {
+      const response = await api.delete(`/users/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la suppression de l\'utilisateur' };
+    }
+  },
+};
+
+// Service Catégories (utile pour la gestion de catalogue)
+export const categoryService = {
+  list: async () => {
+    try {
+      const response = await api.get('/categories');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des catégories' };
+    }
+  },
+
+  create: async (data) => {
+    try {
+      const response = await api.post('/categories', {
+        name: data.name,
+        slug: data.slug || undefined,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la création de la catégorie' };
+    }
+  },
+
+  update: async (id, data) => {
+    try {
+      const response = await api.put(`/categories/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la mise à jour de la catégorie' };
+    }
+  },
+
+  remove: async (id) => {
+    try {
+      const response = await api.delete(`/categories/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la suppression de la catégorie' };
+    }
+  },
+};
+
+// Service Images produits
+export const productImageService = {
+  listByProduct: async (productId) => {
+    try {
+      const response = await api.get('/product-images', { params: { product_id: productId } });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des images produit' };
+    }
+  },
+
+  uploadFiles: async (productId, files, options = {}) => {
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((file) => {
+        formData.append('images[]', file);
+      });
+      if (options.is_main) {
+        formData.append('is_main', 'true');
+      }
+
+      const response = await api.post(`/products/${productId}/images/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du téléversement de l\'image produit' };
+    }
+  },
+
+  create: async ({ product_id, image_url, is_main }) => {
+    try {
+      const response = await api.post('/product-images', {
+        product_id,
+        image_url,
+        is_main: !!is_main,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de l\'ajout de l\'image produit' };
+    }
+  },
+
+  update: async (id, data) => {
+    try {
+      const response = await api.put(`/product-images/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la mise à jour de l\'image produit' };
+    }
+  },
+
+  remove: async (id) => {
+    try {
+      const response = await api.delete(`/product-images/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la suppression de l\'image produit' };
+    }
+  },
+};
+
 export default api;

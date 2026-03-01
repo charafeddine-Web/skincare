@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\ProductImage;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use Cloudinary\Api\Upload\UploadApi;
 
 class ProductImageController extends Controller
 {
@@ -41,6 +43,50 @@ class ProductImageController extends Controller
         $image = ProductImage::create($validated);
 
         return response()->json($image->load('product'), 201);
+    }
+
+    /**
+     * Upload d'une ou plusieurs images vers Cloudinary pour un produit donné
+     */
+    public function upload(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+            'images' => 'required|array',
+            'images.*' => 'required|file|image|max:5120', // 5MB
+            'is_main' => 'sometimes|in:true,false,1,0,on,off',
+        ]);
+
+        $setMain = filter_var($validated['is_main'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        $uploaded = [];
+
+        foreach ($validated['images'] as $index => $file) {
+            $upload = (new UploadApi())->upload($file->getRealPath(), [
+                'folder' => 'skincare/products/' . $product->id,
+            ]);
+
+            $url = $upload['secure_url'] ?? $upload['url'] ?? null;
+
+            if (!$url) {
+                continue;
+            }
+
+            // Si on veut définir l'image principale, on désactive les autres avant la première insertion
+            $isMainForThis = $setMain && $index === 0;
+            if ($isMainForThis) {
+                ProductImage::where('product_id', $product->id)->update(['is_main' => false]);
+            }
+
+            $image = ProductImage::create([
+                'product_id' => $product->id,
+                'image_url' => $url,
+                'is_main' => $isMainForThis,
+            ]);
+
+            $uploaded[] = $image;
+        }
+
+        return response()->json($uploaded, 201);
     }
 
     /**
