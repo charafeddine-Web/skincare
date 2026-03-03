@@ -112,6 +112,7 @@ const ReviewForm = ({ productId, onSuccess }) => {
                     ))}
                 </div>
             </div>
+            
 
             <div style={{ marginBottom: '24px' }}>
                 <label htmlFor="comment" style={{ display: 'block', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>Votre message</label>

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=Poppins:wght@300;400;500;600;700&display=swap');
 
 /* =========================================
    DESIGN TOKENS
@@ -58,8 +58,20 @@
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --transition-fast: all 0.2s var(--ease-out);
+  --transition-mid: all 0.3s var(--ease-out);
   --transition: all 0.4s var(--ease-out);
   --transition-slow: all 0.7s var(--ease-out);
+
+  /* Premium e-commerce: soft neutrals */
+  --neutral-50: #FDFBF9;
+  --neutral-100: #F7F3EF;
+  --neutral-200: #EFE9E3;
+  --neutral-300: #E8E0D8;
+  --neutral-400: #D4C9BF;
+  --nude: #E8D5CC;
+  --soft-pink: #F5E6E8;
+  --glass: rgba(255, 252, 250, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.4);
 }
 
 /* =========================================
@@ -80,7 +92,7 @@ html {
 }
 
 body {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'Poppins', 'DM Sans', system-ui, sans-serif;
   color: var(--text-main);
   background-color: var(--background);
   line-height: 1.65;
@@ -134,11 +146,16 @@ h1,
 h2,
 h3,
 h4,
-h5,
-.font-serif {
-  font-family: 'Cormorant Garant', Georgia, serif;
+h5 {
+  font-family: 'Poppins', sans-serif;
   color: var(--text-main);
-  line-height: 1.12;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.font-serif,
+.font-display {
+  font-family: 'Cormorant Garamond', Georgia, serif;
 }
 
 h1 {
@@ -354,11 +371,11 @@ p {
    ========================================= */
 .product-card {
   background: var(--white);
-  border-radius: 20px;
+  border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
   position: relative;
-  box-shadow: 0 2px 12px rgba(28, 28, 30, 0.06);
+  box-shadow: 0 2px 10px rgba(28, 28, 30, 0.06);
   border: 1px solid rgba(232, 224, 216, 0.8);
   transition: box-shadow 0.35s var(--ease-out), border-color 0.3s ease;
 }
@@ -377,8 +394,8 @@ p {
 .product-card__media {
   position: relative;
   aspect-ratio: 1;
-  min-height: 220px;
-  max-height: 320px;
+  min-height: 180px;
+  max-height: 280px;
   background: var(--grad-surface);
   display: flex;
   align-items: center;
@@ -387,15 +404,57 @@ p {
 }
 
 .product-card__img {
-  width: auto;
-  height: 72%;
-  max-width: 85%;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  object-position: center;
   transition: transform 0.4s var(--ease-out);
 }
 
 .product-card:hover .product-card__img {
-  transform: scale(1.03);
+  transform: scale(1.08);
+}
+
+.product-card__img-wrap {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-card__img--hover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.35s var(--ease-out);
+}
+
+.product-card__img--hover img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  transition: transform 0.4s var(--ease-out);
+}
+
+.product-card__img-wrap img {
+  object-position: center;
+}
+
+.product-card:hover .product-card__img--hover {
+  opacity: 1;
+}
+
+.product-card:hover .product-card__img--hover img {
+  transform: scale(1.05);
 }
 
 .product-card__shimmer {
@@ -1217,7 +1276,7 @@ a:focus {
 }
 
 .price-tag {
-  font-family: 'Cormorant Garant', serif;
+  font-family: 'Cormorant Garamond', serif;
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--text-main);
@@ -1350,6 +1409,208 @@ a:focus {
     text-align: center;
     width: 100%;
   }
+}
+
+/* =========================================
+   SHOP PAGE LAYOUT
+   ========================================= */
+.shop-page .shop-layout {
+  display: flex;
+  gap: clamp(32px, 4vw, 48px);
+  align-items: flex-start;
+}
+
+@media (max-width: 1024px) {
+  .shop-page .shop-sidebar {
+    display: none;
+  }
+}
+
+.shop-page .shop-main {
+  min-width: 0;
+}
+
+.shop-grid .product-card {
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s;
+  border-radius: 16px;
+}
+
+.shop-grid .product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 36px rgba(28, 28, 30, 0.1);
+}
+
+/* Shop grid: cartes taille moyenne */
+.shop-grid .product-card__body {
+  padding: 14px 16px 16px;
+}
+
+.shop-grid .product-card__category {
+  font-size: 0.62rem;
+  margin-bottom: 5px;
+}
+
+.shop-grid .product-card__title {
+  font-size: 0.95rem;
+  -webkit-line-clamp: 2;
+  margin-bottom: 8px;
+}
+
+.shop-grid .product-card__rating-wrap {
+  margin-bottom: 10px;
+}
+
+.shop-grid .product-card__stars .product-card__review-count {
+  font-size: 0.68rem;
+}
+
+.shop-grid .product-card__price {
+  font-size: 1.05rem;
+}
+
+/* Footer sans bouton Ajouter en shop (ajout via quick-add bar) */
+.shop-grid .product-card__footer {
+  align-items: center;
+}
+
+/* Shop grid: 4/5 ratio, cover image, hover zoom */
+.shop-grid .product-card__media {
+  aspect-ratio: 4/5;
+  min-height: 0;
+  max-height: none;
+}
+
+.shop-grid .product-card__img-wrap {
+  position: absolute;
+  inset: 0;
+}
+
+.shop-grid .product-card__img,
+.shop-grid .product-card__img--hover img {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+.shop-grid .product-card:hover .product-card__img,
+.shop-grid .product-card:hover .product-card__img--hover img {
+  transform: scale(1.05);
+}
+
+/* Quick Add bar — slide up on hover */
+.product-card__quick-add-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 12px;
+  transform: translateY(100%);
+  opacity: 0;
+  transition: transform 0.3s var(--ease-out), opacity 0.3s;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.shop-grid .product-card__quick-add-bar {
+  padding: 10px 12px;
+}
+
+.shop-grid .product-card__quick-add-btn {
+  padding: 11px 14px;
+  font-size: 0.85rem;
+}
+
+.product-card__quick-add-bar .product-card__quick-add-btn {
+  pointer-events: auto;
+}
+
+.shop-grid .product-card:hover .product-card__quick-add-bar,
+.shop-grid .product-card:focus-within .product-card__quick-add-bar {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.product-card__quick-add-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--neutral-400);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.product-card__quick-add-btn:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Product Detail Page — Slider left, Info right */
+.product-detail-page .product-detail-grid {
+  grid-template-columns: 1fr;
+  gap: 40px;
+}
+
+@media (min-width: 1024px) {
+  .product-detail-page .product-detail-grid {
+    grid-template-columns: 1.15fr 1fr;
+    gap: 56px;
+    align-items: start;
+  }
+
+  .product-detail-page .product-detail-gallery {
+    position: sticky;
+    top: 100px;
+  }
+
+  .product-detail-page .product-detail-info {
+    position: sticky;
+    top: 100px;
+  }
+}
+
+.product-detail-page .reviews-grid {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 1024px) {
+  .product-detail-page .reviews-grid {
+    grid-template-columns: 380px 1fr;
+    gap: 48px;
+  }
+}
+
+.product-detail-page .hover-accent:hover {
+  color: var(--accent) !important;
+}
+
+.product-detail-page .product-detail-thumbs::-webkit-scrollbar {
+  height: 4px;
+}
+
+.product-detail-page .product-detail-thumbs::-webkit-scrollbar-thumb {
+  background: var(--divider);
+  border-radius: 4px;
+}
+
+/* Boutique — barre de recherche */
+.shop-search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
+}
+
+.shop-search-bar:focus-within .shop-search-icon {
+  color: var(--accent);
 }
 
 /* =========================================

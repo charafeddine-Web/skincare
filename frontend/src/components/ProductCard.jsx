@@ -23,7 +23,7 @@ const StarRating = ({ rating = 4.5, count }) => (
     </div>
 );
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, onQuickView, showQuickAddBar }) => {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
     const [wishlisted, setWishlisted] = useState(product.is_favorited ?? false);
@@ -97,15 +97,22 @@ const ProductCard = ({ product }) => {
                 <div className="product-card__shimmer" aria-hidden="true" />
 
                 {product.image ? (
-                    <img
-                        src={product.image}
-                        alt={product.name || 'Produit'}
-                        loading="lazy"
-                        decoding="async"
-                        className="product-card__img"
-                        srcSet={product.srcSet}
-                        sizes="(max-width: 640px) 50vw, 280px"
-                    />
+                    <div className="product-card__img-wrap">
+                        <img
+                            src={product.image}
+                            alt={product.name || 'Produit'}
+                            loading="lazy"
+                            decoding="async"
+                            className="product-card__img"
+                            srcSet={product.srcSet}
+                            sizes="(max-width: 640px) 50vw, 280px"
+                        />
+                        {product.imageHover && (
+                            <div className="product-card__img--hover">
+                                <img src={product.imageHover} alt="" aria-hidden />
+                            </div>
+                        )}
+                    </div>
                 ) : (
                     <div className="product-card__placeholder">
                         <div className="product-card__placeholder-bottle" />
@@ -123,10 +130,10 @@ const ProductCard = ({ product }) => {
                     <Motion.button
                         type="button"
                         className="product-card__quick-view"
-                        aria-label="Aperçu du produit"
+                        aria-label="Aperçu rapide"
                         onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/product/${product.id}`);
+                            if (onQuickView) onQuickView(product); else navigate(`/product/${product.id}`);
                         }}
                         whileHover={{ scale: 1.08 }}
                         whileTap={{ scale: 0.95 }}
@@ -140,6 +147,21 @@ const ProductCard = ({ product }) => {
                     {isNew && <span className="product-card__badge product-card__badge--new">Nouveau</span>}
                     {badge && <span className="product-card__badge product-card__badge--tag">{badge}</span>}
                 </div>
+
+                {/* Quick Add bar (shop grid hover) */}
+                {showQuickAddBar && (
+                    <div className="product-card__quick-add-bar" aria-hidden>
+                        <Motion.button
+                            type="button"
+                            className="product-card__quick-add-btn"
+                            onClick={handleAddToCart}
+                            whileTap={{ scale: 0.96 }}
+                        >
+                            <ShoppingBag size={18} strokeWidth={2} />
+                            Ajouter au panier
+                        </Motion.button>
+                    </div>
+                )}
 
                 {/* Wishlist */}
                 <Motion.button
@@ -170,22 +192,24 @@ const ProductCard = ({ product }) => {
                         <span className="product-card__price">{product.price} €</span>
                     </div>
 
-                    <AnimatePresence mode="wait">
-                        <Motion.button
-                            key={addedToCart ? 'added' : 'add'}
-                            type="button"
-                            className={`product-card__cta ${addedToCart ? 'product-card__cta--added' : ''}`}
-                            aria-label={addedToCart ? 'Ajouté au panier' : 'Ajouter au panier'}
-                            onClick={handleAddToCart}
-                            initial={{ scale: 0.92, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.92, opacity: 0 }}
-                            whileTap={{ scale: 0.96 }}
-                        >
-                            <ShoppingBag size={16} strokeWidth={2} />
-                            <span className="hide-mobile">{addedToCart ? 'Ajouté ✓' : 'Ajouter'}</span>
-                        </Motion.button>
-                    </AnimatePresence>
+                    {!showQuickAddBar && (
+                        <AnimatePresence mode="wait">
+                            <Motion.button
+                                key={addedToCart ? 'added' : 'add'}
+                                type="button"
+                                className={`product-card__cta ${addedToCart ? 'product-card__cta--added' : ''}`}
+                                aria-label={addedToCart ? 'Ajouté au panier' : 'Ajouter au panier'}
+                                onClick={handleAddToCart}
+                                initial={{ scale: 0.92, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.92, opacity: 0 }}
+                                whileTap={{ scale: 0.96 }}
+                            >
+                                <ShoppingBag size={16} strokeWidth={2} />
+                                <span className="hide-mobile">{addedToCart ? 'Ajouté ✓' : 'Ajouter'}</span>
+                            </Motion.button>
+                        </AnimatePresence>
+                    )}
                 </div>
             </div>
         </Motion.article>

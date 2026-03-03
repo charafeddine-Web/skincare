@@ -151,7 +151,7 @@ const Navbar = () => {
                                             <Motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
                                                         style={{ position: 'absolute', top: '100%', left: '-20px', background: 'white', borderRadius: '20px', padding: '15px', minWidth: '200px', maxWidth: '280px', boxShadow: '0 20px 40px rgba(0,0,0,0.08)', marginTop: '15px', zIndex: 1001 }}>
                                                 {link.children.map(child => (
-                                                    <Link key={child} to={`/shop?cat=${child.toLowerCase()}`} style={{ display: 'block', padding: '10px 15px', fontSize: '0.85rem', color: '#666', borderRadius: '12px', textDecoration: 'none' }}>{child}</Link>
+                                                    <Link key={child} to={`/shop?cat=${encodeURIComponent(child.toLowerCase().trim())}`} style={{ display: 'block', padding: '10px 15px', fontSize: '0.85rem', color: '#666', borderRadius: '12px', textDecoration: 'none' }}>{child}</Link>
                                                 ))}
                                             </Motion.div>
                                         )}
@@ -163,7 +163,33 @@ const Navbar = () => {
 
                     {/* ACTIONS */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <button onClick={() => navigate('/shop')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><Search size={20} /></button>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/shop?focus=search')}
+                            aria-label="Rechercher dans la boutique"
+                            style={{
+                                background: 'transparent',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: 'var(--text-muted)',
+                                padding: 10,
+                                borderRadius: 14,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'color 0.2s, background 0.2s',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.color = 'var(--accent)';
+                                e.currentTarget.style.background = 'rgba(197,160,89,0.08)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.color = 'var(--text-muted)';
+                                e.currentTarget.style.background = 'transparent';
+                            }}
+                        >
+                            <Search size={22} />
+                        </button>
 
                         {/* FAVORITES — affiché uniquement si connecté */}
                         {isAuthenticated && (
@@ -238,15 +264,26 @@ const Navbar = () => {
             <AnimatePresence>
                 {isOpen && (
                     <Motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                style={{ position: 'fixed', inset: 0, background: 'white', zIndex: 2000, padding: '100px 30px' }}>
+                                style={{ position: 'fixed', inset: 0, background: 'white', zIndex: 2000, padding: '100px 30px', overflowY: 'auto' }}>
                         <button onClick={() => setIsOpen(false)} style={{ position: 'absolute', top: '30px', right: '30px', background: 'none', border: 'none' }}><X size={30}/></button>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
                             {(isAuthenticated ? authenticatedNavLinks : publicNavLinks).map(l => (
-                                <Link key={l.label} to={l.href} onClick={(e) => handleNavigation(e, l.href)} style={{ fontSize: '1.8rem', fontWeight: 700, textDecoration: 'none', color: '#000' }}>{l.label}</Link>
+                                l.href === '#' && l.children?.length ? (
+                                    <div key={l.label}>
+                                        <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{l.label}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+                                            {l.children.map(child => (
+                                                <Link key={child} to={`/shop?cat=${encodeURIComponent(child.toLowerCase().trim())}`} onClick={() => setIsOpen(false)} style={{ fontSize: '1.25rem', fontWeight: 600, textDecoration: 'none', color: '#000' }}>{child}</Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <Link key={l.label} to={l.href} onClick={(e) => { handleNavigation(e, l.href); setIsOpen(false); }} style={{ fontSize: '1.8rem', fontWeight: 700, textDecoration: 'none', color: '#000' }}>{l.label}</Link>
+                                )
                             ))}
                             <div style={{ height: '1px', background: '#eee', margin: '10px 0' }} />
                             {!isAuthenticated ? (
-                                <Link to="/login" style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--accent)' }}>Se connecter</Link>
+                                <Link to="/login" onClick={() => setIsOpen(false)} style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--accent)' }}>Se connecter</Link>
                             ) : (
                                 <button onClick={handleLogout} style={{ textAlign: 'left', background: 'none', border: 'none', fontSize: '1.2rem', fontWeight: 600, color: '#e74c3c', padding: 0 }}>Déconnexion</button>
                             )}
