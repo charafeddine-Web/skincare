@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ShoppingBag, Heart, Eye, Star } from 'lucide-react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { favoriteService } from '../services/api';
+import { toast } from 'react-toastify';
+import { favoriteService, cartService, CART_UPDATED_EVENT } from '../services/api';
 
 const StarRating = ({ rating = 4.5, count }) => (
     <div className="product-card__stars">
@@ -43,10 +44,21 @@ const ProductCard = ({ product }) => {
     const isNew = product.isNew;
     const badge = product.badge;
 
-    const handleAddToCart = (e) => {
+    const handleAddToCart = async (e) => {
         e.stopPropagation();
-        setAddedToCart(true);
-        setTimeout(() => setAddedToCart(false), 1800);
+        try {
+            await cartService.addItem(product.id, 1);
+            setAddedToCart(true);
+            setTimeout(() => setAddedToCart(false), 1800);
+            toast.success('Ajouté au panier');
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+        } catch (err) {
+            if (err?.status === 401) {
+                navigate('/login');
+            } else {
+                toast.error(err?.message || 'Erreur lors de l\'ajout au panier');
+            }
+        }
     };
 
     const handleWishlist = async (e) => {

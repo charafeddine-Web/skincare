@@ -1,213 +1,158 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-    ShoppingBag,
-    Search,
-    User,
-    Menu,
-    X,
-    ChevronDown,
-    Instagram,
-    Facebook,
-    Youtube,
-    Phone,
-    ArrowRight,
-    LogOut
+    ShoppingBag, Search, User, Menu, X, ChevronDown,
+    Heart, LogOut, Settings, Package
 } from 'lucide-react';
-import {motion as Motion, AnimatePresence} from 'framer-motion';
-import { useLocation, Link } from 'react-router-dom';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-
-// Navigation links for non-authenticated users
-const publicNavLinks = [
-    {label: 'Accueil', href: '/'},
-    {label: 'Boutique', href: '/shop'},
-    {
-        label: 'Catégories', href: '#',
-        children: ['Nettoyants', 'Sérums', 'Hydratants', 'SPF & Solaires']
-    },
-    {label: 'À Propos', href: '/about'},
-    {label: 'Contact', href: '/contact'},
-];
-
-// Navigation links for authenticated normal users
-const authenticatedNavLinks = [
-    {label: 'Boutique', href: '/shop'},
-    {label: 'Mes commandes', href: '/account/commandes'},
-];
+import { categoryService, cartService, CART_UPDATED_EVENT } from '../services/api';
 
 const Navbar = () => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [categories, setCategories] = useState([]);
+    const [isOpen, setIsOpen] = useState(false); // Menu mobile
     const [scrolled, setScrolled] = useState(false);
-    const [cartCount] = useState(2);
-    const [activeDropdown, setActiveDropdown] = useState(null);
-    const [showUserMenu, setShowUserMenu] = useState(false);
-    
+    const [cartCount, setCartCount] = useState(0);
+    const [activeDropdown, setActiveDropdown] = useState(null); // Menu catégories
+    const [showUserMenu, setShowUserMenu] = useState(false); // Menu Profil
+
     const { user, isAuthenticated, isAdmin, logout, loading } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
+
+    // RÉFÉRENCE pour détecter le clic extérieur
+    const userMenuRef = useRef(null);
+
+    // Liens de navigation
+    const publicNavLinks = [
+        { label: 'Accueil', href: '/' },
+        { label: 'Boutique', href: '/shop' },
+        { label: 'Catégories', href: '#', children: categories.map(c => c.name) },
+        { label: 'À Propos', href: '/about' },
+        { label: 'Contact', href: '/contact' },
+    ];
+
+    const authenticatedNavLinks = [
+        { label: 'Accueil', href: '/' },
+        { label: 'Boutique', href: '/shop' },
+        { label: 'Catégories', href: '#', children: categories.map(c => c.name) },
+        { label: 'Mes commandes', href: '/account/commandes' },
+    ];
+
+    // 1. FERMER LE MENU AU CLIC EXTÉRIEUR
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+                setShowUserMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // 2. FERMER LE MENU QUAND ON CHANGE DE PAGE
+    useEffect(() => {
+        setShowUserMenu(false);
+        setIsOpen(false);
+    }, [location.pathname]);
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await categoryService.list();
+                setCategories(res || []);
+            } catch (err) { console.error("Error categories:", err); }
+        };
+        fetchCategories();
+    }, []);
+
+    const fetchCartCount = React.useCallback(async () => {
+        if (!isAuthenticated) {
+            setCartCount(0);
+            return;
+        }
+        try {
+            const data = await cartService.getCartSummary();
+            setCartCount(data?.items_count ?? 0);
+        } catch {
+            setCartCount(0);
+        }
+    }, [isAuthenticated]);
+
+    useEffect(() => {
+        fetchCartCount();
+    }, [fetchCartCount]);
+
+    useEffect(() => {
+        const handler = () => fetchCartCount();
+        window.addEventListener(CART_UPDATED_EVENT, handler);
+        return () => window.removeEventListener(CART_UPDATED_EVENT, handler);
+    }, [fetchCartCount]);
+
+    useEffect(() => {
+        const handleScroll = () => setScrolled(window.scrollY > 40);
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    const handleNavigation = (e, href) => {
+        const protectedPaths = ['/account', '/favorites'];
+        const isProtected = protectedPaths.some(path => href.startsWith(path));
+        if (isProtected && !isAuthenticated) {
+            e.preventDefault();
+            navigate('/login');
+        }
+    };
 
     const handleLogout = async () => {
         await logout();
         setShowUserMenu(false);
+        navigate('/');
     };
 
-    useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 40);
-        window.addEventListener('scroll', handleScroll, {passive: true});
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+    const getInitial = (name) => name ? name.charAt(0).toUpperCase() : 'U';
 
-    // Si un admin est sur une route /admin, on masque complètement la navbar
-    if (isAdmin && location.pathname.startsWith('/admin')) {
-        return null;
-    }
+    if (isAdmin && location.pathname.startsWith('/admin')) return null;
 
     return (
         <>
             <Motion.nav
-                initial={{y: -100, opacity: 0}}
-                animate={{y: 0, opacity: 1}}
-                transition={{duration: 0.7, ease: [0.22, 1, 0.36, 1]}}
-                role="navigation"
-                aria-label="Navigation principale"
+                initial={{ y: -100, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
                 style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    zIndex: 1000,
-                    transition: 'all 0.5s var(--ease-out)',
-                    padding: scrolled ? '10px 0' : '20px 0',
-                    background: scrolled
-                        ? 'rgba(255, 252, 250, 0.85)'
-                        : 'rgba(255, 252, 250, 0.6)',
-                    backdropFilter: 'blur(24px) saturate(160%)',
-                    WebkitBackdropFilter: 'blur(24px) saturate(160%)',
-                    borderBottom: scrolled ? '1px solid var(--divider)' : '1px solid transparent',
-                    boxShadow: scrolled ? 'var(--shadow-sm)' : 'none',
+                    position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
+                    padding: scrolled ? '12px 0' : '24px 0',
+                    background: scrolled ? 'rgba(255, 255, 255, 0.98)' : 'rgba(255, 252, 250, 0.8)',
+                    backdropFilter: 'blur(20px) saturate(180%)',
+                    borderBottom: scrolled ? '1px solid rgba(0,0,0,0.05)' : '1px solid transparent',
+                    transition: 'all 0.4s ease',
                 }}
             >
-                <div className="container"
-                     style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                    {/* Left: Logo + Nav Links */}
-                    <div style={{display: 'flex', alignItems: 'center', gap: 'clamp(24px, 4vw, 60px)'}}>
-                        {/* Brand */}
-                        <Link to="/" style={{textDecoration: 'none', transition: 'transform 0.3s var(--ease-out)'}}>
-                            <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                                {/* Logo image placed before brand text. Asset from public/logo1.png served at '/logo1.png' */}
-                                {/*<img src="/logo2.png" alt="Éveline logo" style={{ height: '48px', width: 'auto', display: 'block', borderRadius: '6px' }} />*/}
-                                <div style={{display: 'flex', flexDirection: 'column', alignItems: 'flex-start'}}>
-                                    <span style={{
-                                        fontFamily: "'Cormorant Garant', serif",
-                                        fontSize: 'clamp(1.5rem, 3vw, 1.85rem)',
-                                        fontWeight: 700,
-                                        letterSpacing: '5px',
-                                        color: 'var(--text-main)',
-                                        lineHeight: 1.1,
-                                    }}>ÉVELINE</span>
-                                    <span style={{
-                                        fontSize: '0.55rem',
-                                        letterSpacing: '4px',
-                                        textTransform: 'uppercase',
-                                        color: 'var(--accent)',
-                                        fontWeight: 600,
-                                        marginTop: '2px',
-                                    }}>Cosmetics</span>
-                                </div>
-                            </div>
-                        </Link>
+                <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 
-                        {/* Desktop Nav */}
-                        <ul className="hide-mobile" style={{display: 'flex', alignItems: 'center', gap: '32px'}}>
-                            {(isAuthenticated && !isAdmin ? authenticatedNavLinks : publicNavLinks).map((link) => (
-                                <li key={link.label} style={{position: 'relative'}}
-                                    onMouseEnter={() => link.children && setActiveDropdown(link.label)}
+                    {/* LOGO & NAV */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '50px' }}>
+                        <Link to="/"><img src="/logo2.png" alt="Logo" style={{ height: scrolled ? '38px' : '45px', transition: 'height 0.3s' }} /></Link>
+
+                        <ul className="hide-mobile" style={{ display: 'flex', gap: '30px', listStyle: 'none', margin: 0, padding: 0 }}>
+                            {(isAuthenticated ? authenticatedNavLinks : publicNavLinks).map((link) => (
+                                <li key={link.label}
+                                    onMouseEnter={() => link.children?.length > 0 && setActiveDropdown(link.label)}
                                     onMouseLeave={() => setActiveDropdown(null)}
+                                    style={{ position: 'relative' }}
                                 >
-                                    {link.children ? (
-                                        <button
-                                            type="button"
-                                            className="nav-link"
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px',
-                                                fontSize: '0.82rem',
-                                                fontWeight: 500,
-                                                letterSpacing: '0.04em',
-                                                textTransform: 'uppercase',
-                                                background: 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                            }}
-                                            aria-haspopup="menu"
-                                            aria-expanded={(activeDropdown === link.label).toString()}
-                                        >
-                                            {link.label}
-                                            <ChevronDown size={14} style={{
-                                                transition: 'transform 0.3s var(--ease-out)',
-                                                transform: activeDropdown === link.label ? 'rotate(180deg)' : 'rotate(0deg)'
-                                            }}/>
-                                        </button>
-                                    ) : (
-                                        <Link
-                                            to={link.href}
-                                            className="nav-link"
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px',
-                                                fontSize: '0.82rem',
-                                                fontWeight: 500,
-                                                letterSpacing: '0.04em',
-                                                textTransform: 'uppercase',
-                                            }}
-                                        >
-                                            {link.label}
-                                        </Link>
-                                    )}
+                                    <Link to={link.href} onClick={(e) => handleNavigation(e, link.href)} className="nav-link"
+                                          style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}>
+                                        {link.label}
+                                        {link.children?.length > 0 && <ChevronDown size={12} />}
+                                    </Link>
 
                                     <AnimatePresence>
-                                        {link.children && activeDropdown === link.label && (
-                                            <Motion.div
-                                                initial={{opacity: 0, y: 12}}
-                                                animate={{opacity: 1, y: 0}}
-                                                exit={{opacity: 0, y: 12}}
-                                                transition={{duration: 0.3, ease: [0.22, 1, 0.36, 1]}}
-                                                role="menu"
-                                                aria-label={`${link.label} sous-menu`}
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: 'calc(100% + 20px)',
-                                                    left: '-20px',
-                                                    background: 'white',
-                                                    border: '1px solid var(--divider)',
-                                                    borderRadius: '16px',
-                                                    padding: '12px',
-                                                    minWidth: '220px',
-                                                    boxShadow: 'var(--shadow-lg)',
-                                                    zIndex: 100,
-                                                }}
-                                            >
-                                                {link.children.map((child) => (
-                                                    <Link key={child} to={`/shop?cat=${child.toLowerCase()}`} style={{
-                                                        display: 'block',
-                                                        padding: '12px 16px',
-                                                        borderRadius: '10px',
-                                                        fontSize: '0.85rem',
-                                                        color: 'var(--text-muted)',
-                                                        transition: 'all 0.2s',
-                                                    }}
-                                                       onMouseEnter={e => {
-                                                           e.currentTarget.style.background = 'var(--surface)';
-                                                           e.currentTarget.style.color = 'var(--accent-deep)';
-                                                           e.currentTarget.style.paddingLeft = '20px';
-                                                       }}
-                                                       onMouseLeave={e => {
-                                                           e.currentTarget.style.background = 'transparent';
-                                                           e.currentTarget.style.color = 'var(--text-muted)';
-                                                           e.currentTarget.style.paddingLeft = '16px';
-                                                       }}
-                                                    >{child}</Link>
+                                        {activeDropdown === link.label && link.children && (
+                                            <Motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                                                        style={{ position: 'absolute', top: '100%', left: '-20px', background: 'white', borderRadius: '20px', padding: '15px', minWidth: '200px', boxShadow: '0 20px 40px rgba(0,0,0,0.08)', marginTop: '15px' }}>
+                                                {link.children.map(child => (
+                                                    <Link key={child} to={`/shop?cat=${child.toLowerCase()}`} style={{ display: 'block', padding: '10px 15px', fontSize: '0.85rem', color: '#666', borderRadius: '12px', textDecoration: 'none' }}>{child}</Link>
                                                 ))}
                                             </Motion.div>
                                         )}
@@ -217,427 +162,108 @@ const Navbar = () => {
                         </ul>
                     </div>
 
-                    {/* Right: Actions */}
-                    <div className="flex-row-stack" style={{gap: '20px'}}>
-                        {/* Search (Desktop only, mobile has it in BottomNav) */}
-                        <Motion.button
-                            whileHover={{scale: 1.1, color: 'var(--accent)'}}
-                            whileTap={{scale: 0.9}}
-                            className="btn-icon hide-mobile"
-                            style={{
-                                background: 'transparent',
-                                border: 'none',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                color: 'var(--text-muted)'
-                            }}
-                            aria-label="Rechercher"
-                        >
-                            <Search size={20}/>
-                        </Motion.button>
+                    {/* ACTIONS */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <button onClick={() => navigate('/shop')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><Search size={20} /></button>
 
-                        {/* Account (Desktop only) */}
+                        {/* FAVORITES */}
+                        <Link to="/favorites" onClick={(e) => handleNavigation(e, '/favorites')} className="hide-mobile">
+                            <div style={{ width: '42px', height: '42px', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: location.pathname === '/favorites' ? 'var(--primary-light)' : 'rgba(0,0,0,0.02)', color: 'var(--primary-deep)' }}>
+                                <Heart size={20} fill={location.pathname === '/favorites' ? 'currentColor' : 'none'} />
+                            </div>
+                        </Link>
+
+                        {/* PROFILE MENU - AVEC RÉFÉRENCE */}
                         {!loading && (
-                            <div style={{ position: 'relative', display: 'flex' }} className="hide-mobile">
+                            <div style={{ position: 'relative' }} className="hide-mobile" ref={userMenuRef}>
                                 {isAuthenticated ? (
-                                    <>
-                                        <Motion.button
-                                            whileHover={{scale: 1.1, color: 'var(--accent)'}}
-                                            whileTap={{scale: 0.9}}
-                                            onClick={() => setShowUserMenu(!showUserMenu)}
-                                            style={{
-                                                background: 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                color: 'var(--text-muted)',
-                                                fontSize: '0.85rem',
-                                                fontWeight: 500
-                                            }}
-                                            aria-label="Mon compte"
-                                        >
-                                            <User size={20}/>
-                                            <span>{user?.first_name || 'Compte'}</span>
-                                            <ChevronDown size={14} style={{
-                                                transition: 'transform 0.3s var(--ease-out)',
-                                                transform: showUserMenu ? 'rotate(180deg)' : 'rotate(0deg)'
-                                            }}/>
-                                        </Motion.button>
-
-                                        <AnimatePresence>
-                                            {showUserMenu && (
-                                                <Motion.div
-                                                    initial={{opacity: 0, y: 12}}
-                                                    animate={{opacity: 1, y: 0}}
-                                                    exit={{opacity: 0, y: 12}}
-                                                    transition={{duration: 0.3, ease: [0.22, 1, 0.36, 1]}}
-                                                    className="absolute top-[calc(100%+20px)] right-0 min-w-[220px] bg-white border border-[var(--divider)] rounded-2xl p-3 shadow-[var(--shadow-lg)] z-[100]"
-                                                >
-                                                    <div className="px-3 py-2 text-xs text-[var(--text-muted)] border-b border-[var(--divider)] mb-2">
-                                                        {user?.email}
-                                                    </div>
-
-                                                    {!isAdmin && (
-                                                        <div className="grid gap-1 mb-2">
-                                                            <Link
-                                                                to="/account"
-                                                                onClick={() => setShowUserMenu(false)}
-                                                                className="px-3 py-2 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--accent-deep)] transition"
-                                                            >
-                                                                Mon profil
-                                                            </Link>
-                                                            <Link
-                                                                to="/account/commandes"
-                                                                onClick={() => setShowUserMenu(false)}
-                                                                className="px-3 py-2 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--accent-deep)] transition"
-                                                            >
-                                                                Mes commandes
-                                                            </Link>
-                                                            <Link
-                                                                to="/account/adresses"
-                                                                onClick={() => setShowUserMenu(false)}
-                                                                className="px-3 py-2 rounded-xl text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--accent-deep)] transition"
-                                                            >
-                                                                Mes adresses
-                                                            </Link>
-                                                        </div>
-                                                    )}
-
-                                                    <button
-                                                        onClick={handleLogout}
-                                                        className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-sm font-semibold text-[var(--text-muted)] hover:bg-[var(--surface)] hover:text-[var(--error)] transition"
-                                                    >
-                                                        <LogOut size={16}/>
-                                                        Déconnexion
-                                                    </button>
-                                                </Motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </>
+                                    <Motion.button
+                                        onClick={() => setShowUserMenu(!showUserMenu)}
+                                        style={{ background: 'white', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '30px', padding: '4px 12px 4px 5px', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
+                                    >
+                                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'linear-gradient(135deg, #2D3436, #000)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>
+                                            {getInitial(user?.first_name)}
+                                        </div>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#333' }}>{user?.first_name}</span>
+                                    </Motion.button>
                                 ) : (
-                                    <Link to="/login" style={{display: 'flex'}}>
-                                        <Motion.button
-                                            whileHover={{scale: 1.1, color: 'var(--accent)'}}
-                                            whileTap={{scale: 0.9}}
-                                            style={{
-                                                background: 'transparent',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                color: 'var(--text-muted)'
-                                            }}
-                                            aria-label="Mon compte"
-                                        >
-                                            <User size={20}/>
-                                        </Motion.button>
-                                    </Link>
+                                    <Link to="/login"><div style={{ width: '42px', height: '42px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.02)', color: '#000' }}><User size={20} /></div></Link>
                                 )}
+
+                                <AnimatePresence>
+                                    {showUserMenu && (
+                                        <Motion.div
+                                            initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                                            style={{ position: 'absolute', top: '55px', right: 0, width: '240px', background: 'white', borderRadius: '24px', padding: '12px', boxShadow: '0 20px 50px rgba(0,0,0,0.15)', zIndex: 1100, border: '1px solid rgba(0,0,0,0.03)' }}
+                                        >
+                                            <div style={{ padding: '12px', borderBottom: '1px solid #f5f5f5', marginBottom: '8px' }}>
+                                                <p style={{ fontSize: '0.8rem', fontWeight: 700, margin: 0 }}>{user?.first_name} {user?.last_name}</p>
+                                                <p style={{ fontSize: '0.7rem', color: '#999', margin: 0 }}>{user?.email}</p>
+                                            </div>
+                                            <div style={{ display: 'grid', gap: '4px' }}>
+                                                <MenuLink icon={<Settings size={14}/>} label="Mon Profil" to="/account" />
+                                                <MenuLink icon={<Package size={14}/>} label="Commandes" to="/account/commandes" />
+                                                <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '12px', borderRadius: '12px', border: 'none', background: 'transparent', color: '#e74c3c', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
+                                                    <LogOut size={14} /> Déconnexion
+                                                </button>
+                                            </div>
+                                        </Motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         )}
 
-                        {/* Cart (Desktop only, mobile version in BottomNav) */}
-                        <Link to="/cart" style={{display: 'flex'}} className="hide-mobile">
-                            <Motion.button
-                                whileHover={{scale: 1.05, boxShadow: 'var(--shadow-md)'}}
-                                whileTap={{scale: 0.95}}
-                                className="btn btn-dark"
-                                style={{
-                                    borderRadius: 'var(--radius-pill)',
-                                    padding: '10px 24px',
-                                    fontSize: '0.75rem',
-                                    fontWeight: 600,
-                                    letterSpacing: '0.1em',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '10px',
-                                }}
-                                aria-label="Panier"
-                            >
-                                <ShoppingBag size={18}/>
-                                <span>PANIER</span>
-                                <span style={{
-                                    background: 'var(--accent)',
-                                    color: 'white',
-                                    fontSize: '10px',
-                                    fontWeight: 700,
-                                    width: '20px',
-                                    height: '20px',
-                                    borderRadius: '50%',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}>{cartCount}</span>
+                        {/* CART */}
+                        <Link to="/cart" className="hide-mobile" style={{ textDecoration: 'none' }}>
+                            <Motion.button style={{ background: '#1a1a1a', color: 'white', borderRadius: '18px', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '12px', border: 'none', cursor: 'pointer' }}>
+                                <ShoppingBag size={18} strokeWidth={2} />
+                                <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{cartCount}</span>
                             </Motion.button>
                         </Link>
 
-                        {/* Mobile hamburger (keeps Categories and About accessible) */}
-                        <div className={""} style={{display: 'grid', placeItems: 'end'}}>
-                            <Motion.button
-                                className="show-mobile"
-                                whileTap={{scale: 0.9}}
-                                onClick={() => setIsOpen(!isOpen)}
-                                style={{
-                                    background: scrolled ? 'var(--white)' : 'var(--surface-alt)',
-                                    border: '1px solid var(--divider)',
-                                    borderRadius: '10px',
-                                    padding: '8px',
-                                    cursor: 'pointer',
-                                    boxShadow: scrolled ? 'var(--shadow-xs)' : 'none'
-                                }}
-                                aria-label="Menu"
-                            >
-                                {isOpen ? <X size={0}/> : <Menu size={20}/>}
-                            </Motion.button>
-                        </div>
+                        {/* MOBILE TOGGLE */}
+                        <button className="show-mobile" onClick={() => setIsOpen(!isOpen)} style={{ background: 'white', border: '1px solid #eee', padding: '10px', borderRadius: '12px' }}>
+                            {isOpen ? <X size={20} /> : <Menu size={20} />}
+                        </button>
                     </div>
                 </div>
             </Motion.nav>
 
-            {/* Mobile Menu Pro Overlay */}
+            <div style={{ height: scrolled ? '64px' : '95px', transition: 'height 0.4s ease', width: '100%' }} />
+
+            {/* MOBILE MENU */}
             <AnimatePresence>
                 {isOpen && (
-                    <Motion.div
-                        initial={{opacity: 0}}
-                        animate={{opacity: 1}}
-                        exit={{opacity: 0}}
-                        transition={{duration: 0.5, ease: [0.22, 1, 0.36, 1]}}
-                        onClick={() => setShowUserMenu(false)}
-                        style={{
-                            position: 'fixed',
-                            inset: 0,
-                            zIndex: 2000,
-                            background: 'var(--background)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            overflow: 'hidden',
-                        }}
-                    >
-                        {/* Background Decorative Shapes */}
-                        <div className="floating-shape" style={{
-                            top: '-10%',
-                            right: '-10%',
-                            width: '600px',
-                            height: '600px',
-                            background: 'var(--grad-blush)',
-                            opacity: 0.3
-                        }}/>
-                        <div className="floating-shape" style={{
-                            bottom: '-10%',
-                            left: '-10%',
-                            width: '500px',
-                            height: '500px',
-                            background: 'var(--grad-gold)',
-                            opacity: 0.15
-                        }}/>
-
-                        {/* Top Header in Menu */}
-                        <div className="container" style={{
-                            height: '90px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            borderBottom: '1px solid rgba(0,0,0,0.03)',
-                            position: 'relative',
-                            zIndex: 10,
-                        }}>
-                            <div>
-                                <div style={{
-                                    fontFamily: "'Cormorant Garant', serif",
-                                    fontSize: '1.4rem',
-                                    fontWeight: 700,
-                                    letterSpacing: '4px'
-                                }}>ÉVELINE
-                                </div>
-                                <div style={{
-                                    fontSize: '0.45rem',
-                                    letterSpacing: '3px',
-                                    color: 'var(--accent)',
-                                    fontWeight: 700
-                                }}>PARIS
-                                </div>
-                            </div>
-                            <Motion.button
-                                whileTap={{scale: 0.9}}
-                                onClick={() => setIsOpen(false)}
-                                style={{
-                                    background: 'var(--surface-alt)',
-                                    border: 'none',
-                                    padding: '12px',
-                                    borderRadius: '50%',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    boxShadow: 'var(--shadow-xs)'
-                                }}
-                            >
-                                <X size={20}/>
-                            </Motion.button>
-                        </div>
-
-                        {/* Centered Main Nav */}
-                        <div className="container" style={{
-                            flex: 1,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            position: 'relative',
-                            zIndex: 10,
-                            paddingBottom: '40px'
-                        }}>
-                            <nav style={{display: 'flex', flexDirection: 'column', gap: '24px', alignItems: 'center'}}>
-                                {(isAuthenticated && !isAdmin ? authenticatedNavLinks : publicNavLinks).map((link, i) => (
-                                    <Motion.div
-                                        key={link.label}
-                                        initial={{opacity: 0, y: 30, filter: 'blur(10px)'}}
-                                        animate={{opacity: 1, y: 0, filter: 'blur(0px)'}}
-                                        transition={{delay: 0.2 + i * 0.08, duration: 0.6}}
-                                    >
-                                        {link.children ? (
-                                            <button
-                                                type="button"
-                                                style={{
-                                                    fontSize: 'clamp(2.5rem, 10vw, 4rem)',
-                                                    fontWeight: 400,
-                                                    color: 'var(--text-main)',
-                                                    background: 'transparent',
-                                                    border: 'none',
-                                                    cursor: 'default',
-                                                    fontFamily: "'Cormorant Garant', serif",
-                                                    display: 'block',
-                                                    textAlign: 'center',
-                                                    transition: 'all 0.4s',
-                                                    position: 'relative',
-                                                }}
-                                                onClick={() => setIsOpen(false)}
-                                            >
-                                                {link.label}
-                                            </button>
-                                        ) : (
-                                            <Link
-                                                to={link.href}
-                                                style={{
-                                                fontSize: 'clamp(2.5rem, 10vw, 4rem)',
-                                                fontWeight: 400,
-                                                color: 'var(--text-main)',
-                                                textDecoration: 'none',
-                                                fontFamily: "'Cormorant Garant', serif",
-                                                display: 'block',
-                                                textAlign: 'center',
-                                                transition: 'all 0.4s',
-                                                position: 'relative',
-                                                }}
-                                                onClick={() => setIsOpen(false)}
-                                                onMouseEnter={e => {
-                                                    e.currentTarget.style.color = 'var(--accent)';
-                                                    e.currentTarget.style.transform = 'scale(1.05)';
-                                                }}
-                                                onMouseLeave={e => {
-                                                    e.currentTarget.style.color = 'var(--text-main)';
-                                                    e.currentTarget.style.transform = 'scale(1)';
-                                                }}
-                                            >
-                                                {link.label}
-                                            </Link>
-                                        )}
-                                    </Motion.div>
-                                ))}
-                            </nav>
-
-                            <Motion.div
-                                initial={{opacity: 0, scale: 0.9}}
-                                animate={{opacity: 1, scale: 1}}
-                                transition={{delay: 0.6}}
-                                style={{marginTop: '60px', display: 'flex', gap: '16px'}}
-                            >
-                                {!loading && (
-                                    <>
-                                        {isAuthenticated ? (
-                                            <>
-                                                <div style={{
-                                                    padding: '16px 24px',
-                                                    background: 'var(--surface)',
-                                                    borderRadius: '16px',
-                                                    textAlign: 'center',
-                                                    minWidth: '150px'
-                                                }}>
-                                                    <div style={{
-                                                        fontSize: '0.75rem',
-                                                        color: 'var(--text-muted)',
-                                                        marginBottom: '4px'
-                                                    }}>
-                                                        Bienvenue
-                                                    </div>
-                                                    <div style={{
-                                                        fontSize: '0.9rem',
-                                                        fontWeight: 600,
-                                                        color: 'var(--text-main)'
-                                                    }}>
-                                                        {user?.first_name}
-                                                    </div>
-                                                </div>
-                                                <button 
-                                                    className="btn btn-secondary" 
-                                                    onClick={() => {
-                                                        handleLogout();
-                                                        setIsOpen(false);
-                                                    }}
-                                                    style={{height: '52px', padding: '0 32px'}}
-                                                >
-                                                    <LogOut size={18}/> Déconnexion
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <Link to="/login" className="btn btn-secondary" onClick={() => setIsOpen(false)}
-                                               style={{height: '52px', padding: '0 32px'}}>
-                                                <User size={18}/> Compte
-                                            </Link>
-                                        )}
-                                    </>
-                                )}
-                                <Link to="/cart" className="btn btn-dark" onClick={() => setIsOpen(false)}
-                                   style={{height: '52px', padding: '0 32px'}}>
-                                    <ShoppingBag size={18}/> Panier ({cartCount})
-                                </Link>
-                            </Motion.div>
-                        </div>
-
-                        {/* Footer in Menu */}
-                        <div className="container" style={{
-                            paddingBottom: '40px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            gap: '24px',
-                            position: 'relative',
-                            zIndex: 10,
-                        }}>
-                            <div style={{display: 'flex', gap: '20px'}}>
-                                {[Instagram, Facebook, Youtube].map((Icon, i) => (
-                                    <a key={i} href="#" style={{color: 'var(--text-muted)'}}><Icon size={20}/></a>
-                                ))}
-                            </div>
-                            <div style={{
-                                fontSize: '0.65rem',
-                                letterSpacing: '2px',
-                                color: 'var(--text-light)',
-                                textTransform: 'uppercase',
-                                textAlign: 'center'
-                            }}>
-                                Éveline Skincare Paris · Haute Boutique
-                            </div>
+                    <Motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                                style={{ position: 'fixed', inset: 0, background: 'white', zIndex: 2000, padding: '100px 30px' }}>
+                        <button onClick={() => setIsOpen(false)} style={{ position: 'absolute', top: '30px', right: '30px', background: 'none', border: 'none' }}><X size={30}/></button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                            {(isAuthenticated ? authenticatedNavLinks : publicNavLinks).map(l => (
+                                <Link key={l.label} to={l.href} onClick={(e) => handleNavigation(e, l.href)} style={{ fontSize: '1.8rem', fontWeight: 700, textDecoration: 'none', color: '#000' }}>{l.label}</Link>
+                            ))}
+                            <div style={{ height: '1px', background: '#eee', margin: '10px 0' }} />
+                            {!isAuthenticated ? (
+                                <Link to="/login" style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--accent)' }}>Se connecter</Link>
+                            ) : (
+                                <button onClick={handleLogout} style={{ textAlign: 'left', background: 'none', border: 'none', fontSize: '1.2rem', fontWeight: 600, color: '#e74c3c', padding: 0 }}>Déconnexion</button>
+                            )}
                         </div>
                     </Motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Navbar spacer */}
-            <div style={{height: scrolled ? '65px' : '90px', transition: 'height 0.4s var(--ease-out)'}}/>
         </>
     );
 };
+
+// COMPONENT POUR LES LIENS DU MENU PROFIL
+const MenuLink = ({ icon, label, to }) => (
+    <Link to={to} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600, color: '#444', textDecoration: 'none', transition: 'background 0.2s' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#f9f9f9'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+        {icon} {label}
+    </Link>
+);
 
 export default Navbar;

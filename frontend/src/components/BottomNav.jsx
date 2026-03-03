@@ -1,13 +1,37 @@
-import React from 'react';
-import { Home, ShoppingBag, ShoppingCart, User, Search } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Home, ShoppingBag, ShoppingCart, User, Search, Heart } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { cartService, CART_UPDATED_EVENT } from '../services/api';
 
 const BottomNav = () => {
     const location = useLocation();
     const { isAuthenticated, isAdmin } = useAuth();
-    const cartCount = 2; // Mock cart count
+    const [cartCount, setCartCount] = useState(0);
+
+    const fetchCartCount = useCallback(async () => {
+        if (!isAuthenticated) {
+            setCartCount(0);
+            return;
+        }
+        try {
+            const data = await cartService.getCartSummary();
+            setCartCount(data?.items_count ?? 0);
+        } catch {
+            setCartCount(0);
+        }
+    }, [isAuthenticated]);
+
+    useEffect(() => {
+        fetchCartCount();
+    }, [fetchCartCount]);
+
+    useEffect(() => {
+        const handler = () => fetchCartCount();
+        window.addEventListener(CART_UPDATED_EVENT, handler);
+        return () => window.removeEventListener(CART_UPDATED_EVENT, handler);
+    }, [fetchCartCount]);
 
     // Cacher complètement la bottom nav dans l'espace admin
     if (isAdmin && location.pathname.startsWith('/admin')) {
@@ -16,9 +40,9 @@ const BottomNav = () => {
 
     const navItems = [
         { icon: Home, label: 'Accueil', path: '/' },
-        { icon: Search, label: 'Découvrir', path: '/shop' },
+        { icon: Search, label: 'Boutique', path: '/shop' },
+        ...(isAuthenticated && !isAdmin ? [{ icon: Heart, label: 'Favoris', path: '/favorites' }] : []),
         { icon: ShoppingCart, label: 'Panier', path: '/cart', count: cartCount },
-        // Pour un user connecté on laisse "Compte" mais la page /login va rediriger selon le rôle
         { icon: User, label: isAuthenticated ? 'Compte' : 'Connexion', path: isAuthenticated ? '/account' : '/login' },
     ];
 

@@ -488,6 +488,28 @@ export const reviewService = {
     }
   },
 
+  submit: async (productId, data) => {
+    try {
+      const response = await api.post(`/products/${productId}/reviews`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la soumission de l\'avis' };
+    }
+  },
+
+  canReview: async (productId) => {
+    try {
+      const response = await api.get(`/products/${productId}/can-review`);
+      return response.data;
+    } catch (error) {
+      // Si on n'est pas connecté, l'API renvoie 401, on gère ça comme can_review: false
+      if (error.response?.status === 401) {
+        return { can_review: false, reason: 'not_authenticated' };
+      }
+      throw error.response?.data || { message: 'Erreur lors de la vérification de l\'éligibilité' };
+    }
+  },
+
   remove: async (id) => {
     try {
       const response = await api.delete(`/reviews/${id}`);
@@ -517,6 +539,94 @@ export const shopSettingsService = {
       throw error.response?.data || { message: 'Erreur lors de la mise à jour des modes de livraison' };
     }
   },
+};
+
+// Événement émis quand le panier change (pour mettre à jour le badge Navbar/BottomNav)
+export const CART_UPDATED_EVENT = 'cart:updated';
+
+// Service Panier
+export const cartService = {
+  /** Résumé léger (items_count = nb de produits différents, pas total qty) — pour badge Navbar/BottomNav */
+  getCartSummary: async () => {
+    try {
+      const response = await api.get('/cart/summary');
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 401) return null;
+      throw error.response?.data || { message: 'Erreur chargement panier' };
+    }
+  },
+
+  getCart: async () => {
+    try {
+      const response = await api.get('/cart');
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 401) return null;
+      throw error.response?.data || { message: 'Erreur lors du chargement du panier' };
+    }
+  },
+
+  addItem: async (productId, quantity = 1) => {
+    try {
+      const response = await api.post('/cart/items', { product_id: productId, quantity });
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 401) throw { status: 401, message: 'Non connecté' };
+      throw error.response?.data || { message: 'Erreur lors de l\'ajout au panier' };
+    }
+  },
+
+  updateQuantity: async (cartItemId, quantity) => {
+    try {
+      const response = await api.patch(`/cart/items/${cartItemId}`, { quantity });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la mise à jour' };
+    }
+  },
+
+  removeItem: async (cartItemId) => {
+    try {
+      const response = await api.delete(`/cart/items/${cartItemId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la suppression' };
+    }
+  },
+};
+
+// Service Favoris
+export const favoriteService = {
+  list: async () => {
+    try {
+      const response = await api.get('/favorites');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des favoris' };
+    }
+  },
+
+  toggle: async (productId) => {
+    try {
+      const response = await api.post(`/favorites/${productId}/toggle`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la modification des favoris' };
+    }
+  },
+
+  check: async (productId) => {
+    try {
+      const response = await api.get(`/favorites/${productId}/check`);
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 401) return { favorited: false };
+      throw error.response?.data || { message: 'Erreur lors de la vérification des favoris' };
+    }
+  },
+
+
 };
 
 export default api;

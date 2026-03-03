@@ -13,6 +13,8 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\CartController;
 
 /*
 |--------------------------------------------------------------------------
@@ -106,7 +108,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('order-items', OrderItemController::class);
 
     // Routes pour les avis
+    Route::get('/products/{product}/can-review', [ReviewController::class, 'canReview']);
     Route::apiResource('reviews', ReviewController::class)->except(['index', 'show']);
     Route::post('/products/{product}/reviews', [ReviewController::class, 'store']);
+
+    // Routes pour les favoris
+    Route::get('/favorites', [FavoriteController::class, 'index']);
+    Route::post('/favorites/{product}/toggle', [FavoriteController::class, 'toggle']);
+    Route::get('/favorites/{product}/check', [FavoriteController::class, 'check']);
+
+    // Routes panier
+    Route::get('/cart/summary', [CartController::class, 'summary']);
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::post('/cart/items', [CartController::class, 'addItem']);
+    Route::patch('/cart/items/{cartItem}', [CartController::class, 'updateItem']);
+    Route::delete('/cart/items/{cartItem}', [CartController::class, 'removeItem']);
 });
 
