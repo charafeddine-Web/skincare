@@ -1,306 +1,234 @@
 import React, { useMemo, useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Mail, Phone, MapPin, CheckCircle, Edit3 } from 'lucide-react';
+import { User, Mail, Phone, MapPin, CheckCircle, Edit3, Save, X, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Profile = () => {
-  const { user, isAuthenticated, isAdmin, updateProfile } = useAuth();
+    const { user, isAuthenticated, isAdmin, updateProfile } = useAuth();
 
-  // Admins should live in /admin, not in "Mon compte"
-  if (isAuthenticated && isAdmin) {
-    return <Navigate to="/admin" replace />;
-  }
+    if (isAuthenticated && isAdmin) return <Navigate to="/admin" replace />;
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+    const initial = useMemo(() => {
+        const fullName = user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ');
+        return {
+            name: fullName || '',
+            email: user?.email || '',
+            phone: user?.phone || user?.telephone || '',
+            address: user?.address || '',
+            city: user?.city || '',
+            zip: user?.zip || user?.postal_code || '',
+        };
+    }, [user]);
 
-  const initial = useMemo(() => {
-    const fullName = user?.name || [user?.first_name, user?.last_name].filter(Boolean).join(' ');
-    return {
-      name: fullName || '',
-      email: user?.email || '',
-      phone: user?.phone || user?.telephone || '',
-      address: user?.address || '',
-      city: user?.city || '',
-      zip: user?.zip || user?.postal_code || '',
+    const [form, setForm] = useState(initial);
+    const [saved, setSaved] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+
+    const onChange = (key) => (e) => {
+        setSaved(false);
+        setForm((prev) => ({ ...prev, [key]: e.target.value }));
     };
-  }, [user]);
 
-  const [form, setForm] = useState(initial);
-  const [saved, setSaved] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+    const onSubmit = (e) => {
+        e.preventDefault();
+        updateProfile(form);
+        setSaved(true);
+        setIsEditing(false);
+        setTimeout(() => setSaved(false), 3000);
+    };
 
-  const onChange = (key) => (e) => {
-    setSaved(false);
-    setForm((prev) => ({ ...prev, [key]: e.target.value }));
-  };
+    const inputClasses = "w-full h-12 rounded-xl border border-gray-200 bg-gray-50/50 px-4 outline-none focus:bg-white focus:ring-2 focus:ring-[var(--accent-light)] focus:border-[var(--accent)] transition-all duration-200 text-sm";
+    const labelClasses = "text-[11px] tracking-wider uppercase text-gray-400 font-bold mb-1.5 ml-1 flex items-center gap-2";
 
-  const onSubmit = (e) => {
-    e.preventDefault();
-    updateProfile({
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      address: form.address,
-      city: form.city,
-      zip: form.zip,
-    });
-    setSaved(true);
-    setIsEditing(false);
-    setTimeout(() => setSaved(false), 3000);
-  };
+    return (
+        <motion.div
+            className="min-h-screen bg-[#fafaf9]" // Fond crème très léger pour le luxe
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+        >
+            {/* Header Section refined */}
+            <section className="bg-white border-b border-gray-100">
+                <div className="container max-w-6xl py-10">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+                        <div className="space-y-2">
+              <span className="text-[10px] tracking-[0.3em] uppercase text-[var(--accent-deep)] font-black opacity-70">
+                Espace Client
+              </span>
+                            <h1 className="text-4xl md:text-5xl font-serif text-[#1a1a1a]">
+                                Mon Profil
+                            </h1>
+                            <p className="text-gray-500 max-w-md text-sm leading-relaxed">
+                                Personnalisez vos préférences et gérez vos informations de compte pour une expérience sur mesure.
+                            </p>
+                        </div>
 
-  return (
-    <motion.div 
-      className="page-enter"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-    >
-      <section className="bg-gradient-to-b from-[var(--surface)] to-[var(--background)] border-b border-[var(--divider)]">
-        <div className="container py-12">
-          <motion.div 
-            className="flex items-end justify-between gap-6 flex-wrap"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <div>
-              <motion.div 
-                className="text-[0.7rem] tracking-[0.22em] uppercase text-[var(--accent)] font-bold mb-2"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                Mon compte
-              </motion.div>
-              <h1 className="text-[clamp(2.2rem,5vw,3.5rem)] leading-tight font-serif">
-                Mon Profil
-              </h1>
-              <p className="text-[var(--text-muted)] mt-3 text-base">
-                Gérez vos informations personnelles et vos coordonnées de livraison.
-              </p>
+                        {/*<nav className="flex p-1 bg-gray-100/50 rounded-2xl w-fit">*/}
+                        {/*    {[*/}
+                        {/*        { label: 'Profil', path: '/account', active: true },*/}
+                        {/*        { label: 'Commandes', path: '/account/commandes' },*/}
+                        {/*        { label: 'Adresses', path: '/account/adresses' }*/}
+                        {/*    ].map((item) => (*/}
+                        {/*        <Link*/}
+                        {/*            key={item.label}*/}
+                        {/*            to={item.path}*/}
+                        {/*            className={`px-6 py-2 rounded-xl text-xs font-bold transition-all ${*/}
+                        {/*                item.active*/}
+                        {/*                    ? "bg-white text-[var(--accent-deep)] shadow-sm ring-1 ring-black/5"*/}
+                        {/*                    : "text-gray-400 hover:text-gray-600"*/}
+                        {/*            }`}*/}
+                        {/*        >*/}
+                        {/*            {item.label}*/}
+                        {/*        </Link>*/}
+                        {/*    ))}*/}
+                        {/*</nav>*/}
+                    </div>
+                </div>
+            </section>
+
+            <div className="container max-w-6xl py-12">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+
+                    {/* Main Form Card */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <motion.div
+                            className="bg-white rounded-[32px] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 overflow-hidden"
+                            layout
+                        >
+                            <form onSubmit={onSubmit}>
+                                {/* Card Header */}
+                                <div className="px-8 py-6 border-b border-gray-50 flex items-center justify-between bg-white">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-2xl bg-[var(--accent-light)]/30 flex items-center justify-center text-[var(--accent-deep)]">
+                                            <User size={22} strokeWidth={1.5} />
+                                        </div>
+                                        <div>
+                                            <h2 className="font-semibold text-lg text-gray-800">Détails personnels</h2>
+                                            <p className="text-xs text-gray-400">Informations de contact et identité</p>
+                                        </div>
+                                    </div>
+
+                                    {!isEditing ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsEditing(true)}
+                                            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-bold transition-all border border-gray-200"
+                                        >
+                                            <Edit3 size={14} /> Modifier
+                                        </button>
+                                    ) : (
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => { setIsEditing(false); setForm(initial); }}
+                                                className="p-2 rounded-xl text-gray-400 hover:bg-gray-50 transition-all"
+                                            >
+                                                <X size={20} />
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--accent-deep)] text-white text-xs font-bold shadow-lg shadow-[var(--accent-light)] transition-all hover:brightness-110"
+                                            >
+                                                <Save size={14} /> Enregistrer
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="p-8">
+                                    <AnimatePresence>
+                                        {saved && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+                                                animate={{ height: 'auto', opacity: 1, marginBottom: 24 }}
+                                                exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                                                className="overflow-hidden"
+                                            >
+                                                <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-3 flex items-center gap-3 text-emerald-700 text-sm">
+                                                    <CheckCircle size={18} />
+                                                    Profil mis à jour avec succès
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                                        <Field label="Nom complet" icon={<User size={14}/>}>
+                                            <input disabled={!isEditing} className={inputClasses} value={form.name} onChange={onChange('name')} placeholder="Nom" />
+                                        </Field>
+
+                                        <Field label="Adresse Email" icon={<Mail size={14}/>}>
+                                            <input disabled={!isEditing} type="email" className={inputClasses} value={form.email} onChange={onChange('email')} />
+                                        </Field>
+
+                                        <Field label="Téléphone" icon={<Phone size={14}/>}>
+                                            <input disabled={!isEditing} className={inputClasses} value={form.phone} onChange={onChange('phone')} placeholder="+33..." />
+                                        </Field>
+
+                                        <div className="md:col-span-2">
+                                            <Field label="Adresse de résidence" icon={<MapPin size={14}/>}>
+                                                <input disabled={!isEditing} className={inputClasses} value={form.address} onChange={onChange('address')} />
+                                            </Field>
+                                        </div>
+
+                                        <Field label="Ville">
+                                            <input disabled={!isEditing} className={inputClasses} value={form.city} onChange={onChange('city')} />
+                                        </Field>
+
+                                        <Field label="Code Postal">
+                                            <input disabled={!isEditing} className={inputClasses} value={form.zip} onChange={onChange('zip')} />
+                                        </Field>
+                                    </div>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
+
+                    {/* Sidebar / Info Card */}
+                    <aside className="space-y-6">
+                        <div className="bg-[#1a1a1a] rounded-[32px] p-8 text-white relative overflow-hidden group">
+                            <div className="relative z-10">
+                                <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center mb-6">
+                                    <ShieldCheck size={20} className="text-[var(--accent-light)]" />
+                                </div>
+                                <h3 className="text-xl  text-gray-100 mb-4">Confidentialité</h3>
+                                <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                                    Vos données sont chiffrées et ne seront jamais partagées avec des tiers sans votre consentement.
+                                </p>
+                                <button className="text-[10px] uppercase tracking-widest font-bold border-b border-[var(--accent)] pb-1 hover:text-[var(--accent-light)] transition-colors">
+                                    En savoir plus
+                                </button>
+                            </div>
+                            {/* Decorative element */}
+                            <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-[var(--accent)] opacity-10 rounded-full blur-3xl group-hover:opacity-20 transition-opacity" />
+                        </div>
+
+                        <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm">
+                            <h4 className="font-bold text-sm mb-4 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+                                Besoin d'aide ?
+                            </h4>
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                Une question sur vos données ? Contactez notre support disponible 24/7.
+                            </p>
+                        </div>
+                    </aside>
+
+                </div>
             </div>
-
-            <nav className="flex gap-3 flex-wrap">
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  to="/account"
-                  className="px-5 py-2.5 rounded-full border-2 border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent-deep)] text-sm font-semibold shadow-sm"
-                >
-                  Profil
-                </Link>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  to="/account/commandes"
-                  className="px-5 py-2.5 rounded-full border border-[var(--divider)] bg-transparent text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--accent-deep)] hover:border-[var(--accent)] transition-all"
-                >
-                  Commandes
-                </Link>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Link
-                  to="/account/adresses"
-                  className="px-5 py-2.5 rounded-full border border-[var(--divider)] bg-transparent text-sm font-semibold text-[var(--text-muted)] hover:text-[var(--accent-deep)] hover:border-[var(--accent)] transition-all"
-                >
-                  Adresses
-                </Link>
-              </motion.div>
-            </nav>
-          </motion.div>
-        </div>
-      </section>
-
-      <div className="container py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-8 items-start">
-          <motion.form
-            onSubmit={onSubmit}
-            className="bg-white border border-[var(--divider)] rounded-3xl p-8 lg:p-10 shadow-lg"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            whileHover={{ boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08)' }}
-          >
-            <div className="flex items-start justify-between gap-4 flex-wrap mb-8">
-              <div>
-                <h2 className="text-2xl font-semibold font-serif flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[var(--accent-light)] flex items-center justify-center">
-                    <User size={20} className="text-[var(--accent-deep)]" />
-                  </div>
-                  Informations personnelles
-                </h2>
-                <p className="text-sm text-[var(--text-muted)] mt-2">
-                  Ces informations serviront pour vos commandes et la livraison.
-                </p>
-              </div>
-              <motion.button
-                type="submit"
-                className="px-6 py-3 rounded-full bg-gradient-to-r from-[var(--accent-deep)] to-[var(--accent)] text-white text-sm font-semibold shadow-lg hover:shadow-xl active:scale-[0.98] transition-all flex items-center gap-2"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Edit3 size={16} />
-                Enregistrer
-              </motion.button>
-            </div>
-
-            <AnimatePresence>
-              {saved && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                  className="mb-6 rounded-2xl border-2 border-[var(--success)] bg-gradient-to-r from-[var(--success)]/10 to-[var(--success)]/5 px-5 py-4 text-sm text-[var(--text-main)] flex items-center gap-3"
-                >
-                  <CheckCircle size={20} className="text-[var(--success)] flex-shrink-0" />
-                  <span className="font-semibold">Modifications enregistrées avec succès !</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <motion.label 
-                className="flex flex-col gap-2"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <span className="text-xs tracking-wide uppercase text-[var(--text-light)] font-semibold flex items-center gap-2">
-                  <User size={14} className="text-[var(--accent)]" />
-                  Nom complet
-                </span>
-                <input
-                  className="h-14 rounded-2xl border-2 border-[var(--divider)] px-5 outline-none focus:ring-2 focus:ring-[var(--accent-light)] focus:border-[var(--accent)] transition-all text-base"
-                  value={form.name}
-                  onChange={onChange('name')}
-                  placeholder="Jeanne Dupont"
-                  required
-                />
-              </motion.label>
-
-              <motion.label 
-                className="flex flex-col gap-2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.35 }}
-              >
-                <span className="text-xs tracking-wide uppercase text-[var(--text-light)] font-semibold flex items-center gap-2">
-                  <Mail size={14} className="text-[var(--accent)]" />
-                  Email
-                </span>
-                <input
-                  className="h-14 rounded-2xl border-2 border-[var(--divider)] px-5 outline-none focus:ring-2 focus:ring-[var(--accent-light)] focus:border-[var(--accent)] transition-all text-base"
-                  value={form.email}
-                  onChange={onChange('email')}
-                  placeholder="jeanne@exemple.com"
-                  type="email"
-                  required
-                />
-              </motion.label>
-
-              <motion.label 
-                className="flex flex-col gap-2"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <span className="text-xs tracking-wide uppercase text-[var(--text-light)] font-semibold flex items-center gap-2">
-                  <Phone size={14} className="text-[var(--accent)]" />
-                  Téléphone
-                </span>
-                <input
-                  className="h-14 rounded-2xl border-2 border-[var(--divider)] px-5 outline-none focus:ring-2 focus:ring-[var(--accent-light)] focus:border-[var(--accent)] transition-all text-base"
-                  value={form.phone}
-                  onChange={onChange('phone')}
-                  placeholder="06 00 00 00 00"
-                />
-              </motion.label>
-
-              <motion.label 
-                className="flex flex-col gap-2 md:col-span-2"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.45 }}
-              >
-                <span className="text-xs tracking-wide uppercase text-[var(--text-light)] font-semibold flex items-center gap-2">
-                  <MapPin size={14} className="text-[var(--accent)]" />
-                  Adresse
-                </span>
-                <input
-                  className="h-14 rounded-2xl border-2 border-[var(--divider)] px-5 outline-none focus:ring-2 focus:ring-[var(--accent-light)] focus:border-[var(--accent)] transition-all text-base"
-                  value={form.address}
-                  onChange={onChange('address')}
-                  placeholder="12 rue de la Peau"
-                />
-              </motion.label>
-
-              <motion.label 
-                className="flex flex-col gap-2"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <span className="text-xs tracking-wide uppercase text-[var(--text-light)] font-semibold">Ville</span>
-                <input
-                  className="h-14 rounded-2xl border-2 border-[var(--divider)] px-5 outline-none focus:ring-2 focus:ring-[var(--accent-light)] focus:border-[var(--accent)] transition-all text-base"
-                  value={form.city}
-                  onChange={onChange('city')}
-                  placeholder="Paris"
-                />
-              </motion.label>
-
-              <motion.label 
-                className="flex flex-col gap-2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.55 }}
-              >
-                <span className="text-xs tracking-wide uppercase text-[var(--text-light)] font-semibold">Code postal</span>
-                <input
-                  className="h-14 rounded-2xl border-2 border-[var(--divider)] px-5 outline-none focus:ring-2 focus:ring-[var(--accent-light)] focus:border-[var(--accent)] transition-all text-base"
-                  value={form.zip}
-                  onChange={onChange('zip')}
-                  placeholder="75000"
-                />
-              </motion.label>
-            </div>
-          </motion.form>
-
-          <motion.aside 
-            className="bg-gradient-to-br from-white to-[var(--surface)] border border-[var(--divider)] rounded-3xl p-6 lg:p-8 shadow-lg"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            whileHover={{ boxShadow: '0 20px 60px rgba(0, 0, 0, 0.08)' }}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-[var(--accent-light)] flex items-center justify-center">
-                <CheckCircle size={24} className="text-[var(--accent-deep)]" />
-              </div>
-              <h3 className="text-xl font-semibold font-serif">Conseil beauté</h3>
-            </div>
-            <p className="text-sm text-[var(--text-muted)] mt-3 leading-relaxed">
-              Ajoutez un "Rituel peau" (quiz) dans votre compte pour recevoir des recommandations personnalisées selon votre type de peau (acné, taches, rougeurs…).
-            </p>
-            <motion.div 
-              className="mt-6 rounded-2xl bg-gradient-to-r from-[var(--accent-light)]/50 to-[var(--accent-light)]/30 border border-[var(--accent)]/20 p-5"
-              whileHover={{ scale: 1.02 }}
-            >
-              <p className="text-xs tracking-wide uppercase text-[var(--accent-deep)] font-semibold mb-2">💡 Astuce</p>
-              <p className="text-sm text-[var(--text-main)]">
-                Vos informations sont sécurisées et utilisées uniquement pour vos commandes.
-              </p>
-            </motion.div>
-          </motion.aside>
-        </div>
-      </div>
-    </motion.div>
-  );
+        </motion.div>
+    );
 };
 
+// Sub-component for fields to keep code clean
+const Field = ({ label, icon, children }) => (
+    <div className="flex flex-col">
+        <label className="text-[11px] tracking-wider uppercase text-gray-400 font-bold mb-1.5 ml-1 flex items-center gap-2">
+            {icon} {label}
+        </label>
+        {children}
+    </div>
+);
+
 export default Profile;
-
-

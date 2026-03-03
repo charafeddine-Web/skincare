@@ -39,6 +39,17 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, []);
 
+  // Écouter les 401 (token expiré / invalide) : déconnecter sans rediriger pour ne pas
+  // forcer les visiteurs ou les pages publiques vers /login
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setUser(null);
+      setIsAuthenticated(false);
+    };
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('auth:session-expired', handleSessionExpired);
+  }, []);
+
   // Fonction de connexion
   const login = async (credentials) => {
     try {

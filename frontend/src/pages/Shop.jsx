@@ -1,25 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import { SlidersHorizontal, X, ChevronDown, Search } from 'lucide-react';
+import { productService, categoryService } from '../services/api';
 
-/* ── DATA ── */
-const allProducts = [
-    { id: 1, name: 'Sérum Éclat Vitamine C', price: 45, category: 'Sérums', rating: 4.9, reviews: 2340, isNew: true, badge: 'Best-seller', skinType: ['Terne', 'Mixte'] },
-    { id: 2, name: 'Nettoyant Purifiant Doux', price: 28, category: 'Nettoyants', rating: 4.7, reviews: 892, skinType: ['Mixte', 'Grasse'] },
-    { id: 3, name: 'Crème Hydratante Intense', price: 52, category: 'Hydratants', rating: 4.8, reviews: 1456, badge: '-20%', originalPrice: 65, skinType: ['Sèche', 'Sensible'] },
-    { id: 4, name: 'Protection Solaire SPF 50', price: 34, category: 'SPF', rating: 4.6, reviews: 678, isNew: true, skinType: ['Tous types'] },
-    { id: 5, name: 'Huile Précieuse Rosehip', price: 38, category: 'Sérums', rating: 4.8, reviews: 514, skinType: ['Sèche', 'Mature'] },
-    { id: 6, name: 'Masque Argile Kaolin', price: 24, category: 'Masques', rating: 4.5, reviews: 382, skinType: ['Grasse', 'Mixte'] },
-    { id: 7, name: 'Contour des Yeux Anti-Âge', price: 58, category: 'Soins Ciblés', rating: 4.9, reviews: 1023, badge: 'Exclusif', skinType: ['Mature'] },
-    { id: 8, name: 'Brume Tonique Florale', price: 19, category: 'Nettoyants', rating: 4.4, reviews: 267, skinType: ['Tous types'] },
-    { id: 9, name: 'Exfoliant Enzymatique Doux', price: 32, category: 'Masques', rating: 4.6, reviews: 445, skinType: ['Tous types'] },
-    { id: 10, name: 'Baume Lèvres Nourrissant', price: 14, category: 'Soins Ciblés', rating: 4.8, reviews: 890, skinType: ['Tous types'] },
-    { id: 11, name: 'Sérum Éclat Niacinamide 10%', price: 42, category: 'Sérums', rating: 4.7, reviews: 1120, isNew: true, skinType: ['Mixte', 'Grasse'] },
-    { id: 12, name: 'Crème Solaire SPF 30 Teintée', price: 28, category: 'SPF', rating: 4.5, reviews: 334, skinType: ['Tous types'] },
-];
-
-const categories = ['Tous', 'Sérums', 'Nettoyants', 'Hydratants', 'Masques', 'SPF', 'Soins Ciblés'];
+/* ── CONSTANTS ── */
 const sortOptions = [
     { label: 'Populaires', value: 'popular' },
     { label: 'Prix croissant', value: 'price-asc' },
@@ -36,12 +22,57 @@ const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.07 } }
 
 /* ── COMPONENT ── */
 const Shop = () => {
+    const location = useLocation();
+    const queryParams = new URLSearchParams(location.search);
+    const initialCat = queryParams.get('cat');
+
+    const [allProducts, setAllProducts] = useState([]);
+    const [categories, setCategories] = useState([{ id: 'Tous', name: 'Tous' }]);
     const [selectedCategory, setSelectedCategory] = useState('Tous');
     const [sortBy, setSortBy] = useState('popular');
     const [searchQuery, setSearchQuery] = useState('');
     const [priceRange, setPriceRange] = useState([0, 100]);
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [sortOpen, setSortOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (initialCat) {
+            // Capitalize first letter to match our mapped category names if needed, 
+            // or just find case-insensitive match
+            setSelectedCategory(initialCat.charAt(0).toUpperCase() + initialCat.slice(1));
+        }
+    }, [initialCat]);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const [productsRes, categoriesRes] = await Promise.all([
+                    productService.list({ per_page: 100 }), // Get a good chunk for client-side filtering
+                    categoryService.list()
+                ]);
+
+                // Map products to include main image and category name
+                const mappedProducts = (productsRes.data || []).map(p => ({
+                    ...p,
+                    image: p.images?.find(img => img.is_main)?.image_url || p.images?.[0]?.image_url,
+                    category: p.category?.name,
+                    rating: p.rating || 4.5, // Fallback for UI
+                    reviews: p.reviews_count || 0
+                }));
+
+                setAllProducts(mappedProducts);
+                setCategories([{ id: 'Tous', name: 'Tous' }, ...categoriesRes]);
+            } catch (err) {
+                console.error("Error fetching shop data:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
 
     const filtered = useMemo(() => {
         let list = [...allProducts];
@@ -57,13 +88,13 @@ const Shop = () => {
         switch (sortBy) {
             case 'price-asc': list.sort((a, b) => a.price - b.price); break;
             case 'price-desc': list.sort((a, b) => b.price - a.price); break;
-            case 'new': list = list.filter(p => p.isNew).concat(list.filter(p => !p.isNew)); break;
+            case 'new': list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)); break;
             case 'rating': list.sort((a, b) => b.rating - a.rating); break;
             default: list.sort((a, b) => b.reviews - a.reviews);
         }
 
         return list;
-    }, [selectedCategory, sortBy, searchQuery, priceRange]);
+    }, [allProducts, selectedCategory, sortBy, searchQuery, priceRange]);
 
     const currentSortLabel = sortOptions.find(o => o.value === sortBy)?.label;
 
@@ -210,16 +241,16 @@ const Shop = () => {
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                         {categories.map(cat => (
                                             <button
-                                                key={cat} onClick={() => setSelectedCategory(cat)}
+                                                key={cat.id} onClick={() => setSelectedCategory(cat.name)}
                                                 style={{
                                                     padding: '10px 20px', borderRadius: 'var(--radius-pill)',
                                                     border: '1.5px solid',
-                                                    borderColor: selectedCategory === cat ? 'var(--accent)' : 'var(--divider)',
-                                                    background: selectedCategory === cat ? 'var(--accent-light)' : 'white',
-                                                    color: selectedCategory === cat ? 'var(--accent-deep)' : 'var(--text-muted)',
+                                                    borderColor: selectedCategory === cat.name ? 'var(--accent)' : 'var(--divider)',
+                                                    background: selectedCategory === cat.name ? 'var(--accent-light)' : 'white',
+                                                    color: selectedCategory === cat.name ? 'var(--accent-deep)' : 'var(--text-muted)',
                                                     fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.3s',
                                                 }}
-                                            >{cat}</button>
+                                            >{cat.name}</button>
                                         ))}
                                     </div>
                                 </div>
@@ -264,17 +295,17 @@ const Shop = () => {
                     <div className="mobile-scroller no-scrollbar mb-40" style={{ padding: '4px' }}>
                         {categories.map(cat => (
                             <motion.button
-                                key={cat} whileTap={{ scale: 0.95 }} onClick={() => setSelectedCategory(cat)}
+                                key={cat.id} whileTap={{ scale: 0.95 }} onClick={() => setSelectedCategory(cat.name)}
                                 style={{
                                     padding: '12px 28px', borderRadius: 'var(--radius-pill)',
                                     border: '1px solid var(--divider)',
-                                    background: selectedCategory === cat ? 'var(--secondary)' : 'var(--white)',
-                                    color: selectedCategory === cat ? 'white' : 'var(--text-main)',
-                                    boxShadow: selectedCategory === cat ? 'var(--shadow-md)' : 'var(--shadow-sm)',
+                                    background: selectedCategory === cat.name ? 'var(--secondary)' : 'var(--white)',
+                                    color: selectedCategory === cat.name ? 'white' : 'var(--text-main)',
+                                    boxShadow: selectedCategory === cat.name ? 'var(--shadow-md)' : 'var(--shadow-sm)',
                                     fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
                                     transition: 'all 0.3s'
                                 }}
-                            >{cat}</motion.button>
+                            >{cat.name}</motion.button>
                         ))}
                     </div>
                 )}

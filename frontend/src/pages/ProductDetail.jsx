@@ -3,6 +3,7 @@ import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Heart, Star, ArrowLeft, Plus, Minus, Leaf, Shield, Truck } from 'lucide-react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 import { productService, reviewService, favoriteService, cartService, CART_UPDATED_EVENT } from '../services/api';
 
 /* ── CONSTANTS ── */
@@ -163,6 +164,7 @@ const ReviewForm = ({ productId, onSuccess }) => {
 const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { isAuthenticated } = useAuth();
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [canAddReview, setCanAddReview] = useState(false);
@@ -176,11 +178,13 @@ const ProductDetail = () => {
         const fetchProduct = async () => {
             try {
                 setLoading(true);
-                const [data, reviewStatus, favStatus] = await Promise.all([
-                    productService.get(id),
-                    reviewService.canReview(id).catch(() => ({ can_review: false })),
-                    favoriteService.check(id).catch(() => ({ favorited: false }))
-                ]);
+                const data = await productService.get(id);
+                const reviewStatus = isAuthenticated
+                    ? await reviewService.canReview(id).catch(() => ({ can_review: false, reason: null }))
+                    : { can_review: false, reason: 'not_authenticated' };
+                const favStatus = isAuthenticated
+                    ? await favoriteService.check(id).catch(() => ({ favorited: false }))
+                    : { favorited: false };
 
                 // Compute average rating from reviews if not provided
                 const reviewsList = data.reviews?.map(rev => ({
@@ -224,9 +228,9 @@ const ProductDetail = () => {
                     sku: data.sku,
                 };
                 setProduct(mappedProduct);
-                setCanAddReview(reviewStatus.can_review);
-                setReviewReason(reviewStatus.reason);
-                setWishlisted(favStatus.favorited);
+                setCanAddReview(reviewStatus.can_review ?? false);
+                setReviewReason(reviewStatus.reason ?? null);
+                setWishlisted(favStatus.favorited ?? false);
             } catch (err) {
                 console.error("Error fetching product:", err);
                 setProduct({ ...FALLBACK_PRODUCT, name: `Produit #${id}` });
@@ -236,7 +240,7 @@ const ProductDetail = () => {
         };
 
         fetchProduct();
-    }, [id]);
+    }, [id, isAuthenticated]);
 
     React.useEffect(() => {
         if (!product) return;

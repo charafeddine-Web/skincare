@@ -1,371 +1,173 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Package, Calendar, Euro, CheckCircle, Truck, Clock, ArrowRight, Eye } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    Package, Calendar, CheckCircle, Truck,
+    Clock, AlertCircle, ChevronRight, ArrowRight
+} from 'lucide-react';
+
+// Import de TON service API
+import { orderService } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Orders = () => {
-  const { isAuthenticated, isAdmin } = useAuth();
+    const { isAuthenticated, isAdmin } = useAuth();
+    const [orders, setOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-  if (isAuthenticated && isAdmin) return <Navigate to="/admin" replace />;
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+    // Chargement des données via ton API
+    useEffect(() => {
+        const fetchOrders = async () => {
+            try {
+                setLoading(true);
+                // Utilisation de orderService.list() de ton fichier
+                const response = await orderService.list();
 
-  const orders = [
-    { 
-      id: '#EV-1024', 
-      date: '02 janvier 2026', 
-      total: '89,00', 
-      status: 'Payée', 
-      statusIcon: CheckCircle, 
-      statusColor: 'var(--success)',
-      items: 3
-    },
-    { 
-      id: '#EV-1022', 
-      date: '01 janvier 2026', 
-      total: '54,00', 
-      status: 'Expédiée', 
-      statusIcon: Truck, 
-      statusColor: 'var(--accent)',
-      items: 2
-    },
-  ];
+                // Si ton API Laravel utilise la pagination, les données sont dans .data
+                // Sinon c'est directement la réponse
+                const data = response.data || response;
+                setOrders(Array.isArray(data) ? data : data.data || []);
 
-  const getStatusIcon = (status) => {
-    switch(status) {
-      case 'Payée': return CheckCircle;
-      case 'Expédiée': return Truck;
-      case 'En cours': return Clock;
-      default: return Package;
-    }
-  };
+                setError(null);
+            } catch (err) {
+                console.error("Erreur lors de la récupération :", err);
+                setError(err.message || "Impossible de charger vos commandes.");
+            } finally {
+                setLoading(false);
+            }
+        };
 
-  return (
-    <motion.div 
-      className="page-enter"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      style={{ minHeight: '100vh', background: 'var(--background)' }}
-    >
-      {/* Header Section */}
-      <section style={{
-        background: 'linear-gradient(to bottom, var(--surface), var(--background))',
-        borderBottom: '1px solid var(--divider)',
-        paddingTop: 'clamp(60px, 10vw, 100px)',
-        paddingBottom: 'clamp(40px, 6vw, 60px)'
-      }}>
-        <div className="container">
-          <motion.div 
-            className="flex items-end justify-between gap-6 flex-wrap"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-          >
-            <div>
-              <motion.div 
-                className="text-[0.7rem] tracking-[0.22em] uppercase text-[var(--accent)] font-bold mb-3"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                Mon compte
-              </motion.div>
-              <h1 style={{
-                fontFamily: "'Cormorant Garant', serif",
-                fontSize: 'clamp(2.2rem, 5vw, 3.2rem)',
-                fontWeight: 600,
-                lineHeight: 1.1,
-                color: 'var(--text-main)',
-                marginBottom: '12px'
-              }}>
-                Mes commandes
-              </h1>
-              <p style={{
-                fontSize: '1rem',
-                color: 'var(--text-muted)',
-                lineHeight: 1.6
-              }}>
-                Retrouvez l'historique et le suivi de toutes vos commandes
-              </p>
+        if (isAuthenticated) fetchOrders();
+    }, [isAuthenticated]);
+
+    // Protections de routes
+    if (isAuthenticated && isAdmin) return <Navigate to="/admin" replace />;
+    if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="min-h-screen bg-[#FAFAFA] pt-28 pb-20"
+        >
+            <div className="container mx-auto px-4">
+                <div className="max-w-4xl mx-auto">
+
+                    {/* Header dynamique */}
+                    <header className="mb-12">
+                        <motion.span className="text-[var(--accent)] font-bold tracking-[0.2em] text-[10px] uppercase mb-2 block">
+                            Historique d'achats
+                        </motion.span>
+                        <h1 className="text-4xl font-serif text-gray-900">
+                            Mes <span className="italic text-[var(--primary-deep)]">Commandes</span>
+                        </h1>
+                    </header>
+
+                    {/* États de l'interface */}
+                    {loading ? (
+                        <div className="space-y-4">
+                            {[1, 2, 3].map(i => <div key={i} className="h-32 bg-gray-100 animate-pulse rounded-3xl" />)}
+                        </div>
+                    ) : error ? (
+                        <div className="bg-red-50 p-8 rounded-[30px] text-center border border-red-100">
+                            <AlertCircle className="mx-auto text-red-400 mb-4" size={32} />
+                            <p className="text-red-600 font-medium">{error}</p>
+                            <button onClick={() => window.location.reload()} className="mt-4 text-sm underline">Réessayer</button>
+                        </div>
+                    ) : orders.length === 0 ? (
+                        <EmptyState />
+                    ) : (
+                        <div className="space-y-6">
+                            <AnimatePresence>
+                                {orders.map((order, idx) => (
+                                    <OrderCard key={order.id} order={order} index={idx} />
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                    )}
+                </div>
             </div>
+        </motion.div>
+    );
+};
 
-            <nav style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Link 
-                  to="/account" 
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--divider)',
-                    background: 'transparent',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    color: 'var(--text-muted)',
-                    textDecoration: 'none',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = 'var(--accent-deep)';
-                    e.currentTarget.style.borderColor = 'var(--accent)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'var(--text-muted)';
-                    e.currentTarget.style.borderColor = 'var(--divider)';
-                  }}
-                >
-                  Profil
-                </Link>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Link 
-                  to="/account/commandes"
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: '10px',
-                    border: '2px solid var(--accent)',
-                    background: 'var(--accent-light)',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    color: 'var(--accent-deep)',
-                    textDecoration: 'none',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  Commandes
-                </Link>
-              </motion.div>
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Link 
-                  to="/account/adresses"
-                  style={{
-                    padding: '10px 20px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--divider)',
-                    background: 'transparent',
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    color: 'var(--text-muted)',
-                    textDecoration: 'none',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = 'var(--accent-deep)';
-                    e.currentTarget.style.borderColor = 'var(--accent)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = 'var(--text-muted)';
-                    e.currentTarget.style.borderColor = 'var(--divider)';
-                  }}
-                >
-                  Adresses
-                </Link>
-              </motion.div>
-            </nav>
-          </motion.div>
-        </div>
-      </section>
+/* ── SOUS-COMPOSANT: CARTE COMMANDE ── */
+const OrderCard = ({ order, index }) => {
+    // Configuration des statuts basée sur ton Backend
+    const getStatusInfo = (status) => {
+        const states = {
+            'pending': { label: 'En attente', color: '#6366F1', icon: Clock },
+            'paid': { label: 'Payée', color: '#10B981', icon: CheckCircle },
+            'shipped': { label: 'Expédiée', color: '#F59E0B', icon: Truck },
+            'delivered': { label: 'Livrée', color: '#059669', icon: CheckCircle },
+            'cancelled': { label: 'Annulée', color: '#EF4444', icon: AlertCircle }
+        };
+        return states[status] || { label: status, color: '#9CA3AF', icon: Package };
+    };
 
-      {/* Orders List */}
-      <div className="container" style={{ 
-        paddingTop: 'clamp(40px, 6vw, 60px)',
-        paddingBottom: 'clamp(60px, 8vw, 100px)'
-      }}>
-        {orders.length === 0 ? (
-          <motion.div
+    const status = getStatusInfo(order.status);
+
+    return (
+        <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            style={{
-              textAlign: 'center',
-              padding: '80px 20px',
-              background: 'var(--white)',
-              borderRadius: '20px',
-              border: '1px solid var(--divider)'
-            }}
-          >
-            <Package size={64} style={{ color: 'var(--text-light)', margin: '0 auto 24px', opacity: 0.5 }} />
-            <h3 style={{
-              fontFamily: "'Cormorant Garant', serif",
-              fontSize: '1.5rem',
-              fontWeight: 600,
-              color: 'var(--text-main)',
-              marginBottom: '8px'
-            }}>
-              Aucune commande
-            </h3>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-              Vous n'avez pas encore passé de commande
-            </p>
-          </motion.div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            {orders.map((order, index) => {
-              const StatusIcon = getStatusIcon(order.status);
-              return (
-                <motion.div
-                  key={order.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + index * 0.1, duration: 0.5 }}
-                  style={{
-                    background: 'var(--white)',
-                    border: '1px solid var(--divider)',
-                    borderRadius: '16px',
-                    padding: '24px',
-                    transition: 'all 0.3s',
-                    cursor: 'pointer'
-                  }}
-                  whileHover={{
-                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.08)',
-                    borderColor: 'var(--accent)',
-                    y: -4
-                  }}
-                >
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr auto',
-                    gap: '24px',
-                    alignItems: 'start'
-                  }}>
-                    {/* Left: Order Info */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                      {/* Header */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '12px'
-                      }}>
-                        <div>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            marginBottom: '4px'
-                          }}>
-                            <Package size={20} style={{ color: 'var(--accent)' }} />
-                            <span style={{
-                              fontSize: '1.1rem',
-                              fontWeight: 700,
-                              color: 'var(--text-main)',
-                              fontFamily: "'Cormorant Garant', serif"
-                            }}>
-                              {order.id}
-                            </span>
-                          </div>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '0.875rem',
-                            color: 'var(--text-muted)'
-                          }}>
-                            <Calendar size={14} />
-                            <span>{order.date}</span>
-                            <span style={{ margin: '0 4px' }}>•</span>
-                            <span>{order.items} {order.items > 1 ? 'articles' : 'article'}</span>
-                          </div>
-                        </div>
+            transition={{ delay: index * 0.1 }}
+            className="bg-white rounded-[30px] p-6 border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/40 transition-all group"
+        >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
 
-                        {/* Status Badge */}
-                        <motion.div
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            fontSize: '0.8rem',
-                            fontWeight: 600,
-                            background: `${order.statusColor}15`,
-                            color: order.statusColor,
-                            border: `1px solid ${order.statusColor}30`
-                          }}
-                          whileHover={{ scale: 1.05 }}
-                        >
-                          <StatusIcon size={14} />
-                          {order.status}
-                        </motion.div>
-                      </div>
-
-                      {/* Divider */}
-                      <div style={{
-                        height: '1px',
-                        background: 'var(--divider)',
-                        width: '100%'
-                      }} />
-
-                      {/* Footer */}
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        flexWrap: 'wrap',
-                        gap: '12px'
-                      }}>
-                        <div>
-                          <div style={{
-                            fontSize: '0.75rem',
-                            color: 'var(--text-light)',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.1em',
-                            marginBottom: '4px'
-                          }}>
-                            Total
-                          </div>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'baseline',
-                            gap: '4px',
-                            fontSize: '1.5rem',
-                            fontWeight: 700,
-                            color: 'var(--accent-deep)',
-                            fontFamily: "'Cormorant Garant', serif"
-                          }}>
-                            <Euro size={20} style={{ marginBottom: '2px' }} />
-                            <span>{order.total}</span>
-                          </div>
-                        </div>
-
-                        <motion.button
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            padding: '10px 20px',
-                            background: 'var(--surface)',
-                            border: '1px solid var(--divider)',
-                            borderRadius: '10px',
-                            fontSize: '0.875rem',
-                            fontWeight: 600,
-                            color: 'var(--text-main)',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                          whileHover={{
-                            background: 'var(--accent-light)',
-                            borderColor: 'var(--accent)',
-                            color: 'var(--accent-deep)'
-                          }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Eye size={16} />
-                          Voir les détails
-                          <ArrowRight size={16} />
-                        </motion.button>
-                      </div>
+                {/* Infos principales */}
+                <div className="flex items-center gap-5">
+                    <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center text-[var(--accent)] group-hover:scale-110 transition-transform">
+                        <Package size={28} />
                     </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </motion.div>
-  );
+                    <div>
+                        <div className="flex items-center gap-3 mb-1">
+                            <h3 className="font-bold text-gray-900">#ORD-{order.id}</h3>
+                            <span
+                                style={{ color: status.color, backgroundColor: `${status.color}15` }}
+                                className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5"
+                            >
+                                <status.icon size={12} />
+                                {status.label}
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-gray-400">
+                            <span className="flex items-center gap-1.5"><Calendar size={14}/> {new Date(order.created_at).toLocaleDateString('fr-FR')}</span>
+                            <span>•</span>
+                            <span>{order.items_count || order.items?.length || 0} articles</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Prix et Action */}
+                <div className="flex items-center justify-between md:justify-end gap-8 border-t md:border-none pt-4 md:pt-0">
+                    <div className="text-right">
+                        <p className="text-[10px] uppercase tracking-widest text-gray-400 mb-0.5">Total</p>
+                        <p className="text-xl font-bold text-gray-900">{order.total_amount || order.total} €</p>
+                    </div>
+                    <Link
+                        to={`/account/orders/${order.id}`}
+                        className="w-12 h-12 bg-gray-900 text-white rounded-2xl flex items-center justify-center hover:bg-[var(--accent)] transition-colors shadow-lg shadow-gray-200"
+                    >
+                        <ChevronRight size={20} />
+                    </Link>
+                </div>
+            </div>
+        </motion.div>
+    );
 };
+
+const EmptyState = () => (
+    <div className="text-center py-20 bg-white rounded-[40px] border border-dashed border-gray-200">
+        <Package size={48} className="mx-auto text-gray-200 mb-4" />
+        <h3 className="text-xl font-medium text-gray-900">Aucune commande</h3>
+        <p className="text-gray-500 mb-8">Vous n'avez pas encore passé de commande sur notre boutique.</p>
+        <Link to="/shop" className="inline-flex items-center gap-2 bg-gray-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-[var(--accent)] transition-all">
+            Commencer mon shopping <ArrowRight size={18} />
+        </Link>
+    </div>
+);
 
 export default Orders;

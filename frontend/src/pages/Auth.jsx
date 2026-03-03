@@ -1,6 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, ArrowRight, Mail, Lock, User as UserIcon, AlertCircle, X, CheckCircle2 } from 'lucide-react';
+import {
+    Eye,
+    EyeOff,
+    ArrowRight,
+    Mail,
+    Lock,
+    User as UserIcon,
+    AlertCircle,
+    X,
+    CheckCircle2,
+    Sparkles,
+} from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Navigate } from 'react-router-dom';
 
@@ -10,11 +21,16 @@ const Auth = () => {
     const [showPass2, setShowPass2] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [form, setForm] = useState({ name: '', email: '', password: '', password2: '' });
+    const [form, setForm] = useState({
+        name: '',
+        email: '',
+        password: '',
+        password2: '',
+    });
     const [fieldErrors, setFieldErrors] = useState({});
     const [focusedField, setFocusedField] = useState('');
 
-    const { login, register, isAuthenticated, isAdmin, user } = useAuth();
+    const { login, register, isAuthenticated, isAdmin } = useAuth();
     const navigate = useNavigate();
 
     if (isAuthenticated) {
@@ -38,18 +54,18 @@ const Auth = () => {
         }
 
         if (!form.email.trim()) {
-            newFieldErrors.email = 'L\'email est requis';
+            newFieldErrors.email = "L'email est requis";
             isValid = false;
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-            newFieldErrors.email = 'Format d\'email invalide';
+            newFieldErrors.email = 'Format invalide';
             isValid = false;
         }
 
         if (!form.password) {
-            newFieldErrors.password = 'Le mot de passe est requis';
+            newFieldErrors.password = 'Mot de passe requis';
             isValid = false;
         } else if (form.password.length < 8) {
-            newFieldErrors.password = 'Minimum 8 caractères';
+            newFieldErrors.password = '≥ 8 caractères';
             isValid = false;
         }
 
@@ -91,24 +107,23 @@ const Auth = () => {
                 });
             }
 
-            const loggedUser = response?.user || user;
+            const loggedUser = response?.user;
             const isUserAdmin = loggedUser?.role === 'admin' || loggedUser?.is_admin;
             navigate(isUserAdmin ? '/admin' : '/');
         } catch (err) {
             if (err.errors) {
                 const newFieldErrors = {};
-                Object.keys(err.errors).forEach(key => {
-                    if (err.errors[key] && err.errors[key][0]) {
+                Object.keys(err.errors).forEach((key) => {
+                    if (err.errors[key]?.[0]) {
                         newFieldErrors[key] = err.errors[key][0];
                     }
                 });
                 setFieldErrors(newFieldErrors);
-                const firstErrorKey = Object.keys(err.errors)[0];
-                if (err.errors[firstErrorKey] && err.errors[firstErrorKey][0]) {
-                    setError(err.errors[firstErrorKey][0]);
-                }
+
+                const firstError = Object.values(newFieldErrors)[0];
+                if (firstError) setError(firstError);
             } else {
-                setError(err.message || 'Une erreur est survenue. Veuillez réessayer.');
+                setError(err.message || 'Une erreur est survenue.');
             }
         } finally {
             setLoading(false);
@@ -117,350 +132,189 @@ const Auth = () => {
 
     const clearFieldError = (field) => {
         if (fieldErrors[field]) {
-            setFieldErrors({ ...fieldErrors, [field]: '' });
+            setFieldErrors((prev) => ({ ...prev, [field]: '' }));
         }
     };
 
     return (
-        <div className="auth-layout" style={{ 
-            minHeight: '100vh',
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
-            position: 'relative',
-            overflow: 'hidden'
-        }}>
-            {/* Left Side - Visual */}
+        <div
+            className="min-h-screen grid lg:grid-cols-2 grid-cols-1 relative overflow-hidden bg-gradient-to-br from-rose-50 via-amber-50 to-neutral-50"
+        >
+            {/* ─── LEFT VISUAL SIDE ─── */}
             <motion.div
-                className="auth-visual-side"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.6 }}
-                style={{
-                    background: 'linear-gradient(135deg, var(--grad-blush) 0%, var(--surface) 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 'clamp(40px, 8vw, 80px)',
-                    position: 'relative',
-                    overflow: 'hidden'
-                }}
+                transition={{ duration: 0.9 }}
+                className="relative hidden lg:flex items-center justify-center p-8 xl:p-16 bg-gradient-to-br from-amber-100/30 via-rose-100/20 to-transparent backdrop-blur-sm"
             >
-                {/* Subtle background pattern */}
-                <div style={{
-                    position: 'absolute',
-                    inset: 0,
-                    background: 'radial-gradient(circle at 30% 50%, rgba(197, 160, 89, 0.08) 0%, transparent 50%)',
-                    pointerEvents: 'none'
-                }} />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(197,160,89,0.07)_0%,transparent_60%)]" />
 
                 <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2, duration: 0.8 }}
-                    style={{
-                        maxWidth: '520px',
-                        textAlign: 'center',
-                        position: 'relative',
-                        zIndex: 1
-                    }}
+                    initial={{ y: 40, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.3, duration: 1, type: 'spring', damping: 18 }}
+                    className="relative z-10 max-w-xl text-center space-y-10"
                 >
-                    <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.3, type: 'spring', damping: 15 }}
-                        style={{
-                            width: '80px',
-                            height: '80px',
-                            margin: '0 auto 32px',
-                            background: 'var(--white)',
-                            borderRadius: '20px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            boxShadow: 'var(--shadow-lg)'
-                        }}
-                    >
-                        <span style={{ fontSize: '2.5rem' }}>✨</span>
-                    </motion.div>
+                    <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-white/70 backdrop-blur-xl rounded-full border border-white/40 shadow-sm">
+                        <Sparkles className="text-amber-600" size={20} />
+                        <span className="text-amber-800 font-medium tracking-wide uppercase text-sm">
+              Éveline Skincare
+            </span>
+                    </div>
 
-                    <h1 style={{
-                        fontFamily: "'Cormorant Garant', serif",
-                        fontSize: 'clamp(2.5rem, 5vw, 3.5rem)',
-                        fontWeight: 600,
-                        lineHeight: 1.2,
-                        color: 'var(--text-main)',
-                        marginBottom: '16px'
-                    }}>
-                        {mode === 'login' ? 'Bienvenue' : 'Rejoignez-nous'}
+                    <h1 className="text-5xl xl:text-6xl font-serif font-medium leading-tight text-neutral-900">
+                        {mode === 'login' ? 'Ravie de vous revoir' : 'Bienvenue dans votre rituel'}
                     </h1>
 
-                    <p style={{
-                        fontSize: '1.1rem',
-                        color: 'var(--text-muted)',
-                        lineHeight: 1.7,
-                        marginBottom: '48px'
-                    }}>
-                        {mode === 'login' 
-                            ? 'Accédez à votre espace beauté personnalisé'
-                            : 'Créez votre compte et profitez d\'avantages exclusifs'}
+                    <p className="text-lg text-neutral-600 max-w-md mx-auto leading-relaxed">
+                        {mode === 'login'
+                            ? 'Connectez-vous pour retrouver vos recommandations personnalisées et votre routine beauté'
+                            : 'Créez votre espace dédié et profitez d’une expérience sur mesure'}
                     </p>
 
-                    <div style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '12px',
-                        textAlign: 'left',
-                        background: 'rgba(255, 255, 255, 0.6)',
-                        backdropFilter: 'blur(20px)',
-                        borderRadius: '20px',
-                        padding: '24px',
-                        border: '1px solid rgba(255, 255, 255, 0.8)'
-                    }}>
+                    <div className="space-y-5 pt-6">
                         {[
-                            '10% de réduction sur votre première commande',
-                            'Accès en avant-première aux nouveautés',
-                            'Conseils beauté personnalisés',
-                            'Programme de fidélité exclusif'
+                            '10% sur votre première commande',
+                            'Accès prioritaire aux nouveautés',
+                            'Diagnostic & conseils sur mesure',
+                            'Programme de fidélité exclusif',
                         ].map((benefit, i) => (
                             <motion.div
-                                key={i}
+                                key={benefit}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: 0.4 + i * 0.1 }}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '12px',
-                                    fontSize: '0.95rem',
-                                    color: 'var(--text-main)'
-                                }}
+                                transition={{ delay: 0.5 + i * 0.12, duration: 0.7 }}
+                                className="flex items-center gap-4 text-left text-neutral-700"
                             >
-                                <CheckCircle2 size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-                                <span>{benefit}</span>
+                                <div className="w-8 h-8 rounded-full bg-amber-100/80 flex items-center justify-center flex-shrink-0">
+                                    <CheckCircle2 size={18} className="text-amber-700" />
+                                </div>
+                                <span className="text-base">{benefit}</span>
                             </motion.div>
                         ))}
                     </div>
                 </motion.div>
             </motion.div>
 
-            {/* Right Side - Form */}
+            {/* ─── RIGHT FORM SIDE ─── */}
             <motion.div
-                className="auth-form-side"
-                initial={{ opacity: 0, x: 30 }}
+                initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: 'clamp(40px, 8vw, 80px)',
-                    background: 'var(--background)',
-                    position: 'relative'
-                }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="flex items-center justify-center p-6 sm:p-10 lg:p-16 bg-white/70 backdrop-blur-xl min-h-screen lg:min-h-auto"
             >
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={mode}
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 25 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        transition={{ duration: 0.4 }}
-                        style={{
-                            width: '100%',
-                            maxWidth: '440px'
-                        }}
+                        exit={{ opacity: 0, y: -25 }}
+                        transition={{ duration: 0.45 }}
+                        className="w-full max-w-md space-y-10"
                     >
                         {/* Header */}
-                        <div style={{ marginBottom: '40px' }}>
-                            <div style={{
-                                display: 'inline-block',
-                                padding: '6px 14px',
-                                background: 'var(--accent-light)',
-                                borderRadius: '8px',
-                                fontSize: '0.7rem',
-                                fontWeight: 700,
-                                letterSpacing: '0.1em',
-                                textTransform: 'uppercase',
-                                color: 'var(--accent-deep)',
-                                marginBottom: '20px'
-                            }}>
+                        <div className="space-y-6 text-center lg:text-left">
+                            <div className="inline-block px-4 py-1.5 bg-amber-50 text-amber-800 rounded-full text-xs font-semibold tracking-wider uppercase">
                                 Éveline Skincare
                             </div>
-                            <h2 style={{
-                                fontFamily: "'Cormorant Garant', serif",
-                                fontSize: 'clamp(2rem, 4vw, 2.5rem)',
-                                fontWeight: 600,
-                                lineHeight: 1.2,
-                                color: 'var(--text-main)',
-                                marginBottom: '8px'
-                            }}>
-                                {mode === 'login' ? 'Connexion' : 'Inscription'}
+
+                            <h2 className="text-4xl font-serif font-medium text-neutral-900">
+                                {mode === 'login' ? 'Connexion' : 'Créer mon compte'}
                             </h2>
-                            <p style={{
-                                fontSize: '0.95rem',
-                                color: 'var(--text-muted)',
-                                lineHeight: 1.6
-                            }}>
-                                {mode === 'login' 
-                                    ? 'Entrez vos identifiants pour continuer'
-                                    : 'Remplissez le formulaire ci-dessous'}
+
+                            <p className="text-neutral-600">
+                                {mode === 'login'
+                                    ? 'Entrez vos informations pour accéder à votre espace'
+                                    : 'Rejoignez des milliers de femmes qui prennent soin d’elles'}
                             </p>
                         </div>
 
-                        {/* Error Message */}
+                        {/* Global Error */}
                         <AnimatePresence>
                             {error && (
                                 <motion.div
-                                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                    animate={{ opacity: 1, height: 'auto', marginBottom: '24px' }}
-                                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                                    style={{
-                                        padding: '12px 16px',
-                                        background: 'rgba(192, 57, 43, 0.08)',
-                                        border: '1px solid var(--error)',
-                                        borderRadius: '12px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'space-between',
-                                        gap: '12px'
-                                    }}
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="bg-red-50/80 border border-red-200 text-red-800 px-5 py-4 rounded-2xl flex items-center gap-3 text-sm font-medium"
                                 >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-                                        <AlertCircle size={18} style={{ color: 'var(--error)', flexShrink: 0 }} />
-                                        <span style={{ fontSize: '0.9rem', color: 'var(--error)', fontWeight: 500 }}>
-                                            {error}
-                                        </span>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setError('')}
-                                        style={{
-                                            background: 'none',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            color: 'var(--error)',
-                                            padding: '4px',
-                                            display: 'flex',
-                                            alignItems: 'center'
-                                        }}
-                                    >
-                                        <X size={16} />
+                                    <AlertCircle size={20} className="flex-shrink-0" />
+                                    <span className="flex-1">{error}</span>
+                                    <button onClick={() => setError('')} className="p-1 hover:text-red-900 transition">
+                                        <X size={18} />
                                     </button>
                                 </motion.div>
                             )}
                         </AnimatePresence>
 
-                        {/* Form */}
-                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            {/* Name Field (Register only) */}
-                            {mode === 'register' && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="form-group"
-                                >
-                                    <label className="input-label" style={{
-                                        display: 'block',
-                                        fontSize: '0.8rem',
-                                        fontWeight: 600,
-                                        color: 'var(--text-main)',
-                                        marginBottom: '8px',
-                                        letterSpacing: '0.02em'
-                                    }}>
-                                        Nom complet
-                                    </label>
-                                    <div style={{ position: 'relative' }}>
-                                        <UserIcon 
-                                            size={18} 
-                                            style={{
-                                                position: 'absolute',
-                                                left: '16px',
-                                                top: '50%',
-                                                transform: 'translateY(-50%)',
-                                                color: focusedField === 'name' ? 'var(--accent)' : 'var(--text-light)',
-                                                transition: 'color 0.2s',
-                                                pointerEvents: 'none'
-                                            }}
-                                        />
-                                        <input
-                                            className="input"
-                                            type="text"
-                                            placeholder="Jeanne Dupont"
-                                            value={form.name}
-                                            onChange={(e) => {
-                                                setForm({ ...form, name: e.target.value });
-                                                clearFieldError('name');
-                                            }}
-                                            onFocus={() => setFocusedField('name')}
-                                            onBlur={() => setFocusedField('')}
-                                            required
-                                            style={{
-                                                width: '100%',
-                                                height: '52px',
-                                                padding: '0 16px 0 48px',
-                                                background: 'var(--white)',
-                                                border: `2px solid ${fieldErrors.name ? 'var(--error)' : focusedField === 'name' ? 'var(--accent)' : 'var(--divider)'}`,
-                                                borderRadius: '12px',
-                                                fontSize: '0.95rem',
-                                                color: 'var(--text-main)',
-                                                transition: 'all 0.2s',
-                                                outline: 'none'
-                                            }}
-                                        />
-                                    </div>
-                                    <AnimatePresence>
-                                        {fieldErrors.name && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: -4 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -4 }}
-                                                style={{
-                                                    marginTop: '6px',
-                                                    fontSize: '0.8rem',
-                                                    color: 'var(--error)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '6px'
+                        {/* ─── FORM ─── */}
+                        <form onSubmit={handleSubmit} className="space-y-6">
+                            {/* Name – Register only */}
+                            <AnimatePresence>
+                                {mode === 'register' && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                                        animate={{ height: 'auto', opacity: 1, marginTop: '24px' }}
+                                        exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                                        className="space-y-2 overflow-hidden"
+                                    >
+                                        <label className="block text-sm font-medium text-neutral-700">Nom complet</label>
+                                        <div className="relative">
+                                            <UserIcon
+                                                size={18}
+                                                className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                                                    focusedField === 'name' ? 'text-amber-600' : 'text-neutral-400'
+                                                }`}
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder="Jeanne Dupont"
+                                                value={form.name}
+                                                onChange={(e) => {
+                                                    setForm({ ...form, name: e.target.value });
+                                                    clearFieldError('name');
                                                 }}
-                                            >
-                                                <AlertCircle size={14} />
-                                                {fieldErrors.name}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </motion.div>
-                            )}
+                                                onFocus={() => setFocusedField('name')}
+                                                onBlur={() => setFocusedField('')}
+                                                className={`w-full h-14 pl-12 pr-5 bg-white border-2 rounded-xl text-base transition-all outline-none
+                          ${
+                                                    fieldErrors.name
+                                                        ? 'border-red-400 focus:border-red-500'
+                                                        : focusedField === 'name'
+                                                            ? 'border-amber-400 focus:border-amber-500 shadow-sm shadow-amber-100'
+                                                            : 'border-neutral-200 focus:border-amber-400'
+                                                }`}
+                                            />
+                                        </div>
+                                        <AnimatePresence>
+                                            {fieldErrors.name && (
+                                                <motion.p
+                                                    initial={{ opacity: 0, y: -6 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -6 }}
+                                                    className="text-xs text-red-600 flex items-center gap-1.5 pl-1"
+                                                >
+                                                    <AlertCircle size={14} /> {fieldErrors.name}
+                                                </motion.p>
+                                            )}
+                                        </AnimatePresence>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
-                            {/* Email Field */}
-                            <div className="form-group">
-                                <label className="input-label" style={{
-                                    display: 'block',
-                                    fontSize: '0.8rem',
-                                    fontWeight: 600,
-                                    color: 'var(--text-main)',
-                                    marginBottom: '8px',
-                                    letterSpacing: '0.02em'
-                                }}>
-                                    Adresse email
-                                </label>
-                                <div style={{ position: 'relative' }}>
-                                    <Mail 
-                                        size={18} 
-                                        style={{
-                                            position: 'absolute',
-                                            left: '16px',
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
-                                            color: focusedField === 'email' ? 'var(--accent)' : 'var(--text-light)',
-                                            transition: 'color 0.2s',
-                                            pointerEvents: 'none'
-                                        }}
+                            {/* Email */}
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-neutral-700">Adresse email</label>
+                                <div className="relative">
+                                    <Mail
+                                        size={18}
+                                        className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                                            focusedField === 'email' ? 'text-amber-600' : 'text-neutral-400'
+                                        }`}
                                     />
                                     <input
-                                        className="input"
                                         type="email"
-                                        placeholder="jeanne@exemple.com"
+                                        placeholder="jeanne@example.com"
                                         value={form.email}
                                         onChange={(e) => {
                                             setForm({ ...form, email: e.target.value });
@@ -468,87 +322,53 @@ const Auth = () => {
                                         }}
                                         onFocus={() => setFocusedField('email')}
                                         onBlur={() => setFocusedField('')}
-                                        required
-                                        style={{
-                                            width: '100%',
-                                            height: '52px',
-                                            padding: '0 16px 0 48px',
-                                            background: 'var(--white)',
-                                            border: `2px solid ${fieldErrors.email ? 'var(--error)' : focusedField === 'email' ? 'var(--accent)' : 'var(--divider)'}`,
-                                            borderRadius: '12px',
-                                            fontSize: '0.95rem',
-                                            color: 'var(--text-main)',
-                                            transition: 'all 0.2s',
-                                            outline: 'none'
-                                        }}
+                                        className={`w-full h-14 pl-12 pr-5 bg-white border-2 rounded-xl text-base transition-all outline-none
+                      ${
+                                            fieldErrors.email
+                                                ? 'border-red-400 focus:border-red-500'
+                                                : focusedField === 'email'
+                                                    ? 'border-amber-400 focus:border-amber-500 shadow-sm shadow-amber-100'
+                                                    : 'border-neutral-200 focus:border-amber-400'
+                                        }`}
                                     />
                                 </div>
                                 <AnimatePresence>
                                     {fieldErrors.email && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -4 }}
+                                        <motion.p
+                                            initial={{ opacity: 0, y: -6 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -4 }}
-                                            style={{
-                                                marginTop: '6px',
-                                                fontSize: '0.8rem',
-                                                color: 'var(--error)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px'
-                                            }}
+                                            exit={{ opacity: 0, y: -6 }}
+                                            className="text-xs text-red-600 flex items-center gap-1.5 pl-1"
                                         >
-                                            <AlertCircle size={14} />
-                                            {fieldErrors.email}
-                                        </motion.div>
+                                            <AlertCircle size={14} /> {fieldErrors.email}
+                                        </motion.p>
                                     )}
                                 </AnimatePresence>
                             </div>
 
-                            {/* Password Field */}
-                            <div className="form-group">
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                    <label className="input-label" style={{
-                                        fontSize: '0.8rem',
-                                        fontWeight: 600,
-                                        color: 'var(--text-main)',
-                                        letterSpacing: '0.02em'
-                                    }}>
-                                        Mot de passe
-                                    </label>
+                            {/* Password */}
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <label className="block text-sm font-medium text-neutral-700">Mot de passe</label>
                                     {mode === 'login' && (
                                         <button
                                             type="button"
-                                            onClick={() => setMode('forgot')}
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                fontSize: '0.8rem',
-                                                color: 'var(--accent)',
-                                                fontWeight: 600,
-                                                padding: '4px 0'
-                                            }}
+                                            className="text-sm text-amber-700 hover:text-amber-900 font-medium transition"
+                                            onClick={() => {/* handle forgot password route if exists */}}
                                         >
                                             Mot de passe oublié ?
                                         </button>
                                     )}
                                 </div>
-                                <div style={{ position: 'relative' }}>
-                                    <Lock 
-                                        size={18} 
-                                        style={{
-                                            position: 'absolute',
-                                            left: '16px',
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
-                                            color: focusedField === 'password' ? 'var(--accent)' : 'var(--text-light)',
-                                            transition: 'color 0.2s',
-                                            pointerEvents: 'none'
-                                        }}
+
+                                <div className="relative">
+                                    <Lock
+                                        size={18}
+                                        className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                                            focusedField === 'password' ? 'text-amber-600' : 'text-neutral-400'
+                                        }`}
                                     />
                                     <input
-                                        className="input"
                                         type={showPass ? 'text' : 'password'}
                                         placeholder="••••••••"
                                         value={form.password}
@@ -558,257 +378,140 @@ const Auth = () => {
                                         }}
                                         onFocus={() => setFocusedField('password')}
                                         onBlur={() => setFocusedField('')}
-                                        required
-                                        style={{
-                                            width: '100%',
-                                            height: '52px',
-                                            padding: '0 48px 0 48px',
-                                            background: 'var(--white)',
-                                            border: `2px solid ${fieldErrors.password ? 'var(--error)' : focusedField === 'password' ? 'var(--accent)' : 'var(--divider)'}`,
-                                            borderRadius: '12px',
-                                            fontSize: '0.95rem',
-                                            color: 'var(--text-main)',
-                                            transition: 'all 0.2s',
-                                            outline: 'none'
-                                        }}
+                                        className={`w-full h-14 pl-12 pr-14 bg-white border-2 rounded-xl text-base transition-all outline-none
+                      ${
+                                            fieldErrors.password
+                                                ? 'border-red-400 focus:border-red-500'
+                                                : focusedField === 'password'
+                                                    ? 'border-amber-400 focus:border-amber-500 shadow-sm shadow-amber-100'
+                                                    : 'border-neutral-200 focus:border-amber-400'
+                                        }`}
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPass(!showPass)}
-                                        style={{
-                                            position: 'absolute',
-                                            right: '16px',
-                                            top: '50%',
-                                            transform: 'translateY(-50%)',
-                                            background: 'none',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            color: 'var(--text-light)',
-                                            padding: '4px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            transition: 'color 0.2s'
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent)'}
-                                        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-light)'}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-amber-600 transition"
                                     >
                                         {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
                                     </button>
                                 </div>
+
                                 <AnimatePresence>
                                     {fieldErrors.password && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -4 }}
+                                        <motion.p
+                                            initial={{ opacity: 0, y: -6 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -4 }}
-                                            style={{
-                                                marginTop: '6px',
-                                                fontSize: '0.8rem',
-                                                color: 'var(--error)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '6px'
-                                            }}
+                                            exit={{ opacity: 0, y: -6 }}
+                                            className="text-xs text-red-600 flex items-center gap-1.5 pl-1"
                                         >
-                                            <AlertCircle size={14} />
-                                            {fieldErrors.password}
-                                        </motion.div>
+                                            <AlertCircle size={14} /> {fieldErrors.password}
+                                        </motion.p>
                                     )}
                                 </AnimatePresence>
                             </div>
 
-                            {/* Confirm Password Field (Register only) */}
-                            {mode === 'register' && (
-                                <motion.div
-                                    initial={{ opacity: 0, height: 0 }}
-                                    animate={{ opacity: 1, height: 'auto' }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className="form-group"
-                                >
-                                    <label className="input-label" style={{
-                                        display: 'block',
-                                        fontSize: '0.8rem',
-                                        fontWeight: 600,
-                                        color: 'var(--text-main)',
-                                        marginBottom: '8px',
-                                        letterSpacing: '0.02em'
-                                    }}>
-                                        Confirmer le mot de passe
-                                    </label>
-                                    <div style={{ position: 'relative' }}>
-                                        <Lock 
-                                            size={18} 
-                                            style={{
-                                                position: 'absolute',
-                                                left: '16px',
-                                                top: '50%',
-                                                transform: 'translateY(-50%)',
-                                                color: focusedField === 'password2' ? 'var(--accent)' : 'var(--text-light)',
-                                                transition: 'color 0.2s',
-                                                pointerEvents: 'none'
-                                            }}
-                                        />
-                                        <input
-                                            className="input"
-                                            type={showPass2 ? 'text' : 'password'}
-                                            placeholder="••••••••"
-                                            value={form.password2}
-                                            onChange={(e) => {
-                                                setForm({ ...form, password2: e.target.value });
-                                                clearFieldError('password2');
-                                            }}
-                                            onFocus={() => setFocusedField('password2')}
-                                            onBlur={() => setFocusedField('')}
-                                            required
-                                            style={{
-                                                width: '100%',
-                                                height: '52px',
-                                                padding: '0 48px 0 48px',
-                                                background: 'var(--white)',
-                                                border: `2px solid ${fieldErrors.password2 ? 'var(--error)' : focusedField === 'password2' ? 'var(--accent)' : 'var(--divider)'}`,
-                                                borderRadius: '12px',
-                                                fontSize: '0.95rem',
-                                                color: 'var(--text-main)',
-                                                transition: 'all 0.2s',
-                                                outline: 'none'
-                                            }}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowPass2(!showPass2)}
-                                            style={{
-                                                position: 'absolute',
-                                                right: '16px',
-                                                top: '50%',
-                                                transform: 'translateY(-50%)',
-                                                background: 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                color: 'var(--text-light)',
-                                                padding: '4px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                transition: 'color 0.2s'
-                                            }}
-                                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent)'}
-                                            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text-light)'}
-                                        >
-                                            {showPass2 ? <EyeOff size={20} /> : <Eye size={20} />}
-                                        </button>
-                                    </div>
-                                    <AnimatePresence>
-                                        {fieldErrors.password2 && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: -4 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: -4 }}
-                                                style={{
-                                                    marginTop: '6px',
-                                                    fontSize: '0.8rem',
-                                                    color: 'var(--error)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '6px'
+                            {/* Confirm Password – Register only */}
+                            <AnimatePresence>
+                                {mode === 'register' && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                                        animate={{ height: 'auto', opacity: 1, marginTop: '24px' }}
+                                        exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                                        className="space-y-2 overflow-hidden"
+                                    >
+                                        <label className="block text-sm font-medium text-neutral-700">
+                                            Confirmer le mot de passe
+                                        </label>
+                                        <div className="relative">
+                                            <Lock
+                                                size={18}
+                                                className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors ${
+                                                    focusedField === 'password2' ? 'text-amber-600' : 'text-neutral-400'
+                                                }`}
+                                            />
+                                            <input
+                                                type={showPass2 ? 'text' : 'password'}
+                                                placeholder="••••••••"
+                                                value={form.password2}
+                                                onChange={(e) => {
+                                                    setForm({ ...form, password2: e.target.value });
+                                                    clearFieldError('password2');
                                                 }}
+                                                onFocus={() => setFocusedField('password2')}
+                                                onBlur={() => setFocusedField('')}
+                                                className={`w-full h-14 pl-12 pr-14 bg-white border-2 rounded-xl text-base transition-all outline-none
+                          ${
+                                                    fieldErrors.password2
+                                                        ? 'border-red-400 focus:border-red-500'
+                                                        : focusedField === 'password2'
+                                                            ? 'border-amber-400 focus:border-amber-500 shadow-sm shadow-amber-100'
+                                                            : 'border-neutral-200 focus:border-amber-400'
+                                                }`}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPass2(!showPass2)}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-amber-600 transition"
                                             >
-                                                <AlertCircle size={14} />
-                                                {fieldErrors.password2}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </motion.div>
-                            )}
+                                                {showPass2 ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            </button>
+                                        </div>
 
-                            {/* Submit Button */}
+                                        <AnimatePresence>
+                                            {fieldErrors.password2 && (
+                                                <motion.p
+                                                    initial={{ opacity: 0, y: -6 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -6 }}
+                                                    className="text-xs text-red-600 flex items-center gap-1.5 pl-1"
+                                                >
+                                                    <AlertCircle size={14} /> {fieldErrors.password2}
+                                                </motion.p>
+                                            )}
+                                        </AnimatePresence>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Submit */}
                             <motion.button
                                 type="submit"
                                 disabled={loading}
-                                className="btn btn-primary btn-full"
+                                className="w-full h-14 mt-4 rounded-xl font-medium text-base text-white flex items-center justify-center gap-2 transition-all shadow-lg shadow-amber-200/30"
                                 style={{
-                                    height: '52px',
-                                    marginTop: '8px',
-                                    borderRadius: '12px',
-                                    fontSize: '0.9rem',
-                                    fontWeight: 600,
-                                    background: loading 
-                                        ? 'var(--accent-deep)' 
-                                        : 'linear-gradient(135deg, var(--accent-deep) 0%, var(--accent) 100%)',
-                                    boxShadow: loading 
-                                        ? 'var(--shadow-sm)' 
-                                        : '0 4px 16px rgba(197, 160, 89, 0.3)',
-                                    opacity: loading ? 0.7 : 1,
-                                    cursor: loading ? 'not-allowed' : 'pointer',
-                                    border: 'none',
-                                    color: 'var(--white)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '8px',
-                                    transition: 'all 0.2s'
+                                    background: loading
+                                        ? 'rgb(180 83 9)'
+                                        : 'linear-gradient(135deg, rgb(180 83 9) 0%, rgb(217 119 6) 100%)',
                                 }}
-                                whileHover={loading ? {} : { 
-                                    scale: 1.02, 
-                                    boxShadow: '0 6px 20px rgba(197, 160, 89, 0.4)',
-                                    y: -2
-                                }}
+                                whileHover={loading ? {} : { scale: 1.02, y: -2 }}
                                 whileTap={loading ? {} : { scale: 0.98 }}
                             >
                                 {loading ? (
                                     <>
                                         <motion.div
-                                            style={{
-                                                width: '18px',
-                                                height: '18px',
-                                                border: '2px solid rgba(255, 255, 255, 0.3)',
-                                                borderTopColor: 'white',
-                                                borderRadius: '50%'
-                                            }}
+                                            className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full"
                                             animate={{ rotate: 360 }}
-                                            transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                                         />
-                                        <span>{mode === 'login' ? 'Connexion...' : 'Inscription...'}</span>
+                                        <span>{mode === 'login' ? 'Connexion…' : 'Inscription…'}</span>
                                     </>
                                 ) : (
                                     <>
-                                        <span>{mode === 'login' ? 'Se connecter' : 'Créer mon compte'}</span>
+                                        {mode === 'login' ? 'Se connecter' : 'Créer mon compte'}
                                         <ArrowRight size={18} />
                                     </>
                                 )}
                             </motion.button>
 
-                            {/* Switch Mode */}
-                            <div style={{ 
-                                textAlign: 'center', 
-                                marginTop: '24px',
-                                paddingTop: '24px',
-                                borderTop: '1px solid var(--divider)'
-                            }}>
-                                <p style={{ 
-                                    fontSize: '0.9rem', 
-                                    color: 'var(--text-muted)',
-                                    marginBottom: '8px'
-                                }}>
-                                    {mode === 'login' ? 'Pas encore de compte ?' : 'Déjà un compte ?'}
+                            {/* Switch mode */}
+                            <div className="text-center pt-6 border-t border-neutral-100">
+                                <p className="text-sm text-neutral-600 mb-3">
+                                    {mode === 'login' ? 'Pas encore de compte ?' : 'Déjà inscrite ?'}
                                 </p>
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setMode(mode === 'login' ? 'register' : 'login');
-                                        setError('');
-                                        setFieldErrors({});
-                                    }}
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        color: 'var(--accent)',
-                                        fontWeight: 600,
-                                        fontSize: '0.9rem',
-                                        padding: '8px 0',
-                                        transition: 'color 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--accent-deep)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--accent)'}
+                                    onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+                                    className="text-amber-700 hover:text-amber-900 font-medium transition"
                                 >
                                     {mode === 'login' ? 'Créer un compte' : 'Se connecter'}
                                 </button>

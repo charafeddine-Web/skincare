@@ -1,23 +1,25 @@
-import React from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Hero from '../components/Hero';
-import ProductCard from '../components/ProductCard';
+import ProductCard, { SkeletonCard } from '../components/ProductCard';
 import { ArrowRight, Quote, Droplets, Sun, Shield, Zap, Leaf } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { productService, categoryService } from '../services/api';
 
-/* ── DATA ── */
-const products = [
-    { id: 1, name: 'Sérum Éclat Vitamine C', price: 45, category: 'Sérums', rating: 4.9, reviews: 2340, isNew: true, badge: 'Best-seller' },
-    { id: 2, name: 'Nettoyant Purifiant Doux', price: 28, category: 'Nettoyants', rating: 4.7, reviews: 892 },
-    { id: 3, name: 'Crème Hydratante Intense', price: 52, category: 'Hydratants', rating: 4.8, reviews: 1456, badge: '-20%', originalPrice: 65 },
-    { id: 4, name: 'Protection Solaire SPF 50', price: 34, category: 'Protections SPF', rating: 4.6, reviews: 678, isNew: true },
-];
+/* ── CONSTANTS ── */
+const categoryStyles = {
+    'nettoyants': { emoji: '🫧', color: '#EFE9E3', accent: '#C5A059' },
+    'sérums': { emoji: '✨', color: '#FADADD', accent: '#8B4A52' },
+    'hydratants': { emoji: '💧', color: '#E8F4EF', accent: '#3E8B5E' },
+    'spf': { emoji: '☀️', color: '#FFF3D4', accent: '#C5A059' },
+    'default': { emoji: '🌸', color: '#F8F8F8', accent: '#8B4A52' }
+};
 
-const categories = [
-    { name: 'Nettoyants', count: 12, emoji: '🫧', color: '#EFE9E3', accent: '#C5A059' },
-    { name: 'Sérums', count: 8, emoji: '✨', color: '#FADADD', accent: '#8B4A52' },
-    { name: 'Hydratants', count: 15, emoji: '💧', color: '#E8F4EF', accent: '#3E8B5E' },
-    { name: 'Protections SPF', count: 6, emoji: '☀️', color: '#FFF3D4', accent: '#C5A059' },
+const philosophyStats = [
+    { number: '14 ans', label: "d'expertise botanique" },
+    { number: '98%', label: 'ingrédients naturels' },
+    { number: '50k+', label: 'clientes satisfaites' },
+    { number: '0', label: 'parabènes, sulfates, silicones' },
 ];
 
 const ingredients = [
@@ -58,13 +60,6 @@ const testimonials = [
     },
 ];
 
-const philosophyStats = [
-    { number: '14 ans', label: "d'expertise botanique" },
-    { number: '98%', label: 'ingrédients naturels' },
-    { number: '50k+', label: 'clientes satisfaites' },
-    { number: '0', label: 'parabènes, sulfates, silicones' },
-];
-
 /* ── ANIMATION VARIANTS ── */
 const fadeUp = {
     hidden: { opacity: 0, y: 40 },
@@ -79,16 +74,79 @@ const stagger = {
 /* ── COMPONENT ── */
 const Home = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const [products, setProducts] = useState([]);
+    const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const mountedRef = useRef(true);
+
+    // Remonter en haut quand on affiche la Home (ex. retour Boutique → Accueil) pour que les sections soient visibles
+    useEffect(() => {
+        if (location.pathname === '/') window.scrollTo(0, 0);
+    }, [location.pathname]);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                const [productsRes, categoriesRes] = await Promise.all([
+                    productService.list({ per_page: 4, sort: 'rating' }),
+                    categoryService.list()
+                ]);
+
+                if (!mountedRef.current) return;
+
+                const rawProducts = productsRes?.data ?? productsRes;
+                const productsArray = Array.isArray(rawProducts) ? rawProducts : [];
+                const mappedProducts = productsArray.map(p => ({
+                    ...p,
+                    image: p.images?.find(img => img.is_main)?.image_url || p.images?.[0]?.image_url,
+                    category: p.category?.name,
+                    rating: p.rating != null ? Number(p.rating) : 4.5,
+                    reviews: p.reviews_count ?? 0
+                }));
+
+                const rawCategories = Array.isArray(categoriesRes) ? categoriesRes : (categoriesRes?.data ?? []);
+                const rootCategories = rawCategories.filter(c => !c.parent_id);
+                const mappedCategories = rootCategories.map(cat => {
+                    const styleKey = (cat.name || '').toLowerCase();
+                    const style = categoryStyles[styleKey] || categoryStyles.default;
+                    return {
+                        ...cat,
+                        ...style,
+                        count: cat.products_count ?? 0
+                    };
+                });
+
+                setProducts(mappedProducts);
+                setCategories(mappedCategories);
+            } catch (err) {
+                if (mountedRef.current) {
+                    console.error("Error fetching home data:", err);
+                    setProducts([]);
+                    setCategories([]);
+                }
+            } finally {
+                if (mountedRef.current) setLoading(false);
+            }
+        };
+
+        fetchData();
+        return () => { mountedRef.current = false; };
+    }, []);
+
     return (
         <div className="page-enter">
             <Hero />
 
             {/* ════════════════════════════════
-          CATEGORIES
+          CATEGORIES — visible dès que les données sont prêtes (retour Contact → Accueil)
       ════════════════════════════════ */}
             <section className="section-spacer container">
                 <motion.div
-                    initial="hidden" whileInView="visible"
+                    initial="hidden"
+                    animate={!loading ? 'visible' : 'hidden'}
                     viewport={{ once: true, margin: '-60px' }}
                     variants={fadeUp}
                     className="section-title"
@@ -104,10 +162,17 @@ const Home = () => {
                 </motion.div>
 
                 <motion.div
-                    variants={stagger} initial="hidden"
-                    whileInView="visible" viewport={{ once: true }}
+                    variants={stagger}
+                    initial="hidden"
+                    animate={!loading ? 'visible' : 'hidden'}
                     className="mobile-scroller no-scrollbar"
+                    style={{ display: 'flex', gap: '20px', flexWrap: categories.length === 0 ? 'nowrap' : 'nowrap' }}
                 >
+                    {categories.length === 0 && !loading && (
+                        <p style={{ color: 'var(--text-muted)', padding: '24px', minWidth: '280px' }}>
+                            Aucune catégorie pour le moment. <Link to="/shop">Voir la boutique</Link>
+                        </p>
+                    )}
                     {categories.map((cat) => (
                         <motion.div
                             key={cat.name}
@@ -171,13 +236,13 @@ const Home = () => {
             </section>
 
             {/* ════════════════════════════════
-          FEATURED PRODUCTS
+          FEATURED PRODUCTS — visible dès que le chargement est terminé
       ════════════════════════════════ */}
             <section className="section-spacer" style={{ backgroundColor: 'var(--surface)' }}>
                 <div className="container">
                     <motion.div
-                        initial="hidden" whileInView="visible"
-                        viewport={{ once: true, margin: '-60px' }}
+                        initial="hidden"
+                        animate={!loading ? 'visible' : 'hidden'}
                         variants={fadeUp}
                         className="section-header-flex"
                     >
@@ -191,15 +256,19 @@ const Home = () => {
                     </motion.div>
 
                     <motion.div
-                        variants={stagger} initial="hidden"
-                        whileInView="visible" viewport={{ once: true }}
+                        variants={stagger}
+                        initial="hidden"
+                        animate={!loading ? 'visible' : 'hidden'}
                         className="grid-auto-fit"
                     >
-                        {products.map((product) => (
-                            <motion.div key={product.id} variants={fadeUp}>
-                                <ProductCard product={product} />
-                            </motion.div>
-                        ))}
+                        {loading
+                            ? [1, 2, 3, 4].map(i => <SkeletonCard key={i} />)
+                            : products.map((product) => (
+                                <motion.div key={product.id} variants={fadeUp}>
+                                    <ProductCard product={product} />
+                                </motion.div>
+                            ))
+                        }
                     </motion.div>
                 </div>
             </section>

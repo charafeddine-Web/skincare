@@ -3,6 +3,7 @@ import { ShoppingBag, Heart, Eye, Star } from 'lucide-react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useAuth } from '../contexts/AuthContext';
 import { favoriteService, cartService, CART_UPDATED_EVENT } from '../services/api';
 
 const StarRating = ({ rating = 4.5, count }) => (
@@ -24,16 +25,21 @@ const StarRating = ({ rating = 4.5, count }) => (
 
 const ProductCard = ({ product }) => {
     const navigate = useNavigate();
-    const [wishlisted, setWishlisted] = useState(product.is_favorited || false);
+    const { isAuthenticated } = useAuth();
+    const [wishlisted, setWishlisted] = useState(product.is_favorited ?? false);
     const [addedToCart, setAddedToCart] = useState(false);
 
     useEffect(() => {
+        if (!isAuthenticated) {
+            setWishlisted(false);
+            return;
+        }
         if (product.is_favorited === undefined) {
             favoriteService.check(product.id)
                 .then(res => setWishlisted(res.favorited))
                 .catch(() => {});
         }
-    }, [product.id, product.is_favorited]);
+    }, [isAuthenticated, product.id, product.is_favorited]);
 
     const rating = product.rating ?? 4.5;
     const reviewCount = useMemo(() => {

@@ -26,16 +26,17 @@ api.interceptors.request.use(
   }
 );
 
-// Intercepteur pour gérer les erreurs d'authentification
+// Intercepteur pour gérer les erreurs d'authentification (401)
+// On nettoie la session et on signale la déconnexion sans rediriger : ainsi les pages
+// publiques (Accueil, Boutique, Catégories) restent accessibles. Seule la ProtectedRoute
+// redirige vers /login si l'utilisateur est sur /account ou /favorites.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token expiré ou invalide
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_data');
-      // Navigation SPA (sans reload)
-      window.dispatchEvent(new CustomEvent('app:navigate', { detail: { to: '/login' } }));
+      window.dispatchEvent(new CustomEvent('auth:session-expired'));
     }
     return Promise.reject(error);
   }

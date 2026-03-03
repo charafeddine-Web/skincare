@@ -38,10 +38,11 @@ const BottomNav = () => {
         return null;
     }
 
+    // Non connecté : Accueil, Boutique, Panier (nb articles), Connexion. Connecté : Boutique, Favoris, Panier, Compte (pas d'Accueil)
     const navItems = [
-        { icon: Home, label: 'Accueil', path: '/' },
+        ...(!isAuthenticated ? [{ icon: Home, label: 'Accueil', path: '/' }] : []),
         { icon: Search, label: 'Boutique', path: '/shop' },
-        ...(isAuthenticated && !isAdmin ? [{ icon: Heart, label: 'Favoris', path: '/favorites' }] : []),
+        ...(isAuthenticated ? [{ icon: Heart, label: 'Favoris', path: '/favorites' }] : []),
         { icon: ShoppingCart, label: 'Panier', path: '/cart', count: cartCount },
         { icon: User, label: isAuthenticated ? 'Compte' : 'Connexion', path: isAuthenticated ? '/account' : '/login' },
     ];

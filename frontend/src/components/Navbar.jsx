@@ -23,7 +23,7 @@ const Navbar = () => {
     // RÉFÉRENCE pour détecter le clic extérieur
     const userMenuRef = useRef(null);
 
-    // Liens de navigation
+    // Liens de navigation : client non connecté = Accueil + Boutique + tout. Connecté = pas d'Accueil, + Mes commandes
     const publicNavLinks = [
         { label: 'Accueil', href: '/' },
         { label: 'Boutique', href: '/shop' },
@@ -33,7 +33,6 @@ const Navbar = () => {
     ];
 
     const authenticatedNavLinks = [
-        { label: 'Accueil', href: '/' },
         { label: 'Boutique', href: '/shop' },
         { label: 'Catégories', href: '#', children: categories.map(c => c.name) },
         { label: 'Mes commandes', href: '/account/commandes' },
@@ -150,7 +149,7 @@ const Navbar = () => {
                                     <AnimatePresence>
                                         {activeDropdown === link.label && link.children && (
                                             <Motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                                                        style={{ position: 'absolute', top: '100%', left: '-20px', background: 'white', borderRadius: '20px', padding: '15px', minWidth: '200px', boxShadow: '0 20px 40px rgba(0,0,0,0.08)', marginTop: '15px' }}>
+                                                        style={{ position: 'absolute', top: '100%', left: '-20px', background: 'white', borderRadius: '20px', padding: '15px', minWidth: '200px', maxWidth: '280px', boxShadow: '0 20px 40px rgba(0,0,0,0.08)', marginTop: '15px', zIndex: 1001 }}>
                                                 {link.children.map(child => (
                                                     <Link key={child} to={`/shop?cat=${child.toLowerCase()}`} style={{ display: 'block', padding: '10px 15px', fontSize: '0.85rem', color: '#666', borderRadius: '12px', textDecoration: 'none' }}>{child}</Link>
                                                 ))}
@@ -166,12 +165,14 @@ const Navbar = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <button onClick={() => navigate('/shop')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}><Search size={20} /></button>
 
-                        {/* FAVORITES */}
-                        <Link to="/favorites" onClick={(e) => handleNavigation(e, '/favorites')} className="hide-mobile">
-                            <div style={{ width: '42px', height: '42px', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: location.pathname === '/favorites' ? 'var(--primary-light)' : 'rgba(0,0,0,0.02)', color: 'var(--primary-deep)' }}>
-                                <Heart size={20} fill={location.pathname === '/favorites' ? 'currentColor' : 'none'} />
-                            </div>
-                        </Link>
+                        {/* FAVORITES — affiché uniquement si connecté */}
+                        {isAuthenticated && (
+                            <Link to="/favorites" className="hide-mobile">
+                                <div style={{ width: '42px', height: '42px', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: location.pathname === '/favorites' ? 'var(--primary-light)' : 'rgba(0,0,0,0.02)', color: 'var(--primary-deep)' }}>
+                                    <Heart size={20} fill={location.pathname === '/favorites' ? 'currentColor' : 'none'} />
+                                </div>
+                            </Link>
+                        )}
 
                         {/* PROFILE MENU - AVEC RÉFÉRENCE */}
                         {!loading && (
@@ -215,7 +216,7 @@ const Navbar = () => {
                             </div>
                         )}
 
-                        {/* CART */}
+                        {/* PANIER — visible pour tous, affiche le nombre d'articles (0 si non connecté) */}
                         <Link to="/cart" className="hide-mobile" style={{ textDecoration: 'none' }}>
                             <Motion.button style={{ background: '#1a1a1a', color: 'white', borderRadius: '18px', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '12px', border: 'none', cursor: 'pointer' }}>
                                 <ShoppingBag size={18} strokeWidth={2} />

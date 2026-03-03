@@ -13,7 +13,25 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::with(['category', 'images']);
+        $user = $request->user('sanctum');
+        
+        $query = Product::query()
+            ->with(['category:id,name', 'images' => function($q) {
+                $q->where('is_main', true); // Only load main image for list performance
+            }])
+            ->withCount(['reviews' => function($q) {
+                $q->where('status', 'approved');
+            }])
+            ->withAvg(['reviews as rating' => function($q) {
+                $q->where('status', 'approved');
+            }], 'rating');
+
+        // Add is_favorited if user is logged in
+        if ($user) {
+            $query->withExists(['favorites as is_favorited' => function($q) use ($user) {
+                $q->where('user_id', $user->id);
+            }]);
+        }
 
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
@@ -24,10 +42,16 @@ class ProductController extends Controller
         }
 
         if ($request->has('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('description', 'like', '%' . $request->search . '%');
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('sku', 'like', "%{$search}%");
             });
+        }
+
+        if ($request->has('skin_type')) {
+            $query->where('skin_type', $request->skin_type);
         }
 
         if ($request->has('low_stock')) {
@@ -36,11 +60,20 @@ class ProductController extends Controller
 
         if ($request->has('sort_stock')) {
             $query->orderBy('stock_quantity', $request->sort_stock === 'asc' ? 'asc' : 'desc');
+        } elseif ($request->input('sort') === 'rating' || $request->input('top')) {
+            // Top produits: note moyenne décroissante, puis nombre d'avis
+            $query->orderBy('rating', 'desc')->orderBy('reviews_count', 'desc');
         } else {
             $query->orderBy('created_at', 'desc');
         }
 
-        return response()->json($query->paginate($request->per_page ?? 10), 200);
+        $perPage = $request->input('per_page', 12);
+        $products = $query->paginate($perPage);
+        
+        // Transform the collection to match frontend expectations if necessary
+        // or just return as is if the frontend handles it.
+        
+        return response()->json($products, 200);
     }
 
     /**
@@ -74,12 +107,21 @@ class ProductController extends Controller
         return response()->json($product->load(['category', 'images']), 201);
     }
 
-    /**
-     * Affiche un produit spécifique
-     */
-    public function show(Product $product)
+    public function show(Request $request, Product $product)
     {
-        return response()->json($product->load(['category', 'images', 'reviews.user']), 200);
+        $user = $request->user('sanctum');
+
+        $product->load(['category', 'images', 'reviews' => function($q) {
+            $q->where('status', 'approved')->with('user:id,first_name');
+        }]);
+
+        if ($user) {
+            $product->is_favorited = $product->favorites()
+                ->where('user_id', $user->id)
+                ->exists();
+        }
+
+        return response()->json($product, 200);
     }
 
     /**

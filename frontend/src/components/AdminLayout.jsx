@@ -65,7 +65,7 @@ const AdminLayout = () => {
         {/* Brand Identity / Official Logo */}
         <div className="h-[120px] flex flex-col items-center justify-center px-8">
           <img
-            src="/logo2.jpg"
+            src="/logo2.png"
             alt="Éveline Skincare"
             className="h-16 w-auto object-contain mb-2"
           />
@@ -214,11 +214,11 @@ const AdminLayout = () => {
       <style>{`
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
+
         .animate-page-entry {
           animation: pageEntry 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
-        
+
         @keyframes pageEntry {
           from { opacity: 0; transform: translateY(15px); }
           to { opacity: 1; transform: translateY(0); }

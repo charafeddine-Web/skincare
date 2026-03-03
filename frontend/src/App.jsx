@@ -28,7 +28,7 @@ const AdminSettings = lazy(() => import('./pages/admin/Settings'));
 const AdminReviews = lazy(() => import('./pages/admin/Reviews'));
 const AccountProfile = lazy(() => import('./pages/account/Profile'));
 const AccountOrders = lazy(() => import('./pages/account/Orders'));
-const AccountAddresses = lazy(() => import('./pages/account/Addresses'));
+const Favorites = lazy(() => import('./pages/Favorites'));
 
 const Loader = () => (
   <div style={{
@@ -77,8 +77,8 @@ const AppContent = () => {
               <Route path="/account">
                 <Route index element={<AccountProfile />} />
                 <Route path="commandes" element={<AccountOrders />} />
-                <Route path="adresses" element={<AccountAddresses />} />
               </Route>
+              <Route path="/favorites" element={<Favorites />} />
             </Route>
 
             {/* Zone administration protégée */}
