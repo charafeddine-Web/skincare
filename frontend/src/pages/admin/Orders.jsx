@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { orderService } from '../../services/api';
+import { getCachedOrFetch, listCacheKey, CACHE_KEYS, invalidateOrders } from '../../services/adminDataCache';
 import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, AlertTriangle, Package, CheckCircle, XCircle, FileText } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
 import AdminModal from '../../components/AdminModal';
@@ -40,7 +41,8 @@ const Orders = () => {
         date: dateFilter || undefined,
       };
 
-      const response = await orderService.list(params);
+      const cacheKey = listCacheKey(CACHE_KEYS.ordersPrefix, params);
+      const response = await getCachedOrFetch(cacheKey, () => orderService.list(params));
 
       if (response && response.data) {
         setOrders(response.data);
@@ -72,6 +74,7 @@ const Orders = () => {
     if (!deleteId) return;
     try {
       await orderService.remove(deleteId);
+      invalidateOrders();
       setOrders(prev => prev.filter(o => o.id !== deleteId));
       setDeleteId(null);
       toast.success('Commande supprimée avec succès', {
@@ -91,6 +94,7 @@ const Orders = () => {
     try {
       setIsUpdating(true);
       await orderService.updateStatus(editOrder.id, newStatus);
+      invalidateOrders();
       setOrders((prev) => prev.map(o => o.id === editOrder.id ? { ...o, status: newStatus } : o));
       setEditOrder(null);
       toast.success('Statut de la commande mis à jour avec succès', {

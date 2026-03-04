@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
 import { categoryService, productImageService, productService } from '../../services/api';
+import { getCachedOrFetch, listCacheKey, CACHE_KEYS, invalidateProducts } from '../../services/adminDataCache';
 import { Eye, Edit, Trash2, Image as ImageIcon, ChevronLeft, ChevronRight, AlertTriangle, Package, Download, Upload, Star } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
 import AdminModal from '../../components/AdminModal';
@@ -53,6 +55,7 @@ const Products = () => {
   const [imageSubmitting, setImageSubmitting] = useState(false);
   const [imageError, setImageError] = useState(null);
   const [imagePreviews, setImagePreviews] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const imageFileInputRef = useRef(null);
   const createImageFileInputRef = useRef(null);
   const editImageFileInputRef = useRef(null);
@@ -77,7 +80,8 @@ const Products = () => {
         sort_stock: sortStock || undefined,
       };
 
-      const response = await productService.list(params);
+      const cacheKey = listCacheKey(CACHE_KEYS.productsPrefix, params);
+      const response = await getCachedOrFetch(cacheKey, () => productService.list(params));
 
       // Laravel pagination structure
       if (response && response.data) {
@@ -100,7 +104,7 @@ const Products = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const categoriesData = await categoryService.list();
+        const categoriesData = await getCachedOrFetch(CACHE_KEYS.categories, () => categoryService.list());
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       } catch (err) {
         console.error("Categories load error", err);
@@ -121,7 +125,12 @@ const Products = () => {
 
   const handleOpenModal = () => {
     setFormError(null);
+    imagePreviews.forEach(url => URL.revokeObjectURL(url));
     setImagePreviews([]);
+    setSelectedFiles([]);
+    if (createImageFileInputRef.current) {
+      createImageFileInputRef.current.value = '';
+    }
     if (!categories.length) {
       setFormError('Veuillez d\'abord créer au moins une catégorie avant d\'ajouter un produit.');
       return;
@@ -145,17 +154,27 @@ const Products = () => {
   };
 
   const handleFileLocalPreview = (e) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 5) {
-      setFormError('Vous pouvez sélectionner au maximum 5 images.');
-      setImagePreviews([]);
+    const newFiles = Array.from(e.target.files || []);
+    if (newFiles.length === 0) return;
+
+    const combined = [...selectedFiles, ...newFiles];
+    if (combined.length > 8) {
+      setFormError(`Maximum 8 images autorisées. Vous en avez déjà ${selectedFiles.length} sélectionnée(s).`);
+      e.target.value = '';
       return;
     }
     setFormError(null);
-    // Cleanup old object URLs
     imagePreviews.forEach(url => URL.revokeObjectURL(url));
-    const previews = files.map(file => URL.createObjectURL(file));
+    const previews = combined.map(file => URL.createObjectURL(file));
+    setSelectedFiles(combined);
     setImagePreviews(previews);
+    e.target.value = '';
+  };
+
+  const handleRemoveSelectedImage = (index) => {
+    URL.revokeObjectURL(imagePreviews[index]);
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleExportCSV = async () => {
@@ -349,6 +368,7 @@ const Products = () => {
     if (!deleteId) return;
     try {
       await productService.remove(deleteId);
+      invalidateProducts();
       setProducts((prev) => prev.filter((p) => p.id !== deleteId));
       setDeleteId(null);
       toast.success('Produit supprimé avec succès', {
@@ -373,32 +393,24 @@ const Products = () => {
       return;
     }
 
-    const files = createImageFileInputRef.current?.files;
-    if (files && files.length > 5) {
-      setFormError(`Vous pouvez téléverser au maximum 5 images (vous en avez sélectionné ${files.length}).`);
-      return;
-    }
-
     try {
       setIsSubmitting(true);
       let created = await productService.create(newProduct);
 
-      // Upload d'images vers Cloudinary si des fichiers ont été choisis
-      if (files && files.length > 0) {
-        const limitedFiles = Array.from(files).slice(0, 5);
-        let uploaded = await productImageService.uploadFiles(created.id, limitedFiles, { is_main: true });
+      if (selectedFiles.length > 0) {
+        let uploaded = await productImageService.uploadFiles(created.id, selectedFiles, { is_main: true });
         if (!Array.isArray(uploaded)) {
           uploaded = [uploaded];
         }
         created = { ...created, images: uploaded };
       }
 
+      invalidateProducts();
       setProducts((prev) => [created, ...prev]);
       setIsModalOpen(false);
-      setImagePreviews((prevUrls) => {
-        prevUrls.forEach(url => URL.revokeObjectURL(url));
-        return [];
-      });
+      imagePreviews.forEach(url => URL.revokeObjectURL(url));
+      setImagePreviews([]);
+      setSelectedFiles([]);
       if (createImageFileInputRef.current) {
         createImageFileInputRef.current.value = '';
       }
@@ -473,6 +485,7 @@ const Products = () => {
         })
       );
 
+      invalidateProducts();
       setEditProduct(null);
       setEditImageUrl('');
       if (editImageFileInputRef.current) {
@@ -502,7 +515,7 @@ const Products = () => {
 
   const handleRemoveImage = async (productId, imageId) => {
     try {
-      await productImageService.remove(productId, imageId);
+      await productImageService.remove(imageId);
       setProducts((prev) =>
         prev.map((p) =>
           p.id === productId
@@ -910,150 +923,127 @@ const Products = () => {
         )}
       </div>
 
-      {/* Modal création produit */}
-      {isModalOpen && (
+      {/* Modal création produit — centré, design pro (grandes marques) */}
+      {isModalOpen && createPortal(
         <div
-          className="admin-modal-backdrop"
+          className="admin-add-product-modal-backdrop"
           style={{
             position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.35)',
-            backdropFilter: 'blur(4px)',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            minHeight: '100vh',
+            background: 'rgba(26, 26, 30, 0.32)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 40,
-            padding: '16px',
-            overflowY: 'auto'
+            zIndex: 90,
+            overflowY: 'auto',
           }}
         >
           <div
             style={{
               width: '100%',
-              maxWidth: 650,
-              borderRadius: 24,
-              background: 'var(--white)',
-              boxShadow: 'var(--shadow-xl)',
-              border: '1px solid var(--divider)',
-              padding: '24px 28px',
-              margin: 'auto'
+              maxWidth: 580,
+              maxHeight: 'min(88vh, 900px)',
+              margin: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              background: '#FFFFFF',
+              boxShadow: '0 32px 64px -12px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)',
+              borderRadius: 16,
+              overflow: 'hidden',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontSize: '0.7rem', letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--text-light)', marginBottom: 4 }}>
-                  Nouveau produit
-                </div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 600 }}>Ajouter un produit skincare</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => !isSubmitting && setIsModalOpen(false)}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  fontSize: '0.9rem',
-                  color: 'var(--text-light)',
-                  cursor: 'pointer',
-                }}
-              >
-                Fermer
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateProduct} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.4fr) minmax(0,1fr)', gap: 12 }}>
+            <header style={{ flexShrink: 0, padding: '24px 28px 20px', borderBottom: '1px solid #EBE8E4', background: '#FFF' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Nom du produit</label>
+                  <p style={{ fontSize: 11, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#8C8782', marginBottom: 6, fontWeight: 600 }}>
+                    Nouveau produit
+                  </p>
+                  <h2 style={{ fontSize: 20, fontWeight: 600, color: '#1C1C1E', letterSpacing: '-0.02em', margin: 0 }}>
+                    Ajouter un produit
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => !isSubmitting && setIsModalOpen(false)}
+                  className="admin-modal-close-btn"
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    border: '1px solid #E5E2DE',
+                    background: '#FFF',
+                    color: '#6B6560',
+                    fontSize: 18,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            </header>
+
+            <form onSubmit={handleCreateProduct} className="admin-product-form" style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '28px 28px 32px', flex: 1, overflowY: 'auto', minHeight: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 20 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Nom du produit</label>
                   <input
                     type="text"
                     value={newProduct.name}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, name: e.target.value }))}
                     placeholder="Ex: Sérum Hydratant Intense"
-                    style={{
-                      width: '100%',
-                      marginTop: 6,
-                      borderRadius: 12,
-                      border: '1px solid var(--divider)',
-                      padding: '10px 14px',
-                      fontSize: '0.9rem',
-                      background: 'var(--surface)'
-                    }}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, color: '#1C1C1E', background: '#FAFAF9' }}
                     required
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>SKU</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>SKU</label>
                   <input
                     type="text"
                     value={newProduct.sku}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, sku: e.target.value }))}
                     placeholder="Ex: SER-HYD-50"
-                    style={{
-                      width: '100%',
-                      marginTop: 6,
-                      borderRadius: 12,
-                      border: '1px solid var(--divider)',
-                      padding: '10px 14px',
-                      fontSize: '0.9rem',
-                      background: 'var(--surface)'
-                    }}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, color: '#1C1C1E', background: '#FAFAF9' }}
                     required
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Prix (€)</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Prix (€)</label>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={newProduct.price}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, price: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      marginTop: 4,
-                      borderRadius: 999,
-                      border: '1px solid var(--divider)',
-                      padding: '8px 14px',
-                      fontSize: '0.85rem',
-                    }}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, color: '#1C1C1E', background: '#FAFAF9' }}
                     required
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Stock</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Stock</label>
                   <input
                     type="number"
                     min="0"
                     value={newProduct.stock_quantity}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, stock_quantity: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      marginTop: 4,
-                      borderRadius: 999,
-                      border: '1px solid var(--divider)',
-                      padding: '8px 14px',
-                      fontSize: '0.85rem',
-                    }}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, color: '#1C1C1E', background: '#FAFAF9' }}
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Statut</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Statut</label>
                   <select
                     value={newProduct.is_active ? 'active' : 'inactive'}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, is_active: e.target.value === 'active' }))}
-                    style={{
-                      width: '100%',
-                      marginTop: 4,
-                      borderRadius: 999,
-                      border: '1px solid var(--divider)',
-                      padding: '8px 14px',
-                      fontSize: '0.85rem',
-                      background: 'white',
-                    }}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, background: '#FAFAF9', color: '#1C1C1E' }}
                   >
                     <option value="active">Actif</option>
                     <option value="inactive">Désactivé</option>
@@ -1062,22 +1052,14 @@ const Products = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Catégorie</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Catégorie</label>
                 <select
                   value={newProduct.category_id}
                   onChange={(e) => setNewProduct((prev) => ({ ...prev, category_id: e.target.value }))}
-                  style={{
-                    width: '100%',
-                    marginTop: 4,
-                    borderRadius: 999,
-                    border: '1px solid var(--divider)',
-                    padding: '8px 14px',
-                    fontSize: '0.85rem',
-                    background: 'white',
-                  }}
+                  style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, background: '#FAFAF9', color: '#1C1C1E' }}
                   required
                 >
-                  <option value="">Choisir une catégorie…</option>
+                  <option value="">Choisir une catégorie</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
@@ -1087,42 +1069,25 @@ const Products = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Description (optionnelle)</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Description (optionnelle)</label>
                 <textarea
                   value={newProduct.description}
                   onChange={(e) => setNewProduct((prev) => ({ ...prev, description: e.target.value }))}
                   placeholder="Décrivez les bienfaits de ce soin..."
                   rows={4}
-                  style={{
-                    width: '100%',
-                    marginTop: 4,
-                    borderRadius: 16,
-                    border: '1px solid var(--divider)',
-                    padding: '8px 14px',
-                    fontSize: '0.85rem',
-                    resize: 'vertical',
-                  }}
+                  style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, color: '#1C1C1E', background: '#FAFAF9', resize: 'vertical' }}
                 />
               </div>
 
-              {/* New Product Detail Fields */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Type de peau</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Type de peau</label>
                   <select
                     value={newProduct.skin_type}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, skin_type: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      marginTop: 6,
-                      borderRadius: 12,
-                      border: '1px solid var(--divider)',
-                      padding: '10px 14px',
-                      fontSize: '0.9rem',
-                      background: 'var(--surface)'
-                    }}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, background: '#FAFAF9', color: '#1C1C1E' }}
                   >
-                    <option value="">Sélectionner...</option>
+                    <option value="">Sélectionner</option>
                     <option value="sèche">Sèche</option>
                     <option value="grasse">Grasse</option>
                     <option value="mixte">Mixte</option>
@@ -1131,21 +1096,13 @@ const Products = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Moment d'application</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Moment d'application</label>
                   <select
                     value={newProduct.application_time}
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, application_time: e.target.value }))}
-                    style={{
-                      width: '100%',
-                      marginTop: 6,
-                      borderRadius: 12,
-                      border: '1px solid var(--divider)',
-                      padding: '10px 14px',
-                      fontSize: '0.9rem',
-                      background: 'var(--surface)'
-                    }}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, background: '#FAFAF9', color: '#1C1C1E' }}
                   >
-                    <option value="">Sélectionner...</option>
+                    <option value="">Sélectionner</option>
                     <option value="matin">Matin</option>
                     <option value="soir">Soir</option>
                     <option value="jour/nuit">Jour/Nuit</option>
@@ -1154,109 +1111,89 @@ const Products = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Ingrédients actifs principaux</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Ingrédients actifs</label>
                 <textarea
                   value={newProduct.active_ingredients}
                   onChange={(e) => setNewProduct((prev) => ({ ...prev, active_ingredients: e.target.value }))}
-                  placeholder="Ex: Acide hyaluronique, Vitamine C, Niacinamide..."
+                  placeholder="Acide hyaluronique, Vitamine C..."
                   rows={2}
-                  style={{
-                    width: '100%',
-                    marginTop: 6,
-                    borderRadius: 12,
-                    border: '1px solid var(--divider)',
-                    padding: '10px 14px',
-                    fontSize: '0.85rem',
-                    resize: 'vertical',
-                  }}
+                  style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, color: '#1C1C1E', background: '#FAFAF9', resize: 'vertical' }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Liste INCI complète</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Liste INCI</label>
                 <textarea
                   value={newProduct.inci_list}
                   onChange={(e) => setNewProduct((prev) => ({ ...prev, inci_list: e.target.value }))}
-                  placeholder="Liste INCI complète des ingrédients (nomenclature internationale)..."
+                  placeholder="Nomenclature internationale des ingrédients..."
                   rows={3}
-                  style={{
-                    width: '100%',
-                    marginTop: 6,
-                    borderRadius: 12,
-                    border: '1px solid var(--divider)',
-                    padding: '10px 14px',
-                    fontSize: '0.85rem',
-                    resize: 'vertical',
-                  }}
+                  style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, color: '#1C1C1E', background: '#FAFAF9', resize: 'vertical' }}
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Mode d'emploi et fréquence</label>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Mode d'emploi</label>
                 <textarea
                   value={newProduct.usage_instructions}
                   onChange={(e) => setNewProduct((prev) => ({ ...prev, usage_instructions: e.target.value }))}
-                  placeholder="Ex: Appliquer matin et soir sur peau propre. Masser délicatement jusqu'à pénétration complète..."
+                  placeholder="Application, fréquence..."
                   rows={3}
-                  style={{
-                    width: '100%',
-                    marginTop: 6,
-                    borderRadius: 12,
-                    border: '1px solid var(--divider)',
-                    padding: '10px 14px',
-                    fontSize: '0.85rem',
-                    resize: 'vertical',
-                  }}
+                  style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, color: '#1C1C1E', background: '#FAFAF9', resize: 'vertical' }}
                 />
               </div>
 
-              <div style={{ padding: '16px', background: 'var(--surface)', borderRadius: 16, border: '1px dashed var(--divider)' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-main)' }}>Images du produit</label>
-                <input
-                  ref={createImageFileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileLocalPreview}
-                  multiple
-                  style={{
-                    width: '100%',
-                    marginTop: 8,
-                    fontSize: '0.85rem',
-                    padding: '8px 0'
-                  }}
-                />
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginTop: 4 }}>
-                  Recommandé : jusqu'à 5 images de haute qualité (fond blanc ou lifestyle). La première sera l'image principale.
+              <div style={{ padding: 20, borderRadius: 12, border: '1px dashed #D8D4CF', background: '#FAFAF9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560' }}>
+                    Images du produit
+                  </label>
+                  <span style={{ fontSize: 12, color: selectedFiles.length >= 8 ? '#B91C1C' : '#8C8782', fontWeight: 500 }}>
+                    {selectedFiles.length}/8
+                  </span>
                 </div>
-                {/* Images Preview section */}
+                <p style={{ fontSize: 13, color: '#8C8782', margin: '0 0 14px 0' }}>
+                  Jusqu'à 8 images. La première = image principale.
+                </p>
+                <label
+                  htmlFor="create-image-upload"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '10px 18px',
+                    borderRadius: 10,
+                    border: '1px solid #E5E2DE',
+                    background: '#FFF',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: selectedFiles.length >= 8 ? 'not-allowed' : 'pointer',
+                    opacity: selectedFiles.length >= 8 ? 0.5 : 1,
+                    color: '#1C1C1E',
+                    transition: 'border-color 0.2s, background 0.2s',
+                  }}
+                >
+                  <ImageIcon size={16} strokeWidth={1.8} />
+                  Ajouter des images
+                </label>
+                <input id="create-image-upload" ref={createImageFileInputRef} type="file" accept="image/*" onChange={handleFileLocalPreview} multiple disabled={selectedFiles.length >= 8} style={{ display: 'none' }} />
+
                 {imagePreviews.length > 0 && (
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>
                     {imagePreviews.map((url, index) => (
-                      <div key={index} style={{
-                        width: '64px',
-                        height: '64px',
-                        borderRadius: '8px',
-                        backgroundImage: `url(${url})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        border: '1px solid var(--divider)',
-                        position: 'relative'
-                      }}>
+                      <div key={index} style={{ position: 'relative', width: 72, height: 72, borderRadius: 10, overflow: 'hidden', border: index === 0 ? '2px solid #A8874A' : '1px solid #E5E2DE', flexShrink: 0 }}>
+                        <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                         {index === 0 && (
-                          <div style={{
-                            position: 'absolute',
-                            bottom: -6,
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            backgroundColor: 'white',
-                            color: 'var(--accent)',
-                            fontSize: '0.6rem',
-                            fontWeight: 'bold',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                          }}>Principal</div>
+                          <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(168,135,74,0.9)', color: '#FFF', fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textAlign: 'center', padding: '3px 4px' }}>PRINCIPALE</span>
                         )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveSelectedImage(index)}
+                          style={{ position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: 6, border: 'none', background: 'rgba(0,0,0,0.6)', color: '#FFF', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                          title="Retirer"
+                        >
+                          ✕
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -1264,22 +1201,25 @@ const Products = () => {
               </div>
 
               {formError && (
-                <div style={{ fontSize: '0.8rem', color: '#b91c1c', marginTop: 4 }}>
+                <div style={{ fontSize: 13, color: '#B91C1C', padding: '10px 14px', background: '#FEF2F2', borderRadius: 10 }}>
                   {formError}
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, paddingTop: 8, marginTop: 4 }}>
                 <button
                   type="button"
                   onClick={() => !isSubmitting && setIsModalOpen(false)}
                   style={{
-                    padding: '8px 16px',
-                    borderRadius: 999,
-                    border: '1px solid var(--divider)',
-                    background: 'white',
-                    fontSize: '0.8rem',
+                    padding: '12px 22px',
+                    borderRadius: 10,
+                    border: '1px solid #E5E2DE',
+                    background: '#FFF',
+                    fontSize: 14,
+                    fontWeight: 600,
                     cursor: 'pointer',
+                    color: '#1C1C1E',
+                    transition: 'border-color 0.2s, background 0.2s',
                   }}
                 >
                   Annuler
@@ -1288,23 +1228,33 @@ const Products = () => {
                   type="submit"
                   disabled={isSubmitting}
                   style={{
-                    padding: '10px 24px',
-                    borderRadius: 999,
+                    padding: '12px 28px',
+                    borderRadius: 10,
                     border: 'none',
-                    background: 'var(--accent-deep)',
-                    color: 'white',
-                    fontSize: '0.85rem',
+                    background: '#1C1C1E',
+                    color: '#FFF',
+                    fontSize: 14,
                     fontWeight: 600,
-                    cursor: 'pointer',
-                    opacity: isSubmitting ? 0.6 : 1,
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                    opacity: isSubmitting ? 0.7 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'opacity 0.2s, background 0.2s',
                   }}
                 >
-                  {isSubmitting ? 'Publication...' : 'Publier le produit'}
+                  {isSubmitting ? (
+                    <>
+                      <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#FFF', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                      Publication...
+                    </>
+                  ) : 'Publier le produit'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* View Product Modal */}

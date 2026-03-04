@@ -2525,3 +2525,35 @@ a:focus {
 .btn-pro-gold-outline:hover svg {
   transform: translateY(1px);
 }
+
+/* Admin: modal "Ajouter un produit" — centré, design pro */
+.admin-add-product-modal-backdrop {
+  left: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+@media (min-width: 768px) {
+  .admin-add-product-modal-backdrop {
+    left: 280px;
+  }
+}
+
+/* Champs du formulaire pro — focus discret */
+.admin-product-form input:focus,
+.admin-product-form select:focus,
+.admin-product-form textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.admin-product-form input,
+.admin-product-form select,
+.admin-product-form textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-modal-close-btn:hover {
+  border-color: var(--accent) !important;
+  background: #FDFBF7 !important;
+}

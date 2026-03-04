@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { userService } from '../../services/api';
+import { getCachedOrFetch, listCacheKey, CACHE_KEYS, invalidateUsers } from '../../services/adminDataCache';
 import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, AlertTriangle, User, Download } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
 import AdminModal from '../../components/AdminModal';
@@ -32,7 +33,8 @@ const Customers = () => {
         per_page: itemsPerPage,
         search: search.trim() || undefined,
       };
-      const response = await userService.list(params);
+      const cacheKey = listCacheKey(CACHE_KEYS.usersPrefix, params);
+      const response = await getCachedOrFetch(cacheKey, () => userService.list(params));
 
       if (response && response.data) {
         setCustomers(response.data);
@@ -84,6 +86,7 @@ const Customers = () => {
     if (!deleteId) return;
     try {
       await userService.remove(deleteId);
+      invalidateUsers();
       setCustomers(prev => prev.filter(c => c.id !== deleteId));
       setDeleteId(null);
       toast.success('Client supprimé avec succès', {
@@ -109,6 +112,7 @@ const Customers = () => {
         phone: editCustomer.phone,
         role: editCustomer.role,
       });
+      invalidateUsers();
       setCustomers((prev) => prev.map(c => c.id === updated.id ? updated : c));
       setEditCustomer(null);
       toast.success('Client mis à jour avec succès', {

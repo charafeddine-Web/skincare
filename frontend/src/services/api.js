@@ -293,9 +293,9 @@ export const adminService = {
 
 // Service Utilisateurs / Clients (admin)
 export const userService = {
-  list: async () => {
+  list: async (params = {}) => {
     try {
-      const response = await api.get('/users');
+      const response = await api.get('/users', { params });
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Erreur lors du chargement des clients' };
@@ -447,6 +447,15 @@ export const productImageService = {
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Erreur lors de la mise à jour de l\'image produit' };
+    }
+  },
+
+  setMain: async (productId, imageId) => {
+    try {
+      const response = await api.put(`/product-images/${imageId}`, { is_main: true });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la définition de l\'image principale' };
     }
   },
 

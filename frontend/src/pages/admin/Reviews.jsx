@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { reviewService } from '../../services/api';
+import { getCachedOrFetch, listCacheKey, CACHE_KEYS, invalidateReviews } from '../../services/adminDataCache';
 import {
     Star,
     CheckCircle,
@@ -45,7 +46,8 @@ const Reviews = () => {
                 status: filterStatus !== 'all' ? filterStatus : undefined,
                 search: searchTerm.trim() || undefined,
             };
-            const response = await reviewService.list(params);
+            const cacheKey = listCacheKey(CACHE_KEYS.reviewsPrefix, params);
+            const response = await getCachedOrFetch(cacheKey, () => reviewService.list(params));
 
             if (response && response.data) {
                 setReviews(response.data);
@@ -66,6 +68,7 @@ const Reviews = () => {
     const handleStatusUpdate = async (id, newStatus) => {
         try {
             await reviewService.updateStatus(id, newStatus);
+            invalidateReviews();
             setReviews(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
             toast.success(`Avis ${newStatus === 'approved' ? 'approuvé' : 'rejeté'}`);
         } catch (err) {
@@ -77,6 +80,7 @@ const Reviews = () => {
         if (!window.confirm("Supprimer définitivement cet avis ?")) return;
         try {
             await reviewService.remove(id);
+            invalidateReviews();
             setReviews(prev => prev.filter(r => r.id !== id));
             toast.success("Avis supprimé avec succès");
         } catch (err) {

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { categoryService } from '../../services/api';
+import { getCachedOrFetch, CACHE_KEYS, invalidateCategories } from '../../services/adminDataCache';
 import { Edit, Trash2, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import AdminLoader from '../../components/AdminLoader';
 import AdminModal from '../../components/AdminModal';
@@ -34,7 +35,7 @@ const Categories = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await categoryService.list();
+        const data = await getCachedOrFetch(CACHE_KEYS.categories, () => categoryService.list());
         if (isMounted) {
           setCategories(Array.isArray(data) ? data : []);
         }
@@ -82,6 +83,7 @@ const Categories = () => {
     if (!deleteId) return;
     try {
       await categoryService.remove(deleteId);
+      invalidateCategories();
       setCategories((prev) => prev.filter((c) => c.id !== deleteId));
       setDeleteId(null);
       toast.success('Catégorie supprimée avec succès', {
@@ -106,6 +108,7 @@ const Categories = () => {
         slug: editCategory.slug,
         parent_id: editCategory.parent_id || null,
       });
+      invalidateCategories();
       setCategories((prev) => prev.map(c => c.id === updated.id ? updated : c));
       setEditCategory(null);
       toast.success('Catégorie mise à jour avec succès', {
@@ -134,6 +137,7 @@ const Categories = () => {
     try {
       setIsSubmitting(true);
       const created = await categoryService.create(newCategory);
+      invalidateCategories();
       setCategories((prev) => [created, ...prev]);
       setNewCategory({ name: '', slug: '', parent_id: '' });
     } catch (err) {

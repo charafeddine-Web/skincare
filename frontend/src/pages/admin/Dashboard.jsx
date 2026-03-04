@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Droplets, ShoppingBag, Users, CreditCard } from 'lucide-react';
 import { adminService } from '../../services/api';
+import { getCachedOrFetch, CACHE_KEYS, TTL_MS } from '../../services/adminDataCache';
 import AdminLoader from '../../components/AdminLoader';
 
 const Dashboard = () => {
@@ -24,8 +25,8 @@ const Dashboard = () => {
         setError(null);
 
         const [metricsData, bestSellersData] = await Promise.all([
-          adminService.getMetrics(),
-          adminService.getBestSellers({ limit: 5 }),
+          getCachedOrFetch(CACHE_KEYS.dashboardMetrics, () => adminService.getMetrics(), TTL_MS.dashboard),
+          getCachedOrFetch(CACHE_KEYS.dashboardBestSellers, () => adminService.getBestSellers({ limit: 5 }), TTL_MS.dashboard),
         ]);
 
         if (!isMounted) return;
