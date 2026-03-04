@@ -54,7 +54,7 @@ const ProductCarousel = ({ products, loading, title = 'Best-sellers', subtitle }
   };
 
   return (
-    <section className="section-spacer" style={{ background: 'var(--surface)' }}>
+    <section className="section-spacer" style={{ background: 'transparent' }}>
       <div className="container">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -74,6 +74,12 @@ const ProductCarousel = ({ products, loading, title = 'Best-sellers', subtitle }
             Voir la collection <ChevronRight size={16} />
           </Link>
         </motion.div>
+
+        {loading && (
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 12, marginTop: -4 }}>
+            Récupération en cours…
+          </p>
+        )}
 
         <div style={{ position: 'relative' }}>
           <motion.button
@@ -140,26 +146,26 @@ const ProductCarousel = ({ products, loading, title = 'Best-sellers', subtitle }
 
           <div
             ref={scrollRef}
-            className="mobile-scroller no-scrollbar"
+            className="mobile-scroller no-scrollbar shop-grid shop-grid--carousel"
             style={{
               display: 'flex',
               gap,
               overflowX: 'auto',
               scrollSnapType: 'x mandatory',
               scrollBehavior: 'smooth',
-              padding: '8px 4px 32px',
+              padding: '8px 4px 24px',
               margin: '0 -4px',
             }}
           >
             {loading
-              ? Array.from({ length: 4 }).map((_, i) => (
+              ? Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} style={{ flex: '0 0 280px', scrollSnapAlign: 'start' }}>
                     <SkeletonCard />
                   </div>
                 ))
               : (products || []).map((product) => (
                   <div key={product.id} style={{ flex: '0 0 280px', scrollSnapAlign: 'start' }}>
-                    <ProductCard product={product} />
+                    <ProductCard product={product} showQuickAddBar />
                   </div>
                 ))}
           </div>

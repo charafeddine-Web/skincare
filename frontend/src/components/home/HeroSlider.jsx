@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Sparkles } from 'lucide-react';
+import { HOME_IMAGES } from './homeImages';
 
 const slides = [
   {
@@ -13,6 +14,7 @@ const slides = [
     ctaSecondary: 'Voir la collection',
     bg: 'linear-gradient(135deg, #FFFCFA 0%, #F7F3EF 40%, #F5E6E8 100%)',
     accent: 'var(--accent)',
+    image: HOME_IMAGES.heroNatural,
   },
   {
     id: 2,
@@ -23,6 +25,7 @@ const slides = [
     ctaSecondary: 'Notre philosophie',
     bg: 'linear-gradient(135deg, #FDFBF9 0%, #EFE9E3 50%, #F0E4CE 100%)',
     accent: 'var(--accent-deep)',
+    image: HOME_IMAGES.heroRadiance,
   },
   {
     id: 3,
@@ -33,6 +36,7 @@ const slides = [
     ctaSecondary: 'Les best-sellers',
     bg: 'linear-gradient(135deg, #F5E6E8 0%, #FFFCFA 60%, #F7F3EF 100%)',
     accent: 'var(--accent)',
+    image: HOME_IMAGES.heroRitual,
   },
 ];
 
@@ -74,7 +78,7 @@ const HeroSlider = () => {
         justifyContent: 'center',
       }}
     >
-      {/* Background per slide with parallax feel */}
+      {/* Background per slide + hero image */}
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div
           key={slide.id}
@@ -89,7 +93,50 @@ const HeroSlider = () => {
             background: slide.bg,
             zIndex: 0,
           }}
-        />
+        >
+          {/* Image droite (desktop) avec overlay pour garder le texte lisible */}
+          {slide.image && (
+            <>
+              <motion.div
+                initial={{ scale: 1.08, opacity: 0 }}
+                animate={{
+                  scale: [1, 1.03, 1],
+                  opacity: 1,
+                }}
+                transition={{
+                  scale: { duration: 8, repeat: Infinity, ease: 'easeInOut' },
+                  opacity: { duration: 1, ease: [0.22, 1, 0.36, 1] },
+                }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  width: 'min(55%, 720px)',
+                  backgroundImage: `url(${slide.image})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center right',
+                  zIndex: 0,
+                }}
+                className="hide-mobile"
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  right: 0,
+                  bottom: 0,
+                  width: 'min(55%, 720px)',
+                  background: 'linear-gradient(90deg, rgba(255,252,250,0.92) 0%, rgba(255,252,250,0.4) 45%, transparent 100%)',
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                }}
+                className="hide-mobile"
+                aria-hidden
+              />
+            </>
+          )}
+        </motion.div>
       </AnimatePresence>
 
       {/* Floating decorative elements */}
@@ -123,6 +170,30 @@ const HeroSlider = () => {
           zIndex: 1,
         }}
       />
+
+      {/* Mobile: bande image en haut (show-mobile) */}
+      {slide.image && (
+        <motion.div
+          key={`mobile-${slide.id}`}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="show-mobile"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 'min(38vh, 280px)',
+            backgroundImage: `url(${slide.image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            zIndex: 0,
+          }}
+        >
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(255,252,250,0.85) 0%, rgba(255,252,250,0.98) 70%)' }} aria-hidden />
+        </motion.div>
+      )}
 
       <div className="container" style={{ position: 'relative', zIndex: 2, paddingTop: 'clamp(80px, 12vh, 120px)', paddingBottom: 'clamp(60px, 10vh, 100px)' }}>
         <div style={{ maxWidth: '640px' }}>

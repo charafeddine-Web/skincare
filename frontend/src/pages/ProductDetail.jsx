@@ -291,6 +291,10 @@ const ProductDetail = () => {
     }
 
     const handleAddToCart = async () => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
         try {
             await cartService.addItem(product.id, qty);
             setAdded(true);
@@ -304,6 +308,10 @@ const ProductDetail = () => {
     };
 
     const handleWishlist = async () => {
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
         try {
             const res = await favoriteService.toggle(product.id);
             setWishlisted(res.favorited);
@@ -539,7 +547,7 @@ const ProductDetail = () => {
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={handleAddToCart}
-                                className="btn btn-primary"
+                                className="btn btn-action"
                                 style={{ flex: 1, padding: '18px', gap: '12px' }}
                             >
                                 <ShoppingBag size={20} />
@@ -548,9 +556,9 @@ const ProductDetail = () => {
 
                             <button className="btn-icon" onClick={handleWishlist} style={{
                                 border: '1px solid var(--divider)',
-                                background: wishlisted ? 'var(--primary-light)' : 'white'
+                                background: wishlisted ? 'var(--action-soft)' : 'white'
                             }}>
-                                <Heart size={20} fill={wishlisted ? 'var(--primary-deep)' : 'none'} color={wishlisted ? 'var(--primary-deep)' : 'var(--text-muted)'} />
+                                <Heart size={20} fill={wishlisted ? 'var(--action)' : 'none'} color={wishlisted ? 'var(--action)' : 'var(--text-muted)'} />
                             </button>
                         </div>
 

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -10,6 +10,8 @@ import AdminLayout from './components/AdminLayout';
 import AdminRoute from './components/AdminRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import RouterEventBridge from './components/RouterEventBridge';
+import { prefetchHomeData } from './services/homeDataCache';
+import { prefetchShopData } from './services/shopDataCache';
 
 const Home = lazy(() => import('./pages/Home'));
 const Shop = lazy(() => import('./pages/Shop'));
@@ -56,6 +58,15 @@ const Loader = () => (
 const AppContent = () => {
   const location = useLocation();
   const isAdminPath = location.pathname.startsWith('/admin');
+
+  // Prefetch Home + Boutique au chargement de l'app pour affichage immédiat au 1er passage
+  useEffect(() => {
+    const t = setTimeout(() => {
+      prefetchHomeData();
+      prefetchShopData();
+    }, 150);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <div className="app" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

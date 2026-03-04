@@ -91,7 +91,7 @@ const BottomNav = () => {
                                         position: 'absolute',
                                         top: '-6px',
                                         right: '-10px',
-                                        background: 'var(--secondary)',
+                                        background: 'var(--action)',
                                         color: 'white',
                                         fontSize: '9px',
                                         fontWeight: 700,

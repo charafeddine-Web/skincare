@@ -1,12 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import HeroSlider from '../components/home/HeroSlider';
+import HeroVideo from '../components/home/HeroVideo';
+import TrustStrip from '../components/home/TrustStrip';
 import FeaturedCategories from '../components/home/FeaturedCategories';
 import ProductCarousel from '../components/home/ProductCarousel';
+import EditorialBlock from '../components/home/EditorialBlock';
+import VideoSection from '../components/home/VideoSection';
+import VisualSection from '../components/home/VisualSection';
 import SkincareRoutine from '../components/home/SkincareRoutine';
 import TestimonialsSlider from '../components/home/TestimonialsSlider';
 import NewsletterSection from '../components/home/NewsletterSection';
-import { productService, categoryService } from '../services/api';
+import { HOME_IMAGES } from '../components/home/homeMedia';
+import { getCachedHomeData, fetchHomeData } from '../services/homeDataCache';
 
 const Home = () => {
   const location = useLocation();
@@ -21,48 +26,32 @@ const Home = () => {
 
   useEffect(() => {
     mountedRef.current = true;
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [productsRes, categoriesRes] = await Promise.all([
-          productService.list({ per_page: 8, sort: 'rating' }),
-          categoryService.list(),
-        ]);
 
+    // Affichage immédiat si cache frais (évite 5–6 s d'attente)
+    const cached = getCachedHomeData();
+    if (cached?.products?.length !== undefined && cached?.categories?.length !== undefined) {
+      setProducts(cached.products);
+      setCategories(cached.categories);
+      setLoading(false);
+    }
+
+    // Toujours refetch : une requête (Promise.all) pour tout mettre à jour + remplir le cache
+    fetchHomeData()
+      .then(({ products: p, categories: c }) => {
         if (!mountedRef.current) return;
-
-        const rawProducts = productsRes?.data ?? productsRes;
-        const productsArray = Array.isArray(rawProducts) ? rawProducts : [];
-        const mappedProducts = productsArray.map((p) => ({
-          ...p,
-          image: p.images?.find((img) => img.is_main)?.image_url || p.images?.[0]?.image_url,
-          imageHover: p.images?.[1]?.image_url,
-          category: p.category?.name,
-          rating: p.rating != null ? Number(p.rating) : 4.5,
-          reviews: p.reviews_count ?? 0,
-        }));
-
-        const rawCategories = Array.isArray(categoriesRes) ? categoriesRes : categoriesRes?.data ?? [];
-        const rootCategories = rawCategories.filter((c) => !c.parent_id);
-        const mappedCategories = rootCategories.map((cat) => ({
-          ...cat,
-          count: cat.products_count ?? 0,
-        }));
-
-        setProducts(mappedProducts);
-        setCategories(mappedCategories);
-      } catch (err) {
+        setProducts(p);
+        setCategories(c);
+        setLoading(false);
+      })
+      .catch((err) => {
         if (mountedRef.current) {
           console.error('Error fetching home data:', err);
           setProducts([]);
           setCategories([]);
+          setLoading(false);
         }
-      } finally {
-        if (mountedRef.current) setLoading(false);
-      }
-    };
+      });
 
-    fetchData();
     return () => {
       mountedRef.current = false;
     };
@@ -70,22 +59,69 @@ const Home = () => {
 
   return (
     <div className="page-enter">
-      <HeroSlider />
+      <HeroVideo />
 
-      <FeaturedCategories categories={categories} loading={loading} />
+      <div className="home-flow home-flow--trust">
+        <TrustStrip />
+      </div>
 
-      <ProductCarousel
-        products={products}
-        loading={loading}
-        title="Les Essentiels Éveline"
-        subtitle="Nos best-sellers plébiscités par nos clientes"
-      />
+      <div className="home-flow home-flow--categories">
+        <FeaturedCategories categories={categories} loading={loading} />
+      </div>
 
-      <SkincareRoutine />
+      <div className="home-flow home-flow--carousel">
+        <ProductCarousel
+          products={products}
+          loading={loading}
+          title="Les Essentiels"
+          subtitle="Nos best-sellers plébiscités par nos clientes"
+        />
+      </div>
 
-      <TestimonialsSlider />
+      <div className="home-flow home-flow--editorial1">
+        <EditorialBlock
+          image={HOME_IMAGES.womanFlowers}
+          imageSide="left"
+          tag="Notre univers"
+          title="La beauté naturelle à l'honneur"
+          excerpt="Fleurs, feuilles et formules douces. Chaque soin est pensé pour révéler l'éclat de votre peau sans la brusquer."
+          ctaLabel="Découvrir la gamme"
+          ctaHref="/shop"
+        />
+      </div>
 
-      <NewsletterSection />
+      <div className="home-flow home-flow--video">
+        <VideoSection />
+      </div>
+
+      <div className="home-flow home-flow--editorial2">
+        <EditorialBlock
+          image={HOME_IMAGES.portraitRitual}
+          imageSide="right"
+          tag="Rituel"
+          title="Un moment rien qu'à vous"
+          excerpt="L'application d'un soin est un instant de pause. Texture fondante, parfum délicat, résultats visibles."
+          ctaLabel="Voir les soins visage"
+          ctaHref="/shop"
+          accent="var(--action)"
+        />
+      </div>
+
+      <div className="home-flow home-flow--visual">
+        <VisualSection />
+      </div>
+
+      <div className="home-flow home-flow--routine">
+        <SkincareRoutine />
+      </div>
+
+      <div className="home-flow home-flow--testimonials">
+        <TestimonialsSlider />
+      </div>
+
+      <div className="home-flow home-flow--newsletter">
+        <NewsletterSection />
+      </div>
     </div>
   );
 };

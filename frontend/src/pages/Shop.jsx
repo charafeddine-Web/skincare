@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import ProductCard from '../components/ProductCard';
+import ProductCard, { SkeletonCard } from '../components/ProductCard';
 import ShopFilters from '../components/shop/ShopFilters';
 import QuickViewModal from '../components/shop/QuickViewModal';
 import { SlidersHorizontal, Search, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
-import { productService, categoryService } from '../services/api';
+import { getCachedShopData, fetchShopData } from '../services/shopDataCache';
 
 const sortOptions = [
   { label: 'Populaires', value: 'popular' },
@@ -45,7 +45,7 @@ const Shop = () => {
   const searchInputRef = useRef(null);
   const searchBarRef = useRef(null);
 
-  const PRODUCTS_PER_PAGE = 12;
+  const PRODUCTS_PER_PAGE = 10;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -90,32 +90,23 @@ const Shop = () => {
   }, [focusSearch, loading, location.pathname, location.search, navigate]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [productsRes, categoriesRes] = await Promise.all([
-          productService.list({ per_page: 100 }),
-          categoryService.list(),
-        ]);
-        const raw = productsRes?.data ?? productsRes;
-        const list = Array.isArray(raw) ? raw : [];
-        const mappedProducts = list.map((p) => ({
-          ...p,
-          image: p.images?.find((img) => img.is_main)?.image_url || p.images?.[0]?.image_url,
-          imageHover: p.images?.[1]?.image_url,
-          category: p.category?.name,
-          rating: p.rating ?? 4.5,
-          reviews: p.reviews_count ?? 0,
-        }));
-        setAllProducts(mappedProducts);
-        setCategories([{ id: 'Tous', name: 'Tous' }, ...(Array.isArray(categoriesRes) ? categoriesRes : categoriesRes?.data ?? [])]);
-      } catch (err) {
-        console.error('Error fetching shop data:', err);
-      } finally {
+    const cached = getCachedShopData();
+    if (cached?.products?.length !== undefined && cached?.categories?.length !== undefined) {
+      setAllProducts(cached.products);
+      setCategories(cached.categories);
+      setLoading(false);
+    }
+
+    fetchShopData()
+      .then(({ products, categories: cats }) => {
+        setAllProducts(products);
+        setCategories(cats);
         setLoading(false);
-      }
-    };
-    fetchData();
+      })
+      .catch((err) => {
+        console.error('Error fetching shop data:', err);
+        setLoading(false);
+      });
   }, []);
 
   const filtered = useMemo(() => {
@@ -308,6 +299,12 @@ const Shop = () => {
               />
             </div>
 
+            {loading && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+                Récupération en cours…
+              </p>
+            )}
+
             {/* Pills catégories (mobile) */}
             <div className="mobile-scroller no-scrollbar" style={{ display: 'flex', gap: 10, padding: '4px 0' }}>
               {categories.map((cat) => (
@@ -336,7 +333,25 @@ const Shop = () => {
 
           {/* Product grid */}
           <AnimatePresence mode="wait">
-            {filtered.length === 0 ? (
+            {loading ? (
+              <motion.div
+                key="skeleton"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="shop-grid"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                  gap: 'clamp(18px, 2.2vw, 26px)',
+                }}
+              >
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i}>
+                    <SkeletonCard />
+                  </div>
+                ))}
+              </motion.div>
+            ) : filtered.length === 0 ? (
               <motion.div
                 key="empty"
                 initial={{ opacity: 0, y: 20 }}

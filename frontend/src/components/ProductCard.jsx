@@ -49,9 +49,18 @@ const ProductCard = ({ product, onQuickView, showQuickAddBar }) => {
     }, [product.reviews, product.id]);
     const isNew = product.isNew;
     const badge = product.badge;
+    const isPromoBadge = useMemo(() => {
+        if (!badge) return false;
+        const b = String(badge).toLowerCase();
+        return /promo|promotion|soldes|sale|off|%|remise|deal/.test(b);
+    }, [badge]);
 
     const handleAddToCart = async (e) => {
         e.stopPropagation();
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
         try {
             await cartService.addItem(product.id, 1);
             setAddedToCart(true);
@@ -69,6 +78,10 @@ const ProductCard = ({ product, onQuickView, showQuickAddBar }) => {
 
     const handleWishlist = async (e) => {
         e.stopPropagation();
+        if (!isAuthenticated) {
+            navigate('/login');
+            return;
+        }
         try {
             const res = await favoriteService.toggle(product.id);
             setWishlisted(res.favorited);
@@ -145,7 +158,11 @@ const ProductCard = ({ product, onQuickView, showQuickAddBar }) => {
                 {/* Badges */}
                 <div className="product-card__badges">
                     {isNew && <span className="product-card__badge product-card__badge--new">Nouveau</span>}
-                    {badge && <span className="product-card__badge product-card__badge--tag">{badge}</span>}
+                    {badge && (
+                        <span className={`product-card__badge ${isPromoBadge ? 'product-card__badge--promo' : 'product-card__badge--tag'}`}>
+                            {badge}
+                        </span>
+                    )}
                 </div>
 
                 {/* Quick Add bar (shop grid hover) */}
