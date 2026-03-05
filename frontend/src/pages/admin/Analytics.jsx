@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { adminService } from '../../services/api';
+import { getCachedOrFetch, CACHE_KEYS, TTL_MS } from '../../services/adminDataCache';
 import AdminLoader from '../../components/AdminLoader';
 
 const Analytics = () => {
@@ -21,12 +22,17 @@ const Analytics = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await adminService.getAnalytics({ days: 30 });
+        const data = await getCachedOrFetch(
+          `${CACHE_KEYS.dashboardAnalytics}_30`,
+          () => adminService.getAnalytics({ days: 30 }),
+          TTL_MS.dashboard
+        );
         if (!isMounted) return;
-        setAnalytics(data || {});
+        setAnalytics(data && typeof data === 'object' ? data : {});
       } catch (err) {
         if (isMounted) {
-          setError(err.message || "Impossible de charger les analytics");
+          const msg = err?.message ?? err?.error ?? (typeof err === 'string' ? err : null);
+          setError(msg || 'Impossible de charger les analyses. Vérifiez que vous êtes connecté en tant qu’administrateur.');
         }
       } finally {
         if (isMounted) {

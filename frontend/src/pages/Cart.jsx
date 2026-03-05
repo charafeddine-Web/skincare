@@ -55,22 +55,56 @@ const Cart = () => {
         if (!item) return;
         const newQty = Math.max(1, item.quantity + delta);
         if (newQty === item.quantity) return;
+
+        const prevItems = [...items];
+        const prevSubtotal = subtotal;
+        const prevShipping = shipping;
+
+        const nextItems = items.map((i) =>
+            i.id === cartItemId ? { ...i, quantity: newQty } : i
+        );
+        const nextSubtotal = nextItems.reduce((sum, i) => sum + Number(i.price || 0) * (i.quantity || 0), 0);
+
+        setItems(nextItems);
+        setSubtotal(nextSubtotal);
+        setShipping(nextSubtotal >= freeShippingThreshold ? 0 : prevShipping);
+        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+
         try {
             const data = await cartService.updateQuantity(cartItemId, newQty);
             applyCartData(data);
             window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
         } catch (err) {
+            setItems(prevItems);
+            setSubtotal(prevSubtotal);
+            setShipping(prevShipping);
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
             toast.error(err?.message || 'Erreur mise à jour');
         }
     };
 
     const removeItem = async (cartItemId) => {
+        const prevItems = [...items];
+        const prevSubtotal = subtotal;
+        const prevShipping = shipping;
+        const remaining = prevItems.filter((i) => i.id !== cartItemId);
+        const nextSubtotal = remaining.reduce((sum, i) => sum + Number(i.price || 0) * (i.quantity || 0), 0);
+
+        setItems(remaining);
+        setSubtotal(nextSubtotal);
+        setShipping(nextSubtotal >= freeShippingThreshold ? 0 : prevShipping);
+        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+
         try {
             const data = await cartService.removeItem(cartItemId);
             applyCartData(data);
             window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
             toast.success('Article retiré du panier');
         } catch (err) {
+            setItems(prevItems);
+            setSubtotal(prevSubtotal);
+            setShipping(prevShipping);
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
             toast.error(err?.message || 'Erreur suppression');
         }
     };

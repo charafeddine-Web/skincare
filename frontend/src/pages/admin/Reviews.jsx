@@ -112,31 +112,109 @@ const Reviews = () => {
                 </div>
             </header>
 
-            {/* FILTERS BAR */}
-            <div className="bg-white p-4 rounded-3xl border border-[#EFE9E3] shadow-sm flex flex-col md:flex-row gap-4 items-center">
-                <div className="relative flex-1 w-full">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A8A09A]" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Rechercher un commentaire, un client ou un produit..."
-                        className="w-full pl-12 pr-4 py-3 bg-[#FDFCFB] border border-[#EFE9E3] rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#C5A059]/20 transition-all text-sm"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+            {/* Barre de recherche et filtrage */}
+            <div
+                style={{
+                    background: '#FFFFFF',
+                    borderRadius: 20,
+                    border: '1px solid #EBE8E4',
+                    boxShadow: '0 2px 12px rgba(26, 26, 30, 0.04)',
+                    padding: '20px 24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 16,
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <Search size={16} style={{ color: '#A8874A' }} />
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#8C8782' }}>
+                        Recherche & filtres
+                    </span>
                 </div>
 
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                    <Filter className="text-[#A8A09A]" size={18} />
-                    <select
-                        className="bg-[#FDFCFB] border border-[#EFE9E3] rounded-2xl px-4 py-3 text-sm font-bold text-[#1A1A1E] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/20"
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                    >
-                        <option value="all">Tous les avis</option>
-                        <option value="pending">En attente uniquement</option>
-                        <option value="approved">Approuvés</option>
-                        <option value="rejected">Rejetés</option>
-                    </select>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, width: '100%' }}>
+                    <div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+                        <Search
+                            size={18}
+                            style={{
+                                position: 'absolute',
+                                left: 16,
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                color: '#A8A09A',
+                                pointerEvents: 'none',
+                            }}
+                        />
+                        <input
+                            type="text"
+                            placeholder="Commentaire, client, produit..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            style={{
+                                width: '100%',
+                                padding: '14px 16px 14px 46px',
+                                background: '#FAFAF9',
+                                border: '1px solid #E5E2DE',
+                                borderRadius: 12,
+                                fontSize: 14,
+                                color: '#1C1C1E',
+                                outline: 'none',
+                                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                            }}
+                            onFocus={(e) => {
+                                e.target.style.borderColor = '#A8874A';
+                                e.target.style.boxShadow = '0 0 0 1px #A8874A';
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = '#E5E2DE';
+                                e.target.style.boxShadow = 'none';
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Filter size={16} style={{ color: '#8C8782', flexShrink: 0 }} />
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#6B6560', whiteSpace: 'nowrap' }}>
+                                Statut :
+                            </span>
+                        </div>
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            style={{
+                                padding: '10px 16px 10px 14px',
+                                background: '#FAFAF9',
+                                border: '1px solid #E5E2DE',
+                                borderRadius: 10,
+                                fontSize: 13,
+                                fontWeight: 600,
+                                color: '#1C1C1E',
+                                outline: 'none',
+                                cursor: 'pointer',
+                                minWidth: 180,
+                                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                            }}
+                            onFocus={(e) => {
+                                e.target.style.borderColor = '#A8874A';
+                                e.target.style.boxShadow = '0 0 0 1px #A8874A';
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = '#E5E2DE';
+                                e.target.style.boxShadow = 'none';
+                            }}
+                        >
+                            <option value="all">Tous les avis</option>
+                            <option value="pending">En attente</option>
+                            <option value="approved">Approuvés</option>
+                            <option value="rejected">Rejetés</option>
+                        </select>
+                        {(searchTerm || filterStatus !== 'all') && (
+                            <span style={{ fontSize: 12, color: '#8C8782', marginLeft: 'auto' }}>
+                                {totalResults} résultat{totalResults !== 1 ? 's' : ''}
+                            </span>
+                        )}
+                    </div>
                 </div>
             </div>
 

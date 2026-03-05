@@ -1,11 +1,29 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import ProductCard, { SkeletonCard } from '../components/ProductCard';
 import ShopFilters from '../components/shop/ShopFilters';
 import QuickViewModal from '../components/shop/QuickViewModal';
 import { SlidersHorizontal, Search, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
-import { getCachedShopData, fetchShopData } from '../services/shopDataCache';
+import {
+  getCachedCategories,
+  fetchCategories,
+  getCachedPriceRange,
+  fetchPriceRange,
+  getCachedProducts,
+  setCachedProducts,
+  normalizeProduct,
+} from '../services/shopDataCache';
+import { productService } from '../services/api';
+
+const PRODUCTS_PER_PAGE = 12;
+
+const SKIN_TYPE_TO_BACKEND = {
+  dry: 'sèche',
+  oily: 'grasse',
+  sensitive: 'sensible',
+  combination: 'mixte',
+};
 
 const sortOptions = [
   { label: 'Populaires', value: 'popular' },
@@ -29,23 +47,25 @@ const Shop = () => {
   const initialSearch = queryParams.get('search');
   const focusSearch = queryParams.get('focus') === 'search';
 
-  const [allProducts, setAllProducts] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [categories, setCategories] = useState([{ id: 'Tous', name: 'Tous' }]);
   const [selectedCategory, setSelectedCategory] = useState('Tous');
   const [sortBy, setSortBy] = useState('popular');
   const [searchQuery, setSearchQuery] = useState(initialSearch || '');
-  const [priceRange, setPriceRange] = useState([0, 100]);
+  const [priceRange, setPriceRange] = useState([0, 500]);
+  const [priceBounds, setPriceBounds] = useState({ min: 0, max: 500 });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [skinTypeFilters, setSkinTypeFilters] = useState([]);
   const [page, setPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch || '');
   const sortRef = useRef(null);
   const searchInputRef = useRef(null);
   const searchBarRef = useRef(null);
-
-  const PRODUCTS_PER_PAGE = 10;
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -71,7 +91,7 @@ const Shop = () => {
 
   // Clic icône recherche navbar : activer automatiquement l’input de recherche (scroll + focus)
   useEffect(() => {
-    if (!focusSearch || loading) return;
+    if (!focusSearch || loadingProducts) return;
     const id = setTimeout(() => {
       const input = searchInputRef.current;
       const bar = searchBarRef.current;
@@ -87,62 +107,110 @@ const Shop = () => {
       navigate(newPath, { replace: true });
     }, 400);
     return () => clearTimeout(id);
-  }, [focusSearch, loading, location.pathname, location.search, navigate]);
+  }, [focusSearch, loadingProducts, location.pathname, location.search, navigate]);
+
+  const buildListParams = useCallback(
+    (pageNum = page) => {
+      const categoryId =
+        selectedCategory === 'Tous'
+          ? undefined
+          : categories.find((c) => c.name === selectedCategory)?.id;
+      const sortParam = sortBy === 'price-asc' ? 'price_asc' : sortBy === 'price-desc' ? 'price_desc' : sortBy;
+      const params = {
+        page: pageNum,
+        per_page: PRODUCTS_PER_PAGE,
+        is_active: true,
+        sort: sortParam,
+        ...(categoryId && categoryId !== 'Tous' && { category_id: categoryId }),
+        ...(debouncedSearch?.trim() && { search: debouncedSearch.trim() }),
+        min_price: priceRange[0],
+        max_price: priceRange[1],
+      };
+      if (skinTypeFilters.length > 0) {
+        params.skin_type = skinTypeFilters.map((id) => SKIN_TYPE_TO_BACKEND[id]).filter(Boolean);
+      }
+      return params;
+    },
+    [page, selectedCategory, categories, debouncedSearch, priceRange, sortBy, skinTypeFilters]
+  );
+
+  const fetchProducts = useCallback(
+    async (pageNum = page) => {
+      if (categories.length === 0) return;
+      const params = buildListParams(pageNum);
+      const cached = getCachedProducts(params);
+      if (cached) {
+        setProducts(cached.products);
+        setTotalProducts(cached.totalProducts);
+        setTotalPages(cached.totalPages);
+        setLoadingProducts(false);
+        return;
+      }
+      setLoadingProducts(true);
+      try {
+        const res = await productService.list(params);
+        const list = res?.data ?? res;
+        const rawList = Array.isArray(list) ? list : [];
+        const normalized = rawList.map(normalizeProduct);
+        setProducts(normalized);
+        setTotalProducts(res?.total ?? rawList.length);
+        setTotalPages(Math.max(1, res?.last_page ?? 1));
+        setCachedProducts(params, {
+          products: normalized,
+          total: res?.total ?? rawList.length,
+          last_page: res?.last_page ?? 1,
+        });
+      } catch (err) {
+        console.error('Error fetching shop products:', err);
+        setProducts([]);
+        setTotalProducts(0);
+        setTotalPages(1);
+      } finally {
+        setLoadingProducts(false);
+      }
+    },
+    [categories.length, buildListParams]
+  );
 
   useEffect(() => {
-    const cached = getCachedShopData();
-    if (cached?.products?.length !== undefined && cached?.categories?.length !== undefined) {
-      setAllProducts(cached.products);
-      setCategories(cached.categories);
-      setLoading(false);
+    const cachedCat = getCachedCategories();
+    if (cachedCat?.length) setCategories(cachedCat);
+    const cachedPrice = getCachedPriceRange();
+    if (cachedPrice) {
+      setPriceBounds(cachedPrice);
+      setPriceRange((prev) =>
+        prev[0] === 0 && prev[1] === 500 ? [cachedPrice.min, cachedPrice.max] : prev
+      );
     }
-
-    fetchShopData()
-      .then(({ products, categories: cats }) => {
-        setAllProducts(products);
-        setCategories(cats);
-        setLoading(false);
+    fetchCategories().then(setCategories).catch(() => {});
+    fetchPriceRange()
+      .then((r) => {
+        setPriceBounds(r);
+        setPriceRange((prev) =>
+          prev[0] === 0 && prev[1] === 500 ? [r.min, r.max] : prev
+        );
       })
-      .catch((err) => {
-        console.error('Error fetching shop data:', err);
-        setLoading(false);
-      });
+      .catch(() => {});
   }, []);
 
-  const filtered = useMemo(() => {
-    let list = [...allProducts];
-    if (selectedCategory !== 'Tous') list = list.filter((p) => p.category === selectedCategory);
-    if (searchQuery) list = list.filter((p) => p.name?.toLowerCase().includes(searchQuery.toLowerCase()));
-    list = list.filter((p) => p.price >= priceRange[0] && p.price <= priceRange[1]);
-    if (skinTypeFilters.length > 0) {
-      const skinTypeMatches = (skinTypeStr, id) => {
-        const pt = (skinTypeStr || '').toLowerCase();
-        if (id === 'dry') return /sec|dry|sèche/.test(pt);
-        if (id === 'oily') return /gras|oily|grasse/.test(pt);
-        if (id === 'sensitive') return /sensible|sensitive/.test(pt);
-        if (id === 'combination') return /mixte|combination/.test(pt);
-        return pt.includes(id);
-      };
-      list = list.filter((p) => {
-        const pt = (p.skin_type || '').toLowerCase();
-        return skinTypeFilters.some((id) => skinTypeMatches(pt, id));
-      });
-    }
-    switch (sortBy) {
-      case 'price-asc': list.sort((a, b) => a.price - b.price); break;
-      case 'price-desc': list.sort((a, b) => b.price - a.price); break;
-      case 'new': list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)); break;
-      case 'rating': list.sort((a, b) => (b.rating || 0) - (a.rating || 0)); break;
-      default: list.sort((a, b) => (b.reviews || 0) - (a.reviews || 0));
-    }
-    return list;
-  }, [allProducts, selectedCategory, sortBy, searchQuery, priceRange, skinTypeFilters]);
+  useEffect(() => {
+    if (categories.length === 0) return;
+    fetchProducts(page);
+  }, [page, selectedCategory, debouncedSearch, priceRange, sortBy, skinTypeFilters, categories, fetchProducts]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   const currentSortLabel = sortOptions.find((o) => o.value === sortBy)?.label;
 
   const resetFilters = () => {
     setSelectedCategory('Tous');
-    setPriceRange([0, 100]);
+    setPriceRange([priceBounds.min, priceBounds.max]);
     setSearchQuery('');
     setSkinTypeFilters([]);
     setPage(1);
@@ -154,8 +222,8 @@ const Shop = () => {
     setPage(1);
   };
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PRODUCTS_PER_PAGE));
-  const paginatedList = useMemo(() => filtered.slice((page - 1) * PRODUCTS_PER_PAGE, page * PRODUCTS_PER_PAGE), [filtered, page]);
+  const isLoading = loadingProducts && products.length === 0;
+  const paginatedList = products;
 
   return (
     <div className="page-enter shop-page">
@@ -165,9 +233,10 @@ const Shop = () => {
           <ShopFilters
             categories={categories}
             selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
+            onCategoryChange={(name) => { setSelectedCategory(name); setPage(1); }}
             priceRange={priceRange}
-            onPriceChange={setPriceRange}
+            onPriceChange={(v) => { setPriceRange(v); setPage(1); }}
+            priceBounds={priceBounds}
             skinTypeFilters={skinTypeFilters}
             onSkinTypeToggle={handleSkinTypeToggle}
             onReset={resetFilters}
@@ -204,7 +273,7 @@ const Shop = () => {
                   <SlidersHorizontal size={16} /> Filtres
                 </button>
                 <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                  {filtered.length} produit{filtered.length !== 1 ? 's' : ''}
+                  {totalProducts} produit{totalProducts !== 1 ? 's' : ''}
                 </span>
                 <div ref={sortRef} style={{ position: 'relative' }}>
                   <button
@@ -251,7 +320,7 @@ const Shop = () => {
                           <button
                             key={opt.value}
                             type="button"
-                            onClick={() => { setSortBy(opt.value); setSortOpen(false); }}
+                            onClick={() => { setSortBy(opt.value); setSortOpen(false); setPage(1); }}
                             style={{
                               width: '100%',
                               padding: '12px 16px',
@@ -299,7 +368,7 @@ const Shop = () => {
               />
             </div>
 
-            {loading && (
+            {loadingProducts && (
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 16 }}>
                 Récupération en cours…
               </p>
@@ -333,7 +402,7 @@ const Shop = () => {
 
           {/* Product grid */}
           <AnimatePresence mode="wait">
-            {loading ? (
+            {isLoading ? (
               <motion.div
                 key="skeleton"
                 initial={{ opacity: 0 }}
@@ -351,7 +420,7 @@ const Shop = () => {
                   </div>
                 ))}
               </motion.div>
-            ) : filtered.length === 0 ? (
+            ) : products.length === 0 && !loadingProducts ? (
               <motion.div
                 key="empty"
                 initial={{ opacity: 0, y: 20 }}
@@ -393,7 +462,7 @@ const Shop = () => {
           </AnimatePresence>
 
           {/* Pagination */}
-          {filtered.length > 0 && totalPages > 1 && (
+          {totalProducts > 0 && totalPages > 1 && (
             <nav
               role="navigation"
               aria-label="Pagination"
@@ -521,9 +590,10 @@ const Shop = () => {
               <ShopFilters
                 categories={categories}
                 selectedCategory={selectedCategory}
-                onCategoryChange={setSelectedCategory}
+                onCategoryChange={(name) => { setSelectedCategory(name); setPage(1); }}
                 priceRange={priceRange}
                 onPriceChange={setPriceRange}
+                priceBounds={priceBounds}
                 skinTypeFilters={skinTypeFilters}
                 onSkinTypeToggle={handleSkinTypeToggle}
                 onReset={resetFilters}

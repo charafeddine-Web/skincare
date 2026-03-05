@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Heart, ShoppingBag, X, Star, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { favoriteService } from '../services/api';
 
 /* ── Skeleton ── */
@@ -43,12 +44,14 @@ const Favorites = () => {
     }, []);
 
     const handleRemove = async (productId) => {
+        const removed = favorites.find((f) => f.product_id === productId);
+        setFavorites((prev) => prev.filter((f) => f.product_id !== productId));
         setRemoving(productId);
         try {
             await favoriteService.toggle(productId);
-            setFavorites(prev => prev.filter(f => f.product_id !== productId));
         } catch (err) {
-            console.error('Error removing favorite:', err);
+            if (removed) setFavorites((prev) => [...prev, removed]);
+            toast.error('Erreur lors de la suppression du favori');
         } finally {
             setRemoving(null);
         }

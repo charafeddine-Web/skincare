@@ -96,7 +96,7 @@ const Home = () => {
 
       <div className="home-flow home-flow--editorial2">
         <EditorialBlock
-          image={HOME_IMAGES.portraitRitual}
+          image={HOME_IMAGES.heroRadiance}
           imageSide="right"
           tag="Rituel"
           title="Un moment rien qu'à vous"

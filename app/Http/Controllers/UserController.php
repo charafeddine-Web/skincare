@@ -10,11 +10,14 @@ use Illuminate\Validation\Rules\Password;
 class UserController extends Controller
 {
     /**
-     * Affiche tous les utilisateurs
+     * Affiche les utilisateurs (Portefeuille Clients : uniquement les clients, pas les admins).
      */
     public function index(Request $request)
     {
         $query = User::query();
+
+        // Portefeuille Clients : n'afficher que les clients (role = user), pas les admins
+        $query->where('role', 'user');
 
         if ($request->has('search')) {
             $searchTerm = $request->search;

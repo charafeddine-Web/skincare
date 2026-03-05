@@ -12,35 +12,35 @@ const NewsletterSection = () => {
     // Placeholder: integrate with your newsletter API
   };
 
+  const bgImage = HOME_IMAGES.botanical || HOME_IMAGES.womanFlowers || HOME_IMAGES.accent;
+
   return (
     <section
-      className="section-spacer"
+      className="section-spacer newsletter-section"
       style={{
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Fond image discret + gradient */}
+      {/* Image de fond */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          backgroundImage: `url(${HOME_IMAGES.accent})`,
+          backgroundImage: `url(${bgImage})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
           zIndex: 0,
         }}
         aria-hidden
       />
-      <motion.div
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.8 }}
+      {/* Overlay léger pour lisibilité du texte */}
+      <div
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(135deg, rgba(245,230,232,0.94) 0%, rgba(247,243,239,0.96) 50%, rgba(232,213,204,0.94) 100%)',
+          background: 'linear-gradient(135deg, rgba(252,250,248,0.88) 0%, rgba(247,243,239,0.9) 50%, rgba(245,238,235,0.88) 100%)',
           zIndex: 1,
           pointerEvents: 'none',
         }}

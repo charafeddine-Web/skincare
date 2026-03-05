@@ -578,6 +578,11 @@ p {
   min-height: auto;
   align-items: center;
   gap: 0;
+  max-width: 1300px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--container-pad, 24px);
+  padding-right: var(--container-pad, 24px);
 }
 @media (min-width: 900px) {
   .editorial-block__grid {
@@ -878,6 +883,10 @@ p {
   box-shadow: 0 2px 10px rgba(28, 28, 30, 0.06);
   border: 1px solid rgba(232, 224, 216, 0.8);
   transition: box-shadow 0.35s var(--ease-out), border-color 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
 }
 
 .product-card:hover {
@@ -890,12 +899,13 @@ p {
   outline-offset: 2px;
 }
 
-/* Media block */
+/* Media block — hauteur fixe pour taille de carte cohérente */
 .product-card__media {
   position: relative;
   aspect-ratio: 1;
   min-height: 180px;
   max-height: 280px;
+  flex-shrink: 0;
   background: var(--grad-surface);
   display: flex;
   align-items: center;
@@ -1131,6 +1141,10 @@ p {
 /* Body */
 .product-card__body {
   padding: 20px 20px 22px;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .product-card__category {
@@ -1180,6 +1194,7 @@ p {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-top: auto;
 }
 
 .product-card__prices {
@@ -2204,7 +2219,17 @@ a:focus {
   min-width: 0;
 }
 
+/* Grille : chaque cellule a la même hauteur, la carte remplit la cellule */
+.shop-grid {
+  align-items: stretch;
+}
+.shop-grid > * {
+  display: flex;
+  min-height: 0;
+}
 .shop-grid .product-card {
+  flex: 1;
+  min-width: 0;
   transition: transform 0.3s var(--ease-out), box-shadow 0.3s;
   border-radius: 16px;
 }
@@ -2226,7 +2251,10 @@ a:focus {
 
 .shop-grid .product-card__title {
   font-size: 0.95rem;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  overflow: hidden;
   margin-bottom: 8px;
 }
 

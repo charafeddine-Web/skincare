@@ -1,94 +1,157 @@
 /**
- * Cache pour la page Boutique (produits + catégories).
- * - Mémoire + sessionStorage : après refresh, affichage immédiat des dernières données.
- * - Prefetch au chargement de l'app pour remplir le cache à l'avance.
- * - TTL mémoire 3 min ; sessionStorage 10 min pour survivre au refresh.
+ * Cache pour la page Boutique : catégories + bornes de prix + listes de produits.
+ * - Catégories : mémoire + sessionStorage pour affichage immédiat après refresh.
+ * - Price range : cache mémoire court pour le slider.
+ * - Produits : cache mémoire par page/filtres pour ne pas refaire un appel à chaque visite.
  */
 
-import { productService, categoryService } from './api';
+import { categoryService, productService } from './api';
 
-const CACHE_KEY = 'eveline_shop_data';
-const TTL_MS = 3 * 60 * 1000; // 3 minutes (mémoire)
-const TTL_SESSION_MS = 10 * 60 * 1000; // 10 minutes (sessionStorage, après refresh)
+const CACHE_KEY_CAT = 'eveline_shop_categories';
+const CACHE_KEY_PRICE = 'eveline_shop_price_range';
+const CACHE_KEY_PRODUCTS_PREFIX = 'eveline_shop_products_';
+const TTL_MS = 5 * 60 * 1000;
+const TTL_SESSION_MS = 10 * 60 * 1000;
+const TTL_PRODUCTS_MS = 5 * 60 * 1000; // 5 min en mémoire
+const MAX_PRODUCTS_CACHE_ENTRIES = 30;
 
-let memoryCache = null;
+let memoryCategories = null;
+let memoryPriceRange = null;
+/** @type {Map<string, { products: any[], total: number, last_page: number, timestamp: number }>} */
+const memoryProductsCache = new Map();
 
-function getFromMemory() {
-  if (!memoryCache) return null;
-  if (Date.now() - memoryCache.timestamp > TTL_MS) return null;
-  return { products: memoryCache.products, categories: memoryCache.categories };
-}
-
-function getFromSession() {
+function getCachedCategoriesFromStorage() {
   try {
-    const raw = sessionStorage.getItem(CACHE_KEY);
+    const raw = sessionStorage.getItem(CACHE_KEY_CAT);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    if (!data || !data.timestamp || Date.now() - data.timestamp > TTL_SESSION_MS) return null;
-    return { products: data.products || [], categories: data.categories || [] };
+    if (!data?.categories || !data.timestamp || Date.now() - data.timestamp > TTL_SESSION_MS) return null;
+    return data.categories;
   } catch {
     return null;
   }
 }
 
-function setInMemory(products, categories) {
-  const timestamp = Date.now();
-  memoryCache = { products, categories, timestamp };
+function setCategoriesInStorage(categories) {
   try {
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify({ products, categories, timestamp }));
-  } catch {
-    // quota ou navigation privée
-  }
+    sessionStorage.setItem(CACHE_KEY_CAT, JSON.stringify({ categories, timestamp: Date.now() }));
+  } catch {}
 }
 
 /**
- * Récupère les données boutique depuis le cache (mémoire puis sessionStorage si refresh).
+ * Retourne les catégories depuis le cache (mémoire puis sessionStorage).
  */
-export function getCachedShopData() {
-  const fromMem = getFromMemory();
-  if (fromMem) return fromMem;
-  const fromSession = getFromSession();
-  if (fromSession) {
-    memoryCache = {
-      products: fromSession.products,
-      categories: fromSession.categories,
-      timestamp: Date.now(),
-    };
-    return fromSession;
+export function getCachedCategories() {
+  if (memoryCategories && memoryCategories.timestamp && Date.now() - memoryCategories.timestamp < TTL_MS) {
+    return memoryCategories.data;
+  }
+  const fromStorage = getCachedCategoriesFromStorage();
+  if (fromStorage?.length) {
+    memoryCategories = { data: fromStorage, timestamp: Date.now() };
+    return fromStorage;
   }
   return null;
 }
 
 /**
- * Charge les données boutique (API), les met en cache et les retourne.
+ * Charge les catégories via l’API, met en cache et retourne la liste (avec "Tous" en premier).
  */
-export async function fetchShopData() {
-  const [productsRes, categoriesRes] = await Promise.all([
-    productService.list({ per_page: 100 }),
-    categoryService.list(),
-  ]);
+export async function fetchCategories() {
+  const res = await categoryService.list();
+  const list = Array.isArray(res) ? res : res?.data ?? [];
+  const categories = [{ id: 'Tous', name: 'Tous' }, ...list];
+  memoryCategories = { data: categories, timestamp: Date.now() };
+  setCategoriesInStorage(categories);
+  return categories;
+}
 
-  const raw = productsRes?.data ?? productsRes;
-  const list = Array.isArray(raw) ? raw : [];
-  const products = list.map((p) => ({
+/**
+ * Retourne les bornes de prix depuis le cache mémoire (court TTL).
+ */
+export function getCachedPriceRange() {
+  if (memoryPriceRange && Date.now() - memoryPriceRange.timestamp < TTL_MS) {
+    return memoryPriceRange.data;
+  }
+  return null;
+}
+
+/**
+ * Charge les bornes min/max des prix (optionnel: category_id).
+ */
+export async function fetchPriceRange(categoryId = null) {
+  const params = categoryId ? { category_id: categoryId } : {};
+  const data = await productService.getPriceRange(params);
+  const range = { min: Number(data?.min) || 0, max: Math.max(Number(data?.max) || 500, 1) };
+  memoryPriceRange = { data: range, timestamp: Date.now() };
+  return range;
+}
+
+/**
+ * Normalise un produit renvoyé par l’API pour l’affichage liste (image, category name, rating, etc.).
+ */
+export function normalizeProduct(p) {
+  return {
     ...p,
     image: p.images?.find((img) => img.is_main)?.image_url || p.images?.[0]?.image_url,
     imageHover: p.images?.[1]?.image_url,
     category: p.category?.name,
     rating: p.rating ?? 4.5,
     reviews: p.reviews_count ?? 0,
-  }));
-
-  const categoriesList = Array.isArray(categoriesRes) ? categoriesRes : categoriesRes?.data ?? [];
-  const categories = [{ id: 'Tous', name: 'Tous' }, ...categoriesList];
-
-  setInMemory(products, categories);
-  return { products, categories };
+  };
 }
 
 /**
- * Prefetch : charge les données boutique en arrière-plan et remplit le cache.
+ * Clé de cache stable pour une requête produits (page + filtres).
+ */
+export function buildProductsCacheKey(params) {
+  const p = {
+    page: params.page,
+    category_id: params.category_id ?? '',
+    search: (params.search || '').trim(),
+    min_price: params.min_price,
+    max_price: params.max_price,
+    sort: params.sort,
+    skin_type: (params.skin_type || []).slice().sort(),
+  };
+  return CACHE_KEY_PRODUCTS_PREFIX + JSON.stringify(p);
+}
+
+/**
+ * Retourne la liste produits en cache pour ces paramètres si encore valide.
+ */
+export function getCachedProducts(params) {
+  const key = buildProductsCacheKey(params);
+  const entry = memoryProductsCache.get(key);
+  if (!entry || Date.now() - entry.timestamp > TTL_PRODUCTS_MS) return null;
+  return {
+    products: entry.products,
+    totalProducts: entry.total,
+    totalPages: entry.last_page,
+  };
+}
+
+/**
+ * Enregistre une liste produits en cache.
+ */
+export function setCachedProducts(params, data) {
+  const key = buildProductsCacheKey(params);
+  memoryProductsCache.set(key, {
+    products: data.products,
+    total: data.total,
+    last_page: data.last_page,
+    timestamp: Date.now(),
+  });
+  if (memoryProductsCache.size > MAX_PRODUCTS_CACHE_ENTRIES) {
+    const entries = [...memoryProductsCache.entries()].sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toDelete = entries.slice(0, memoryProductsCache.size - MAX_PRODUCTS_CACHE_ENTRIES);
+    toDelete.forEach(([k]) => memoryProductsCache.delete(k));
+  }
+}
+
+/**
+ * Prefetch : charge les catégories en arrière-plan pour un prochain passage en boutique.
  */
 export function prefetchShopData() {
-  fetchShopData().catch(() => {});
+  fetchCategories().catch(() => {});
+  fetchPriceRange().catch(() => {});
 }

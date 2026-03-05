@@ -103,6 +103,7 @@ export const CACHE_KEYS = {
   reviewsPrefix: 'admin_reviews',
   dashboardMetrics: 'admin_metrics',
   dashboardBestSellers: 'admin_bestsellers',
+  dashboardAnalytics: 'admin_analytics',
 };
 
 /**
@@ -154,4 +155,5 @@ export function invalidateReviews() {
 export function invalidateDashboard() {
   invalidate(CACHE_KEYS.dashboardMetrics);
   invalidate(CACHE_KEYS.dashboardBestSellers);
+  invalidate(CACHE_KEYS.dashboardAnalytics);
 }

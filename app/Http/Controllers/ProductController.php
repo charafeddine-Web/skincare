@@ -50,7 +50,20 @@ class ProductController extends Controller
             });
         }
 
-        if ($request->has('skin_type')) {
+        if ($request->has('min_price') && is_numeric($request->min_price)) {
+            $query->where('price', '>=', (float) $request->min_price);
+        }
+        if ($request->has('max_price') && is_numeric($request->max_price)) {
+            $query->where('price', '<=', (float) $request->max_price);
+        }
+
+        $skinTypes = $request->input('skin_type');
+        if (!empty($skinTypes)) {
+            $types = is_array($skinTypes) ? $skinTypes : array_filter([$skinTypes]);
+            if (count($types) > 0) {
+                $query->whereIn('skin_type', $types);
+            }
+        } elseif ($request->has('skin_type')) {
             $query->where('skin_type', $request->skin_type);
         }
 
@@ -60,11 +73,26 @@ class ProductController extends Controller
 
         if ($request->has('sort_stock')) {
             $query->orderBy('stock_quantity', $request->sort_stock === 'asc' ? 'asc' : 'desc');
-        } elseif ($request->input('sort') === 'rating' || $request->input('top')) {
-            // Top produits: note moyenne décroissante, puis nombre d'avis
-            $query->orderBy('rating', 'desc')->orderBy('reviews_count', 'desc');
         } else {
-            $query->orderBy('created_at', 'desc');
+            $sort = $request->input('sort', 'new');
+            switch ($sort) {
+                case 'price_asc':
+                    $query->orderBy('price', 'asc');
+                    break;
+                case 'price_desc':
+                    $query->orderBy('price', 'desc');
+                    break;
+                case 'rating':
+                    $query->orderBy('rating', 'desc')->orderBy('reviews_count', 'desc');
+                    break;
+                case 'popular':
+                    $query->orderBy('reviews_count', 'desc')->orderBy('rating', 'desc');
+                    break;
+                case 'new':
+                default:
+                    $query->orderBy('created_at', 'desc');
+                    break;
+            }
         }
 
         $perPage = $request->input('per_page', 12);
@@ -74,6 +102,26 @@ class ProductController extends Controller
         // or just return as is if the frontend handles it.
         
         return response()->json($products, 200);
+    }
+
+    /**
+     * Retourne les bornes min/max des prix pour le filtre boutique (optionnel: category_id).
+     */
+    public function priceRange(Request $request)
+    {
+        $query = Product::query()->where('is_active', true);
+
+        if ($request->has('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        $min = (float) (clone $query)->min('price');
+        $max = (float) (clone $query)->max('price');
+
+        return response()->json([
+            'min' => $min,
+            'max' => max($max, $min + 1),
+        ], 200);
     }
 
     /**

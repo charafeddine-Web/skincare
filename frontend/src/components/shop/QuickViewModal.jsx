@@ -42,15 +42,18 @@ const QuickViewModal = ({ productId, product: initialProduct, onClose }) => {
       navigate('/login');
       return;
     }
+    setAdding(true);
+    toast.success('Ajouté au panier');
+    window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+    const t = setTimeout(() => setAdding(false), 400);
     try {
-      setAdding(true);
       await cartService.addItem(product.id, 1);
-      toast.success('Ajouté au panier');
-      window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
     } catch (err) {
       if (err?.status === 401) navigate('/login');
       else toast.error(err?.message || 'Erreur');
+      window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
     } finally {
+      clearTimeout(t);
       setAdding(false);
     }
   };

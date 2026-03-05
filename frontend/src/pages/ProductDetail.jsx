@@ -176,16 +176,14 @@ const ProductDetail = () => {
     const [activeTab, setActiveTab] = useState('description');
 
     useEffect(() => {
+        let cancelled = false;
+
         const fetchProduct = async () => {
             try {
                 setLoading(true);
+                // 1. Charger le produit en premier — affichage immédiat dès la réponse
                 const data = await productService.get(id);
-                const reviewStatus = isAuthenticated
-                    ? await reviewService.canReview(id).catch(() => ({ can_review: false, reason: null }))
-                    : { can_review: false, reason: 'not_authenticated' };
-                const favStatus = isAuthenticated
-                    ? await favoriteService.check(id).catch(() => ({ favorited: false }))
-                    : { favorited: false };
+                if (cancelled) return;
 
                 // Compute average rating from reviews if not provided
                 const reviewsList = data.reviews?.map(rev => ({
@@ -202,7 +200,6 @@ const ProductDetail = () => {
                     ? reviewsList.reduce((sum, r) => sum + r.rating, 0) / reviewsList.length
                     : (data.rating || 0);
 
-                // Map backend data to frontend structure
                 const mappedProduct = {
                     ...data,
                     category: data.category?.name || 'Soins',
@@ -229,18 +226,32 @@ const ProductDetail = () => {
                     sku: data.sku,
                 };
                 setProduct(mappedProduct);
-                setCanAddReview(reviewStatus.can_review ?? false);
-                setReviewReason(reviewStatus.reason ?? null);
-                setWishlisted(favStatus.favorited ?? false);
-            } catch (err) {
-                console.error("Error fetching product:", err);
-                setProduct({ ...FALLBACK_PRODUCT, name: `Produit #${id}` });
-            } finally {
                 setLoading(false);
+
+                // 2. En parallèle (sans bloquer l’affichage) : statut avis + favori
+                if (isAuthenticated) {
+                    reviewService.canReview(id).then((reviewStatus) => {
+                        if (!cancelled) {
+                            setCanAddReview(reviewStatus?.can_review ?? false);
+                            setReviewReason(reviewStatus?.reason ?? null);
+                        }
+                    }).catch(() => {});
+                    favoriteService.check(id).then((favStatus) => {
+                        if (!cancelled) setWishlisted(favStatus?.favorited ?? false);
+                    }).catch(() => {});
+                }
+            } catch (err) {
+                if (!cancelled) {
+                    console.error("Error fetching product:", err);
+                    setProduct({ ...FALLBACK_PRODUCT, name: `Produit #${id}` });
+                }
+            } finally {
+                if (!cancelled) setLoading(false);
             }
         };
 
         fetchProduct();
+        return () => { cancelled = true; };
     }, [id, isAuthenticated]);
 
     React.useEffect(() => {
@@ -295,15 +306,17 @@ const ProductDetail = () => {
             navigate('/login');
             return;
         }
+        setAdded(true);
+        setTimeout(() => setAdded(false), 2000);
+        toast.success('Ajouté au panier');
+        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
         try {
             await cartService.addItem(product.id, qty);
-            setAdded(true);
-            setTimeout(() => setAdded(false), 2000);
-            toast.success('Ajouté au panier');
-            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
         } catch (err) {
+            setAdded(false);
             if (err?.status === 401) navigate('/login');
             else toast.error(err?.message || 'Erreur lors de l\'ajout au panier');
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
         }
     };
 
@@ -312,11 +325,15 @@ const ProductDetail = () => {
             navigate('/login');
             return;
         }
+        const previous = wishlisted;
+        setWishlisted(!wishlisted);
         try {
             const res = await favoriteService.toggle(product.id);
             setWishlisted(res.favorited);
         } catch (err) {
-            if (err.status === 401) navigate('/login');
+            setWishlisted(previous);
+            if (err?.status === 401) navigate('/login');
+            else toast.error(err?.message || 'Erreur favoris');
         }
     };
 

@@ -61,18 +61,20 @@ const ProductCard = ({ product, onQuickView, showQuickAddBar }) => {
             navigate('/login');
             return;
         }
+        setAddedToCart(true);
+        setTimeout(() => setAddedToCart(false), 1800);
+        toast.success('Ajouté au panier');
+        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
         try {
             await cartService.addItem(product.id, 1);
-            setAddedToCart(true);
-            setTimeout(() => setAddedToCart(false), 1800);
-            toast.success('Ajouté au panier');
-            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
         } catch (err) {
+            setAddedToCart(false);
             if (err?.status === 401) {
                 navigate('/login');
             } else {
                 toast.error(err?.message || 'Erreur lors de l\'ajout au panier');
             }
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
         }
     };
 
@@ -82,11 +84,15 @@ const ProductCard = ({ product, onQuickView, showQuickAddBar }) => {
             navigate('/login');
             return;
         }
+        const previous = wishlisted;
+        setWishlisted(!wishlisted);
         try {
             const res = await favoriteService.toggle(product.id);
             setWishlisted(res.favorited);
         } catch (err) {
-            if (err.status === 401) navigate('/login');
+            setWishlisted(previous);
+            if (err?.status === 401) navigate('/login');
+            else toast.error(err?.message || 'Erreur favoris');
         }
     };
 

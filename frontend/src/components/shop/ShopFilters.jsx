@@ -62,11 +62,15 @@ const ShopFilters = ({
   onCategoryChange,
   priceRange,
   onPriceChange,
+  priceBounds = { min: 0, max: 500 },
   skinTypeFilters = [],
   onSkinTypeToggle,
   onReset,
   onCloseDrawer,
 }) => {
+  const minP = Math.max(0, Number(priceBounds.min) || 0);
+  const maxP = Math.max(minP + 1, Number(priceBounds.max) || 500);
+  const currentMax = Math.min(Math.max(priceRange[1], minP), maxP);
   const getIcon = (name) => {
     if (!name) return categoryIcons.default;
     const key = name.toLowerCase().trim();
@@ -199,7 +203,7 @@ const ShopFilters = ({
         </div>
       </div>
 
-      {/* Budget */}
+      {/* Budget (plage basée sur les prix réels du catalogue) */}
       <div>
         <h3 style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16 }}>
           Budget
@@ -207,16 +211,16 @@ const ShopFilters = ({
         <div style={{ padding: '0 4px' }}>
           <input
             type="range"
-            min="10"
-            max="100"
-            step="5"
-            value={priceRange[1]}
-            onChange={(e) => onPriceChange([0, Number(e.target.value)])}
+            min={minP}
+            max={maxP}
+            step={maxP - minP > 100 ? 10 : maxP - minP > 20 ? 5 : 1}
+            value={currentMax}
+            onChange={(e) => onPriceChange([minP, Number(e.target.value)])}
             style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer', height: 8, borderRadius: 4 }}
           />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginTop: 12 }}>
-            <span>10 €</span>
-            <span>{priceRange[1]} €</span>
+            <span>{minP} €</span>
+            <span>Jusqu'à {currentMax} €</span>
           </div>
         </div>
       </div>

@@ -130,6 +130,16 @@ export const productService = {
     }
   },
 
+  // Bornes min/max des prix (pour filtre boutique, optionnel: category_id)
+  getPriceRange: async (params = {}) => {
+    try {
+      const response = await api.get('/products/price-range', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des prix' };
+    }
+  },
+
   // Récupérer un seul produit
   get: async (id) => {
     try {

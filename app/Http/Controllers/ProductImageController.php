@@ -6,6 +6,7 @@ use App\Models\ProductImage;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Cloudinary\Api\Upload\UploadApi;
+use GuzzleHttp\Promise\Utils;
 
 class ProductImageController extends Controller
 {
@@ -46,7 +47,8 @@ class ProductImageController extends Controller
     }
 
     /**
-     * Upload d'une ou plusieurs images vers Cloudinary pour un produit donné
+     * Upload d'une ou plusieurs images vers Cloudinary pour un produit donné.
+     * Les uploads sont effectués en parallèle pour réduire le temps de traitement.
      */
     public function upload(Request $request, Product $product)
     {
@@ -57,32 +59,37 @@ class ProductImageController extends Controller
         ]);
 
         $setMain = filter_var($validated['is_main'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $uploadApi = new UploadApi();
+        $folder = 'skincare/products/' . $product->id;
+
+        // Lancement de tous les uploads en parallèle (promises)
+        $promises = [];
+        foreach ($validated['images'] as $file) {
+            $promises[] = $uploadApi->uploadAsync($file->getRealPath(), [
+                'folder' => $folder,
+            ]);
+        }
+
+        // Attendre que tous les uploads soient terminés
+        $results = Utils::all($promises)->wait();
+
+        // Désactiver is_main sur les images existantes si la première est principale
+        if ($setMain && count($results) > 0) {
+            ProductImage::where('product_id', $product->id)->update(['is_main' => false]);
+        }
 
         $uploaded = [];
-
-        foreach ($validated['images'] as $index => $file) {
-            $upload = (new UploadApi())->upload($file->getRealPath(), [
-                'folder' => 'skincare/products/' . $product->id,
-            ]);
-
+        foreach ($results as $index => $upload) {
             $url = $upload['secure_url'] ?? $upload['url'] ?? null;
-
             if (!$url) {
                 continue;
             }
-
-            // Si on veut définir l'image principale, on désactive les autres avant la première insertion
             $isMainForThis = $setMain && $index === 0;
-            if ($isMainForThis) {
-                ProductImage::where('product_id', $product->id)->update(['is_main' => false]);
-            }
-
             $image = ProductImage::create([
                 'product_id' => $product->id,
                 'image_url' => $url,
                 'is_main' => $isMainForThis,
             ]);
-
             $uploaded[] = $image;
         }
 
