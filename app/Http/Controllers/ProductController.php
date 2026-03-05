@@ -2,36 +2,126 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Favorite;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class ProductController extends Controller
 {
+    /** Cache TTL in seconds for product list (5 min) */
+    private const PRODUCT_LIST_CACHE_TTL = 300;
+
+    /** Cache TTL for single product detail (5 min) */
+    private const PRODUCT_SHOW_CACHE_TTL = 300;
+
     /**
-     * Affiche tous les produits
+     * Build cache key for product list from request params (no user to allow shared cache).
+     * Version is bumped when products are updated so list caches invalidate.
+     */
+    private function productListCacheKey(Request $request): string
+    {
+        $version = Cache::get('product_list_version', 0);
+        $params = [
+            'page' => $request->input('page', 1),
+            'per_page' => $request->input('per_page', 12),
+            'category_id' => $request->input('category_id'),
+            'is_active' => $request->input('is_active'),
+            'search' => $request->input('search'),
+            'min_price' => $request->input('min_price'),
+            'max_price' => $request->input('max_price'),
+            'skin_type' => $request->input('skin_type'),
+            'sort' => $request->input('sort', 'new'),
+            'low_stock' => $request->input('low_stock'),
+            'sort_stock' => $request->input('sort_stock'),
+        ];
+        return 'product_list:v' . $version . ':' . md5(serialize($params));
+    }
+
+    /**
+     * Invalidate product list and related caches (call when products/categories change).
+     */
+    public static function invalidateProductCaches(?int $productId = null): void
+    {
+        Cache::put('product_list_version', Cache::get('product_list_version', 0) + 1);
+        Cache::put('product_price_range_version', Cache::get('product_price_range_version', 0) + 1);
+        if ($productId !== null) {
+            Cache::forget('product_show:' . $productId);
+        }
+    }
+
+    /**
+     * Affiche tous les produits (liste légère : id, name, price, thumbnail, rating + slug, category).
      */
     public function index(Request $request)
     {
         $user = $request->user('sanctum');
-        
+        $cacheKey = $this->productListCacheKey($request);
+
+        $payload = Cache::remember($cacheKey, self::PRODUCT_LIST_CACHE_TTL, function () use ($request) {
+            $query = $this->buildProductListQuery($request);
+            $perPage = (int) $request->input('per_page', 12);
+            $paginator = $query->paginate($perPage);
+            return [
+                'data' => $paginator->items(),
+                'total' => $paginator->total(),
+                'per_page' => $paginator->perPage(),
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'first_page_url' => $paginator->url(1),
+                'last_page_url' => $paginator->url($paginator->lastPage()),
+                'next_page_url' => $paginator->nextPageUrl(),
+                'prev_page_url' => $paginator->previousPageUrl(),
+                'path' => $paginator->path(),
+                'from' => $paginator->firstItem(),
+                'to' => $paginator->lastItem(),
+            ];
+        });
+
+        // Add is_favorited for authenticated user (not cached per user to avoid cache fragmentation)
+        if ($user && !empty($payload['data'])) {
+            $productIds = collect($payload['data'])->pluck('id')->all();
+            $favoritedIds = Favorite::where('user_id', $user->id)
+                ->whereIn('product_id', $productIds)
+                ->pluck('product_id')
+                ->all();
+            foreach ($payload['data'] as &$item) {
+                $item['is_favorited'] = in_array($item['id'], $favoritedIds, true);
+            }
+            unset($item);
+        }
+
+        return response()->json($payload, 200);
+    }
+
+    /**
+     * Build optimized query for product list: only required columns + eager load thumbnail & rating.
+     */
+    private function buildProductListQuery(Request $request)
+    {
         $query = Product::query()
-            ->with(['category:id,name', 'images' => function($q) {
-                $q->where('is_main', true); // Only load main image for list performance
-            }])
-            ->withCount(['reviews' => function($q) {
+            ->select([
+                'products.id',
+                'products.name',
+                'products.slug',
+                'products.price',
+                'products.category_id',
+                'products.is_active',
+                'products.created_at',
+            ])
+            ->with([
+                'category:id,name',
+                'images' => function ($q) {
+                    $q->where('is_main', true)->select('product_id', 'image_url');
+                },
+            ])
+            ->withCount(['reviews as reviews_count' => function ($q) {
                 $q->where('status', 'approved');
             }])
-            ->withAvg(['reviews as rating' => function($q) {
+            ->withAvg(['reviews as rating' => function ($q) {
                 $q->where('status', 'approved');
             }], 'rating');
-
-        // Add is_favorited if user is logged in
-        if ($user) {
-            $query->withExists(['favorites as is_favorited' => function($q) use ($user) {
-                $q->where('user_id', $user->id);
-            }]);
-        }
 
         if ($request->has('category_id')) {
             $query->where('category_id', $request->category_id);
@@ -44,9 +134,9 @@ class ProductController extends Controller
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('sku', 'like', "%{$search}%");
+                $q->where('name', 'ilike', "%{$search}%")
+                  ->orWhere('description', 'ilike', "%{$search}%")
+                  ->orWhere('sku', 'ilike', "%{$search}%");
             });
         }
 
@@ -95,13 +185,7 @@ class ProductController extends Controller
             }
         }
 
-        $perPage = $request->input('per_page', 12);
-        $products = $query->paginate($perPage);
-        
-        // Transform the collection to match frontend expectations if necessary
-        // or just return as is if the frontend handles it.
-        
-        return response()->json($products, 200);
+        return $query;
     }
 
     /**
@@ -109,19 +193,19 @@ class ProductController extends Controller
      */
     public function priceRange(Request $request)
     {
-        $query = Product::query()->where('is_active', true);
+        $version = Cache::get('product_price_range_version', 0);
+        $cacheKey = 'product_price_range:v' . $version . ':' . ($request->input('category_id') ?? 'all');
+        $result = Cache::remember($cacheKey, self::PRODUCT_LIST_CACHE_TTL, function () use ($request) {
+            $query = Product::query()->where('is_active', true)->select('price');
+            if ($request->has('category_id')) {
+                $query->where('category_id', $request->category_id);
+            }
+            $min = (float) (clone $query)->min('price');
+            $max = (float) (clone $query)->max('price');
+            return ['min' => $min, 'max' => max($max, $min + 1)];
+        });
 
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
-        }
-
-        $min = (float) (clone $query)->min('price');
-        $max = (float) (clone $query)->max('price');
-
-        return response()->json([
-            'min' => $min,
-            'max' => max($max, $min + 1),
-        ], 200);
+        return response()->json($result, 200);
     }
 
     /**
@@ -151,6 +235,7 @@ class ProductController extends Controller
         }
 
         $product = Product::create($validated);
+        self::invalidateProductCaches();
 
         return response()->json($product->load(['category', 'images']), 201);
     }
@@ -158,14 +243,24 @@ class ProductController extends Controller
     public function show(Request $request, Product $product)
     {
         $user = $request->user('sanctum');
+        $cacheKey = 'product_show:' . $product->id;
 
-        $product->load(['category', 'images', 'reviews' => function($q) {
-            $q->where('status', 'approved')->with('user:id,first_name');
-        }]);
+        $product = Cache::remember($cacheKey, self::PRODUCT_SHOW_CACHE_TTL, function () use ($product) {
+            $product->load([
+                'category:id,name',
+                'images:id,product_id,image_url,is_main',
+                'reviews' => function ($q) {
+                    $q->where('status', 'approved')
+                        ->select('id', 'product_id', 'user_id', 'rating', 'comment', 'created_at')
+                        ->with('user:id,first_name');
+                },
+            ]);
+            return $product;
+        });
 
         if ($user) {
-            $product->is_favorited = $product->favorites()
-                ->where('user_id', $user->id)
+            $product->is_favorited = Favorite::where('user_id', $user->id)
+                ->where('product_id', $product->id)
                 ->exists();
         }
 
@@ -199,6 +294,7 @@ class ProductController extends Controller
         }
 
         $product->update($validated);
+        self::invalidateProductCaches($product->id);
 
         return response()->json($product, 200);
     }
@@ -208,7 +304,9 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
+        $id = $product->id;
         $product->delete();
+        self::invalidateProductCaches($id);
         return response()->json(['message' => 'Produit supprimé'], 200);
     }
 

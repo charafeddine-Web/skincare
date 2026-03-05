@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Heart, Star, ArrowLeft, Plus, Minus, Leaf, Shield, Truck } from 'lucide-react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -6,23 +7,23 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { productService, reviewService, favoriteService, cartService, CART_UPDATED_EVENT } from '../services/api';
 
-/* ── CONSTANTS ── */
+/* â”€â”€ CONSTANTS â”€â”€ */
 const FALLBACK_PRODUCT = {
     id: 0,
-    name: 'Produit Éveline',
+    name: 'Produit Ã‰veline',
     category: 'Soins',
     price: 39,
     rating: 4.7,
     reviews: 430,
-    shortDesc: 'Un soin botanique formulé avec passion pour révéler votre éclat naturel.',
-    description: 'Découvrez ce soin exceptionnel conçu par nos laboratoires parisiens.',
+    shortDesc: 'Un soin botanique formulÃ© avec passion pour rÃ©vÃ©ler votre Ã©clat naturel.',
+    description: 'DÃ©couvrez ce soin exceptionnel conÃ§u par nos laboratoires parisiens.',
     ingredients: ['Aloe Vera', 'Vitamine E', 'Acide Hyaluronique'],
     howTo: 'Appliquez sur peau propre, matin et soir.',
     size: '30 ml',
     reviewsList: [],
 };
 
-/* ── SMALL COMPONENTS ── */
+/* â”€â”€ SMALL COMPONENTS â”€â”€ */
 const Stars = ({ rating }) => (
     <div style={{ display: 'flex', gap: '3px' }}>
         {[1, 2, 3, 4, 5].map(s => (
@@ -50,8 +51,8 @@ const Skeleton = () => (
 );
 
 const guarantee = [
-    { icon: Truck, text: 'Livraison offerte dès 60€' },
-    { icon: Shield, text: 'Paiement 100% sécurisé' },
+    { icon: Truck, text: 'Livraison offerte dÃ¨s 60â‚¬' },
+    { icon: Shield, text: 'Paiement 100% sÃ©curisÃ©' },
     { icon: Leaf, text: 'Retours gratuits 30 jours' },
 ];
 
@@ -68,7 +69,7 @@ const ReviewForm = ({ productId, onSuccess }) => {
         try {
             setSubmitting(true);
             await reviewService.submit(productId, { rating, comment });
-            setMsg({ type: 'success', text: 'Votre avis a été envoyé et est en attente de modération. Merci !' });
+            setMsg({ type: 'success', text: 'Votre avis a Ã©tÃ© envoyÃ© et est en attente de modÃ©ration. Merci !' });
             setTimeout(onSuccess, 3000);
         } catch (err) {
             setMsg({ type: 'error', text: err.message || 'Une erreur est survenue.' });
@@ -121,7 +122,7 @@ const ReviewForm = ({ productId, onSuccess }) => {
                     rows="4"
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    placeholder="Qu'avez-vous pensé de ce produit ?"
+                    placeholder="Qu'avez-vous pensÃ© de ce produit ?"
                     style={{
                         width: '100%',
                         padding: '16px',
@@ -161,13 +162,11 @@ const ReviewForm = ({ productId, onSuccess }) => {
     );
 };
 
-/* ── COMPONENT ── */
+/* â”€â”€ COMPONENT â”€â”€ */
 const ProductDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
-    const [product, setProduct] = useState(null);
-    const [loading, setLoading] = useState(true);
     const [canAddReview, setCanAddReview] = useState(false);
     const [reviewReason, setReviewReason] = useState(null);
     const [qty, setQty] = useState(1);
@@ -175,90 +174,68 @@ const ProductDetail = () => {
     const [added, setAdded] = useState(false);
     const [activeTab, setActiveTab] = useState('description');
 
-    useEffect(() => {
-        let cancelled = false;
+    const { data: rawProduct, isLoading: loading } = useQuery({
+        queryKey: ['product', id],
+        queryFn: () => productService.get(id),
+        enabled: !!id,
+    });
 
-        const fetchProduct = async () => {
-            try {
-                setLoading(true);
-                // 1. Charger le produit en premier — affichage immédiat dès la réponse
-                const data = await productService.get(id);
-                if (cancelled) return;
-
-                // Compute average rating from reviews if not provided
-                const reviewsList = data.reviews?.map(rev => ({
-                    id: rev.id,
-                    name: rev.user?.first_name || 'Cliente',
-                    initial: (rev.user?.first_name || 'C')[0].toUpperCase(),
-                    rating: Number(rev.rating),
-                    text: rev.comment,
-                    date: new Date(rev.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
-                    verified: true
-                })) || [];
-
-                const avgRating = reviewsList.length > 0
-                    ? reviewsList.reduce((sum, r) => sum + r.rating, 0) / reviewsList.length
-                    : (data.rating || 0);
-
-                const mappedProduct = {
-                    ...data,
-                    category: data.category?.name || 'Soins',
-                    image: data.images?.find(img => img.is_main)?.image_url || data.images?.[0]?.image_url,
-                    images: data.images || [],
-                    shortDesc: data.description?.substring(0, 160) + (data.description?.length > 160 ? '...' : ''),
-                    description: data.description || 'Aucune description disponible.',
-                    ingredients: data.active_ingredients
-                        ? data.active_ingredients.split(',').map(i => i.trim()).filter(Boolean)
-                        : [],
-                    inciList: data.inci_list
-                        ? data.inci_list.split(',').map(i => i.trim()).filter(Boolean)
-                        : [],
-                    howTo: data.usage_instructions || 'Appliquez sur peau propre, matin et soir.',
-                    applicationTime: data.application_time || null,
-                    skinType: data.skin_type
-                        ? [data.skin_type.charAt(0).toUpperCase() + data.skin_type.slice(1)]
-                        : [],
-                    rating: parseFloat(avgRating.toFixed(1)) || 0,
-                    reviewsCount: reviewsList.length,
-                    reviewsList,
-                    stock: data.stock_quantity ?? null,
-                    isActive: data.is_active ?? true,
-                    sku: data.sku,
-                };
-                setProduct(mappedProduct);
-                setLoading(false);
-
-                // 2. En parallèle (sans bloquer l’affichage) : statut avis + favori
-                if (isAuthenticated) {
-                    reviewService.canReview(id).then((reviewStatus) => {
-                        if (!cancelled) {
-                            setCanAddReview(reviewStatus?.can_review ?? false);
-                            setReviewReason(reviewStatus?.reason ?? null);
-                        }
-                    }).catch(() => {});
-                    favoriteService.check(id).then((favStatus) => {
-                        if (!cancelled) setWishlisted(favStatus?.favorited ?? false);
-                    }).catch(() => {});
-                }
-            } catch (err) {
-                if (!cancelled) {
-                    console.error("Error fetching product:", err);
-                    setProduct({ ...FALLBACK_PRODUCT, name: `Produit #${id}` });
-                }
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
+    const product = useMemo(() => {
+        if (!rawProduct) return null;
+        const data = rawProduct;
+        const reviewsList = data.reviews?.map(rev => ({
+            id: rev.id,
+            name: rev.user?.first_name || 'Cliente',
+            initial: (rev.user?.first_name || 'C')[0].toUpperCase(),
+            rating: Number(rev.rating),
+            text: rev.comment,
+            date: new Date(rev.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }),
+            verified: true
+        })) || [];
+        const avgRating = reviewsList.length > 0
+            ? reviewsList.reduce((sum, r) => sum + r.rating, 0) / reviewsList.length
+            : (data.rating || 0);
+        return {
+            ...data,
+            category: data.category?.name || 'Soins',
+            image: data.images?.find(img => img.is_main)?.image_url || data.images?.[0]?.image_url,
+            images: data.images || [],
+            shortDesc: data.description?.substring(0, 160) + (data.description?.length > 160 ? '...' : ''),
+            description: data.description || 'Aucune description disponible.',
+            ingredients: data.active_ingredients
+                ? data.active_ingredients.split(',').map(i => i.trim()).filter(Boolean)
+                : [],
+            inciList: data.inci_list
+                ? data.inci_list.split(',').map(i => i.trim()).filter(Boolean)
+                : [],
+            howTo: data.usage_instructions || 'Appliquez sur peau propre, matin et soir.',
+            applicationTime: data.application_time || null,
+            skinType: data.skin_type
+                ? [data.skin_type.charAt(0).toUpperCase() + data.skin_type.slice(1)]
+                : [],
+            rating: parseFloat(avgRating.toFixed(1)) || 0,
+            reviewsCount: reviewsList.length,
+            reviewsList,
+            stock: data.stock_quantity ?? null,
+            isActive: data.is_active ?? true,
+            sku: data.sku,
         };
+    }, [rawProduct]);
 
-        fetchProduct();
-        return () => { cancelled = true; };
+    useEffect(() => {
+        if (!isAuthenticated || !id) return;
+        reviewService.canReview(id).then((s) => {
+            setCanAddReview(s?.can_review ?? false);
+            setReviewReason(s?.reason ?? null);
+        }).catch(() => {});
+        favoriteService.check(id).then((s) => setWishlisted(s?.favorited ?? false)).catch(() => {});
     }, [id, isAuthenticated]);
 
     React.useEffect(() => {
         if (!product) return;
 
         // Meta (client-side) : titre et description simples
-        document.title = `${product.name} — Éveline Skincare`;
+        document.title = `${product.name} - â€” Ã‰veline Skincare`;
         const metaDesc = document.querySelector('meta[name="description"]');
         if (metaDesc) metaDesc.setAttribute('content', product.shortDesc || 'Soins naturels Éveline');
 
@@ -298,7 +275,7 @@ const ProductDetail = () => {
     }
 
     if (!product) {
-        return <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>Produit non trouvé</div>;
+        return <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>Produit non trouvÃ©</div>;
     }
 
     const handleAddToCart = async () => {
@@ -308,10 +285,10 @@ const ProductDetail = () => {
         }
         setAdded(true);
         setTimeout(() => setAdded(false), 2000);
-        toast.success('Ajouté au panier');
-        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+        toast.success('AjoutÃ© au panier');
         try {
-            await cartService.addItem(product.id, qty);
+            const data = await cartService.addItem(product.id, qty);
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: data?.items_count } }));
         } catch (err) {
             setAdded(false);
             if (err?.status === 401) navigate('/login');
@@ -337,11 +314,11 @@ const ProductDetail = () => {
         }
     };
 
-    const tabs = ['description', 'ingrédients', 'utilisation', 'avis'];
+    const tabs = ['description', 'ingrÃ©dients', 'utilisation', 'avis'];
 
     return (
         <div className="page-enter">
-            {/* ── Breadcrumb ── */}
+            {/* â”€â”€ Breadcrumb â”€â”€ */}
             <div style={{
                 borderBottom: '1px solid var(--divider)',
                 padding: '16px 0',
@@ -371,7 +348,7 @@ const ProductDetail = () => {
             </div>
 
             <div className="container" style={{ padding: 'clamp(20px, 5vw, 60px) var(--container-pad)' }}>
-                {/* ── Back link ── */}
+                {/* â”€â”€ Back link â”€â”€ */}
                 <Motion.button
                     type="button"
                     onClick={() => navigate('/shop')}
@@ -388,10 +365,10 @@ const ProductDetail = () => {
                     onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
-                    <ArrowLeft size={16} /> Retour à la boutique
+                    <ArrowLeft size={16} /> Retour Ã  la boutique
                 </Motion.button>
 
-                {/* ── Main: Image + Info ── */}
+                {/* â”€â”€ Main: Image + Info â”€â”€ */}
                 <div className="split-grid" style={{ marginBottom: 'clamp(60px, 8vw, 100px)', alignItems: 'flex-start' }}>
                     {/* Left: Image Gallery */}
                     <Motion.div
@@ -499,7 +476,7 @@ const ProductDetail = () => {
                                 <Stars rating={product.rating} />
                             </div>
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                {product.rating > 0 ? product.rating.toFixed(1) : '—'} · {product.reviewsCount} avis{product.reviewsCount > 1 ? '' : ''}
+                                {product.rating > 0 ? product.rating.toFixed(1) : 'â€”'} Â· {product.reviewsCount} avis{product.reviewsCount > 1 ? '' : ''}
                             </span>
                         </div>
 
@@ -523,7 +500,7 @@ const ProductDetail = () => {
                                         padding: '6px 16px', borderRadius: 'var(--radius-pill)',
                                         background: 'var(--surface)', border: '1px solid var(--divider)',
                                         fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)'
-                                    }}>🕐 {product.applicationTime}</span>
+                                    }}>ðŸ• {product.applicationTime}</span>
                                 )}
                             </div>
                         )}
@@ -533,7 +510,7 @@ const ProductDetail = () => {
                                 fontSize: '2.8rem', fontWeight: 700,
                                 fontFamily: "'Cormorant Garant', serif",
                                 color: 'var(--text-main)',
-                            }}>{parseFloat(product.price).toFixed(2)} €</span>
+                            }}>{parseFloat(product.price).toFixed(2)} â‚¬</span>
                             {/* Stock indicator */}
                             {product.stock !== null && (
                                 <span style={{
@@ -544,7 +521,7 @@ const ProductDetail = () => {
                                     color: product.stock > 5 ? '#2d6a2d' : product.stock > 0 ? '#a06000' : 'var(--error)',
                                     border: `1px solid ${product.stock > 5 ? '#ccffcc' : product.stock > 0 ? '#ffe0cc' : '#ffcccc'}`
                                 }}>
-                                    {product.stock > 5 ? '✓ En stock' : product.stock > 0 ? `⚠ ${product.stock} restants` : '✗ Rupture'}
+                                    {product.stock > 5 ? 'âœ“ En stock' : product.stock > 0 ? `âš  ${product.stock} restants` : 'âœ— Rupture'}
                                 </span>
                             )}
                         </div>
@@ -568,7 +545,7 @@ const ProductDetail = () => {
                                 style={{ flex: 1, padding: '18px', gap: '12px' }}
                             >
                                 <ShoppingBag size={20} />
-                                {added ? 'Ajouté !' : 'Ajouter au Panier'}
+                                {added ? 'AjoutÃ© !' : 'Ajouter au Panier'}
                             </Motion.button>
 
                             <button className="btn-icon" onClick={handleWishlist} style={{
@@ -590,7 +567,7 @@ const ProductDetail = () => {
                     </Motion.div>
                 </div>
 
-                {/* ── Tabs ── */}
+                {/* â”€â”€ Tabs â”€â”€ */}
                 <div className="mobile-scroller" style={{ borderBottom: '1px solid var(--divider)', padding: 0, marginBottom: '40px' }}>
                     {tabs.map(tab => (
                         <button
@@ -631,25 +608,25 @@ const ProductDetail = () => {
                                 )}
                             </div>
                         )}
-                        {activeTab === 'ingrédients' && (
+                        {activeTab === 'ingrÃ©dients' && (
                             <div>
                                 {product.ingredients?.length > 0 ? (
                                     <>
-                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>Ingrédients actifs du produit :</p>
+                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>IngrÃ©dients actifs du produit :</p>
                                         <div className="grid-auto-fit" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', marginBottom: '32px' }}>
                                             {product.ingredients.map(ing => (
                                                 <div key={ing} style={{ padding: '14px 18px', background: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--divider)', fontSize: '0.88rem', fontWeight: 500 }}>
-                                                    <span style={{ color: 'var(--accent)', marginRight: '8px' }}>✦</span> {ing}
+                                                    <span style={{ color: 'var(--accent)', marginRight: '8px' }}>âœ¦</span> {ing}
                                                 </div>
                                             ))}
                                         </div>
                                     </>
                                 ) : (
-                                    <p style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>Aucun ingrédient renseigné.</p>
+                                    <p style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>Aucun ingrÃ©dient renseignÃ©.</p>
                                 )}
                                 {product.inciList?.length > 0 && (
                                     <>
-                                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Liste INCI complète</p>
+                                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Liste INCI complÃ¨te</p>
                                         <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', lineHeight: 1.8 }}>{product.inciList.join(', ')}</p>
                                     </>
                                 )}
@@ -719,9 +696,9 @@ const ProductDetail = () => {
                                             {reviewReason === 'not_authenticated' ? (
                                                 <>Veuillez vous <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 600 }}>connecter</Link> pour laisser un avis.</>
                                             ) : reviewReason === 'not_purchased' ? (
-                                                'Seules les clientes ayant acheté ce produit peuvent laisser un avis.'
+                                                'Seules les clientes ayant achetÃ© ce produit peuvent laisser un avis.'
                                             ) : reviewReason === 'already_reviewed' ? (
-                                                '✓ Vous avez déjà laissé un avis pour ce produit. Merci !'
+                                                'âœ“ Vous avez dÃ©jÃ  laissÃ© un avis pour ce produit. Merci !'
                                             ) : (
                                                 'Achetez ce produit pour laisser votre avis.'
                                             )}
@@ -758,7 +735,7 @@ const ProductDetail = () => {
                                                             <Stars rating={rev.rating} />
                                                         </div>
                                                         <div style={{ fontSize: '0.72rem', color: 'var(--text-light)' }}>
-                                                            {rev.date} {rev.verified && <span style={{ color: 'var(--accent)', marginLeft: '8px' }}>✓ Achat vérifié</span>}
+                                                            {rev.date} {rev.verified && <span style={{ color: 'var(--accent)', marginLeft: '8px' }}>âœ“ Achat vÃ©rifiÃ©</span>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -769,9 +746,9 @@ const ProductDetail = () => {
                                         ))
                                     ) : (
                                         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-light)' }}>
-                                            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>💬</div>
+                                            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>ðŸ’¬</div>
                                             <div style={{ fontWeight: 600, marginBottom: '6px' }}>Aucun avis pour le moment</div>
-                                            <div style={{ fontSize: '0.85rem' }}>Soyez la première à donner le vôtre !</div>
+                                            <div style={{ fontSize: '0.85rem' }}>Soyez la premiÃ¨re Ã  donner le vÃ´tre !</div>
                                         </div>
                                     )}
                                 </div>

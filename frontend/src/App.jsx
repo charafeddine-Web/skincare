@@ -11,7 +11,6 @@ import AdminRoute from './components/AdminRoute';
 import ProtectedRoute from './components/ProtectedRoute';
 import RouterEventBridge from './components/RouterEventBridge';
 import { prefetchHomeData } from './services/homeDataCache';
-import { prefetchShopData } from './services/shopDataCache';
 
 const Home = lazy(() => import('./pages/Home'));
 const Shop = lazy(() => import('./pages/Shop'));
@@ -59,12 +58,9 @@ const AppContent = () => {
   const location = useLocation();
   const isAdminPath = location.pathname.startsWith('/admin');
 
-  // Prefetch Home + Boutique au chargement de l'app pour affichage immédiat au 1er passage
+  // Prefetch Home au chargement pour affichage immédiat (Boutique utilise React Query)
   useEffect(() => {
-    const t = setTimeout(() => {
-      prefetchHomeData();
-      prefetchShopData();
-    }, 150);
+    const t = setTimeout(() => { prefetchHomeData(); }, 150);
     return () => clearTimeout(t);
   }, []);
 

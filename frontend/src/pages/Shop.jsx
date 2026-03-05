@@ -1,20 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import ProductCard, { SkeletonCard } from '../components/ProductCard';
 import ShopFilters from '../components/shop/ShopFilters';
 import QuickViewModal from '../components/shop/QuickViewModal';
 import { SlidersHorizontal, Search, ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
-import {
-  getCachedCategories,
-  fetchCategories,
-  getCachedPriceRange,
-  fetchPriceRange,
-  getCachedProducts,
-  setCachedProducts,
-  normalizeProduct,
-} from '../services/shopDataCache';
-import { productService } from '../services/api';
+import { normalizeProduct } from '../services/shopDataCache';
+import { productService, categoryService } from '../services/api';
 
 const PRODUCTS_PER_PAGE = 12;
 
@@ -47,10 +40,6 @@ const Shop = () => {
   const initialSearch = queryParams.get('search');
   const focusSearch = queryParams.get('focus') === 'search';
 
-  const [products, setProducts] = useState([]);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [categories, setCategories] = useState([{ id: 'Tous', name: 'Tous' }]);
   const [selectedCategory, setSelectedCategory] = useState('Tous');
   const [sortBy, setSortBy] = useState('popular');
   const [searchQuery, setSearchQuery] = useState(initialSearch || '');
@@ -58,7 +47,6 @@ const Shop = () => {
   const [priceBounds, setPriceBounds] = useState({ min: 0, max: 500 });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const [loadingProducts, setLoadingProducts] = useState(false);
   const [quickViewProduct, setQuickViewProduct] = useState(null);
   const [skinTypeFilters, setSkinTypeFilters] = useState([]);
   const [page, setPage] = useState(1);
@@ -66,6 +54,78 @@ const Shop = () => {
   const sortRef = useRef(null);
   const searchInputRef = useRef(null);
   const searchBarRef = useRef(null);
+
+  // React Query: categories (cached 10 min)
+  const { data: categoriesData } = useQuery({
+    queryKey: ['shop', 'categories'],
+    queryFn: async () => {
+      const res = await categoryService.list();
+      const list = Array.isArray(res) ? res : res?.data ?? [];
+      return [{ id: 'Tous', name: 'Tous' }, ...list];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+  const categories = categoriesData ?? [{ id: 'Tous', name: 'Tous' }];
+
+  // React Query: price range (depends on category for filter)
+  const categoryIdForPrice = selectedCategory === 'Tous'
+    ? undefined
+    : categories.find((c) => c.name === selectedCategory)?.id;
+  const { data: priceBoundsData } = useQuery({
+    queryKey: ['shop', 'priceRange', categoryIdForPrice],
+    queryFn: () => productService.getPriceRange(categoryIdForPrice ? { category_id: categoryIdForPrice } : {}),
+    enabled: typeof categoryIdForPrice === 'undefined' || typeof categoryIdForPrice === 'number',
+  });
+  useEffect(() => {
+    if (priceBoundsData) {
+      const next = { min: Number(priceBoundsData?.min) || 0, max: Math.max(Number(priceBoundsData?.max) || 500, 1) };
+      setPriceBounds(next);
+      setPriceRange((prev) => (prev[0] === 0 && prev[1] === 500 ? [next.min, next.max] : prev));
+    }
+  }, [priceBoundsData]);
+
+  // Build params for products query (memoized)
+  const listParams = useMemo(() => {
+    const categoryId =
+      selectedCategory === 'Tous'
+        ? undefined
+        : categories.find((c) => c.name === selectedCategory)?.id;
+    const sortParam = sortBy === 'price-asc' ? 'price_asc' : sortBy === 'price-desc' ? 'price_desc' : sortBy;
+    return {
+      page,
+      per_page: PRODUCTS_PER_PAGE,
+      is_active: true,
+      sort: sortParam,
+      ...(categoryId && categoryId !== 'Tous' && { category_id: categoryId }),
+      ...(debouncedSearch?.trim() && { search: debouncedSearch.trim() }),
+      min_price: priceRange[0],
+      max_price: priceRange[1],
+      ...(skinTypeFilters.length > 0 && {
+        skin_type: skinTypeFilters.map((id) => SKIN_TYPE_TO_BACKEND[id]).filter(Boolean),
+      }),
+    };
+  }, [page, selectedCategory, categories, debouncedSearch, priceRange, sortBy, skinTypeFilters]);
+
+  // React Query: products list
+  const {
+    data: productsPayload,
+    isLoading: loadingProducts,
+    isFetching: isFetchingProducts,
+  } = useQuery({
+    queryKey: ['shop', 'products', listParams],
+    queryFn: () => productService.list(listParams),
+    enabled: categories.length > 0,
+  });
+
+  const products = useMemo(() => {
+    const res = productsPayload;
+    const list = res?.data ?? res;
+    const rawList = Array.isArray(list) ? list : [];
+    return rawList.map(normalizeProduct);
+  }, [productsPayload]);
+
+  const totalProducts = productsPayload?.total ?? 0;
+  const totalPages = Math.max(1, productsPayload?.last_page ?? 1);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -108,95 +168,6 @@ const Shop = () => {
     }, 400);
     return () => clearTimeout(id);
   }, [focusSearch, loadingProducts, location.pathname, location.search, navigate]);
-
-  const buildListParams = useCallback(
-    (pageNum = page) => {
-      const categoryId =
-        selectedCategory === 'Tous'
-          ? undefined
-          : categories.find((c) => c.name === selectedCategory)?.id;
-      const sortParam = sortBy === 'price-asc' ? 'price_asc' : sortBy === 'price-desc' ? 'price_desc' : sortBy;
-      const params = {
-        page: pageNum,
-        per_page: PRODUCTS_PER_PAGE,
-        is_active: true,
-        sort: sortParam,
-        ...(categoryId && categoryId !== 'Tous' && { category_id: categoryId }),
-        ...(debouncedSearch?.trim() && { search: debouncedSearch.trim() }),
-        min_price: priceRange[0],
-        max_price: priceRange[1],
-      };
-      if (skinTypeFilters.length > 0) {
-        params.skin_type = skinTypeFilters.map((id) => SKIN_TYPE_TO_BACKEND[id]).filter(Boolean);
-      }
-      return params;
-    },
-    [page, selectedCategory, categories, debouncedSearch, priceRange, sortBy, skinTypeFilters]
-  );
-
-  const fetchProducts = useCallback(
-    async (pageNum = page) => {
-      if (categories.length === 0) return;
-      const params = buildListParams(pageNum);
-      const cached = getCachedProducts(params);
-      if (cached) {
-        setProducts(cached.products);
-        setTotalProducts(cached.totalProducts);
-        setTotalPages(cached.totalPages);
-        setLoadingProducts(false);
-        return;
-      }
-      setLoadingProducts(true);
-      try {
-        const res = await productService.list(params);
-        const list = res?.data ?? res;
-        const rawList = Array.isArray(list) ? list : [];
-        const normalized = rawList.map(normalizeProduct);
-        setProducts(normalized);
-        setTotalProducts(res?.total ?? rawList.length);
-        setTotalPages(Math.max(1, res?.last_page ?? 1));
-        setCachedProducts(params, {
-          products: normalized,
-          total: res?.total ?? rawList.length,
-          last_page: res?.last_page ?? 1,
-        });
-      } catch (err) {
-        console.error('Error fetching shop products:', err);
-        setProducts([]);
-        setTotalProducts(0);
-        setTotalPages(1);
-      } finally {
-        setLoadingProducts(false);
-      }
-    },
-    [categories.length, buildListParams]
-  );
-
-  useEffect(() => {
-    const cachedCat = getCachedCategories();
-    if (cachedCat?.length) setCategories(cachedCat);
-    const cachedPrice = getCachedPriceRange();
-    if (cachedPrice) {
-      setPriceBounds(cachedPrice);
-      setPriceRange((prev) =>
-        prev[0] === 0 && prev[1] === 500 ? [cachedPrice.min, cachedPrice.max] : prev
-      );
-    }
-    fetchCategories().then(setCategories).catch(() => {});
-    fetchPriceRange()
-      .then((r) => {
-        setPriceBounds(r);
-        setPriceRange((prev) =>
-          prev[0] === 0 && prev[1] === 500 ? [r.min, r.max] : prev
-        );
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (categories.length === 0) return;
-    fetchProducts(page);
-  }, [page, selectedCategory, debouncedSearch, priceRange, sortBy, skinTypeFilters, categories, fetchProducts]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -368,7 +339,7 @@ const Shop = () => {
               />
             </div>
 
-            {loadingProducts && (
+            {isFetchingProducts && (
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 16 }}>
                 Récupération en cours…
               </p>

@@ -44,10 +44,10 @@ const QuickViewModal = ({ productId, product: initialProduct, onClose }) => {
     }
     setAdding(true);
     toast.success('Ajouté au panier');
-    window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
     const t = setTimeout(() => setAdding(false), 400);
     try {
-      await cartService.addItem(product.id, 1);
+      const data = await cartService.addItem(product.id, 1);
+      window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: data?.items_count } }));
     } catch (err) {
       if (err?.status === 401) navigate('/login');
       else toast.error(err?.message || 'Erreur');

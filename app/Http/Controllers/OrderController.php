@@ -9,12 +9,14 @@ use Illuminate\Http\Request;
 class OrderController extends Controller
 {
     /**
-     * Affiche toutes les commandes
+     * Affiche toutes les commandes (eager load user + items count; no full items for list).
      */
     public function index(Request $request)
     {
-        // Optimisation : On ne charge que ce qui est affiché dans la liste admin (user) au lieu des adresses et produits
-        $query = Order::with(['user:id,first_name,last_name,email']);
+        $query = Order::query()
+            ->select('id', 'user_id', 'address_id', 'total_amount', 'status', 'payment_method', 'transaction_id', 'created_at')
+            ->with(['user:id,first_name,last_name,email'])
+            ->withCount('items');
 
         if ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
@@ -37,9 +39,9 @@ class OrderController extends Controller
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('id', 'like', '%' . $searchTerm . '%')
                   ->orWhereHas('user', function ($uq) use ($searchTerm) {
-                      $uq->where('first_name', 'like', '%' . $searchTerm . '%')
-                         ->orWhere('last_name', 'like', '%' . $searchTerm . '%')
-                         ->orWhere('email', 'like', '%' . $searchTerm . '%');
+                      $uq->where('first_name', 'ilike', '%' . $searchTerm . '%')
+                         ->orWhere('last_name', 'ilike', '%' . $searchTerm . '%')
+                         ->orWhere('email', 'ilike', '%' . $searchTerm . '%');
                   });
             });
         }
@@ -48,7 +50,8 @@ class OrderController extends Controller
             $query->whereDate('created_at', $request->date);
         }
 
-        return response()->json($query->orderBy('created_at', 'desc')->paginate($request->per_page ?? 10), 200);
+        $perPage = (int) ($request->per_page ?? 10);
+        return response()->json($query->orderByDesc('created_at')->paginate($perPage), 200);
     }
 
     /**
@@ -112,11 +115,19 @@ class OrderController extends Controller
     }
 
     /**
-     * Affiche une commande spécifique
+     * Affiche une commande spécifique (eager load user, address, items avec product minimal).
      */
     public function show(Order $order)
     {
-        return response()->json($order->load(['user', 'address', 'items.product']), 200);
+        $order->load([
+            'user:id,first_name,last_name,email',
+            'address:id,user_id,label,street,city,postal_code,country,phone',
+            'items' => function ($q) {
+                $q->select('id', 'order_id', 'product_id', 'price', 'quantity')
+                    ->with('product:id,name,slug');
+            },
+        ]);
+        return response()->json($order, 200);
     }
 
     /**

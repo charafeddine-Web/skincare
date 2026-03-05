@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
-import { Heart, ShoppingBag, X, Star, ArrowRight } from 'lucide-react';
+import { Heart, ShoppingBag, X, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { favoriteService } from '../services/api';
@@ -24,34 +25,27 @@ const FavSkeleton = () => (
 /* ── COMPONENT ── */
 const Favorites = () => {
     const navigate = useNavigate();
-    const [favorites, setFavorites] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const queryClient = useQueryClient();
     const [removing, setRemoving] = useState(null);
 
-    useEffect(() => {
+    const { data: favorites = [], isLoading: loading } = useQuery({
+        queryKey: ['favorites'],
+        queryFn: () => favoriteService.list(),
+    });
+
+    React.useEffect(() => {
         document.title = 'Mes Favoris — Éveline Skincare';
-        const fetchFavorites = async () => {
-            try {
-                const data = await favoriteService.list();
-                setFavorites(data);
-            } catch (err) {
-                console.error('Error fetching favorites:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchFavorites();
     }, []);
 
     const handleRemove = async (productId) => {
         const removed = favorites.find((f) => f.product_id === productId);
-        setFavorites((prev) => prev.filter((f) => f.product_id !== productId));
         setRemoving(productId);
         try {
             await favoriteService.toggle(productId);
+            queryClient.invalidateQueries({ queryKey: ['favorites'] });
         } catch (err) {
-            if (removed) setFavorites((prev) => [...prev, removed]);
             toast.error('Erreur lors de la suppression du favori');
+            queryClient.invalidateQueries({ queryKey: ['favorites'] });
         } finally {
             setRemoving(null);
         }

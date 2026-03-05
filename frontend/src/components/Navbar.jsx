@@ -83,7 +83,14 @@ const Navbar = () => {
     }, [fetchCartCount]);
 
     useEffect(() => {
-        const handler = () => fetchCartCount();
+        const handler = (e) => {
+            const count = e?.detail?.items_count;
+            if (typeof count === 'number') {
+                setCartCount(count);
+            } else {
+                fetchCartCount();
+            }
+        };
         window.addEventListener(CART_UPDATED_EVENT, handler);
         return () => window.removeEventListener(CART_UPDATED_EVENT, handler);
     }, [fetchCartCount]);

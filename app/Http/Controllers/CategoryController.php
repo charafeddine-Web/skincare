@@ -2,20 +2,28 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\ProductController;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class CategoryController extends Controller
 {
+    private const CATEGORIES_CACHE_KEY = 'categories.with_count';
+    private const CATEGORIES_CACHE_TTL = 600; // 10 min
+
     /**
-     * Affiche toutes les catégories
+     * Affiche toutes les catégories (cached, slim columns + count).
      */
     public function index()
     {
-        $categories = cache()->remember('categories.with_count', 60, function () {
-            return Category::with(['parent', 'children'])
+        $categories = Cache::remember(self::CATEGORIES_CACHE_KEY, self::CATEGORIES_CACHE_TTL, function () {
+            return Category::query()
+                ->select('id', 'name', 'slug', 'parent_id')
+                ->with(['parent:id,name,slug', 'children:id,name,slug,parent_id'])
                 ->withCount('products')
+                ->orderBy('name')
                 ->get();
         });
 
@@ -38,6 +46,7 @@ class CategoryController extends Controller
         }
 
         $category = Category::create($validated);
+        $this->invalidateCategoriesCache();
 
         return response()->json($category, 201);
     }
@@ -66,6 +75,8 @@ class CategoryController extends Controller
         }
 
         $category->update($validated);
+        $this->invalidateCategoriesCache();
+        ProductController::invalidateProductCaches();
 
         return response()->json($category, 200);
     }
@@ -76,7 +87,14 @@ class CategoryController extends Controller
     public function destroy(Category $category)
     {
         $category->delete();
+        $this->invalidateCategoriesCache();
+        ProductController::invalidateProductCaches();
         return response()->json(['message' => 'Catégorie supprimée'], 200);
+    }
+
+    private function invalidateCategoriesCache(): void
+    {
+        Cache::forget(self::CATEGORIES_CACHE_KEY);
     }
 }
 

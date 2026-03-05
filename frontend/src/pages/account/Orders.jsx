@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Navigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -6,40 +7,24 @@ import {
     Clock, AlertCircle, ChevronRight, ArrowRight
 } from 'lucide-react';
 
-// Import de TON service API
 import { orderService } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Orders = () => {
     const { isAuthenticated, isAdmin } = useAuth();
-    const [orders, setOrders] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
 
-    // Chargement des données via ton API
-    useEffect(() => {
-        const fetchOrders = async () => {
-            try {
-                setLoading(true);
-                // Utilisation de orderService.list() de ton fichier
-                const response = await orderService.list();
+    const { data: response, isLoading: loading, error: queryError } = useQuery({
+        queryKey: ['orders', 'user'],
+        queryFn: () => orderService.list(),
+        enabled: !!isAuthenticated,
+    });
 
-                // Si ton API Laravel utilise la pagination, les données sont dans .data
-                // Sinon c'est directement la réponse
-                const data = response.data || response;
-                setOrders(Array.isArray(data) ? data : data.data || []);
+    const orders = React.useMemo(() => {
+        const data = response?.data ?? response;
+        return Array.isArray(data) ? data : data?.data ?? [];
+    }, [response]);
 
-                setError(null);
-            } catch (err) {
-                console.error("Erreur lors de la récupération :", err);
-                setError(err.message || "Impossible de charger vos commandes.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (isAuthenticated) fetchOrders();
-    }, [isAuthenticated]);
+    const error = queryError?.message ?? null;
 
     // Protections de routes
     if (isAuthenticated && isAdmin) return <Navigate to="/admin" replace />;

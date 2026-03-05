@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { favoriteService, cartService, CART_UPDATED_EVENT } from '../services/api';
+import { productThumbnailUrl } from '../utils/imageUrl';
 
 const StarRating = ({ rating = 4.5, count }) => (
     <div className="product-card__stars">
@@ -23,7 +24,7 @@ const StarRating = ({ rating = 4.5, count }) => (
     </div>
 );
 
-const ProductCard = ({ product, onQuickView, showQuickAddBar }) => {
+const ProductCard = React.memo(function ProductCard({ product, onQuickView, showQuickAddBar }) {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
     const [wishlisted, setWishlisted] = useState(product.is_favorited ?? false);
@@ -64,9 +65,9 @@ const ProductCard = ({ product, onQuickView, showQuickAddBar }) => {
         setAddedToCart(true);
         setTimeout(() => setAddedToCart(false), 1800);
         toast.success('Ajouté au panier');
-        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
         try {
-            await cartService.addItem(product.id, 1);
+            const data = await cartService.addItem(product.id, 1);
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: data?.items_count } }));
         } catch (err) {
             setAddedToCart(false);
             if (err?.status === 401) {
@@ -118,7 +119,7 @@ const ProductCard = ({ product, onQuickView, showQuickAddBar }) => {
                 {product.image ? (
                     <div className="product-card__img-wrap">
                         <img
-                            src={product.image}
+                            src={productThumbnailUrl(product.image)}
                             alt={product.name || 'Produit'}
                             loading="lazy"
                             decoding="async"
@@ -128,7 +129,7 @@ const ProductCard = ({ product, onQuickView, showQuickAddBar }) => {
                         />
                         {product.imageHover && (
                             <div className="product-card__img--hover">
-                                <img src={product.imageHover} alt="" aria-hidden />
+                                <img src={productThumbnailUrl(product.imageHover)} alt="" aria-hidden loading="lazy" />
                             </div>
                         )}
                     </div>
@@ -237,7 +238,7 @@ const ProductCard = ({ product, onQuickView, showQuickAddBar }) => {
             </div>
         </Motion.article>
     );
-};
+});
 
 export const SkeletonCard = () => (
     <div className="product-card product-card--skeleton">

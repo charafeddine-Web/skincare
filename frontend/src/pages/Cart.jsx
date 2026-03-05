@@ -68,12 +68,12 @@ const Cart = () => {
         setItems(nextItems);
         setSubtotal(nextSubtotal);
         setShipping(nextSubtotal >= freeShippingThreshold ? 0 : prevShipping);
-        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: nextItems.length } }));
 
         try {
             const data = await cartService.updateQuantity(cartItemId, newQty);
             applyCartData(data);
-            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: data?.items_count } }));
         } catch (err) {
             setItems(prevItems);
             setSubtotal(prevSubtotal);
@@ -93,12 +93,12 @@ const Cart = () => {
         setItems(remaining);
         setSubtotal(nextSubtotal);
         setShipping(nextSubtotal >= freeShippingThreshold ? 0 : prevShipping);
-        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: remaining.length } }));
 
         try {
             const data = await cartService.removeItem(cartItemId);
             applyCartData(data);
-            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT));
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: data?.items_count } }));
             toast.success('Article retiré du panier');
         } catch (err) {
             setItems(prevItems);

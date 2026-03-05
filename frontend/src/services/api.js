@@ -561,7 +561,8 @@ export const shopSettingsService = {
   },
 };
 
-// Événement émis quand le panier change (pour mettre à jour le badge Navbar/BottomNav)
+// Événement émis quand le panier change (pour mettre à jour le badge Navbar/BottomNav).
+// Si detail.items_count est fourni, la Navbar/BottomNav mettent à jour le badge sans appel API.
 export const CART_UPDATED_EVENT = 'cart:updated';
 
 // Service Panier

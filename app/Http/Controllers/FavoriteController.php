@@ -5,23 +5,38 @@ namespace App\Http\Controllers;
 use App\Models\Favorite;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class FavoriteController extends Controller
 {
+    private const FAVORITES_CACHE_TTL = 120; // 2 min per user
+
     /**
-     * Get user favorites
+     * Get user favorites (cached, slim product fields + main image).
      */
     public function index(Request $request)
     {
-        $favorites = Favorite::where('user_id', $request->user()->id)
-            ->with(['product' => function($q) {
-                // Optimisation: select specific columns and eager load main image
-                $q->select('id', 'name', 'price', 'category_id')
-                  ->with(['images' => function($iq) {
-                      $iq->where('is_main', true);
-                  }]);
-            }])
-            ->get();
+        $userId = $request->user()->id;
+        $cacheKey = 'favorites:user:' . $userId;
+
+        $favorites = Cache::remember($cacheKey, self::FAVORITES_CACHE_TTL, function () use ($userId) {
+            return Favorite::query()
+                ->where('user_id', $userId)
+                ->select('id', 'user_id', 'product_id', 'created_at')
+                ->with([
+                    'product' => function ($q) {
+                        $q->select('id', 'name', 'slug', 'price', 'category_id')
+                            ->with([
+                                'category:id,name',
+                                'images' => function ($iq) {
+                                    $iq->where('is_main', true)->select('product_id', 'image_url');
+                                },
+                            ]);
+                    },
+                ])
+                ->orderByDesc('created_at')
+                ->get();
+        });
 
         return response()->json($favorites);
     }
@@ -39,14 +54,15 @@ class FavoriteController extends Controller
 
         if ($favorite) {
             $favorite->delete();
+            Cache::forget('favorites:user:' . $userId);
             return response()->json(['favorited' => false, 'message' => 'Retiré des favoris']);
-        } else {
-            Favorite::create([
-                'user_id' => $userId,
-                'product_id' => $productId
-            ]);
-            return response()->json(['favorited' => true, 'message' => 'Ajouté aux favoris']);
         }
+        Favorite::create([
+            'user_id' => $userId,
+            'product_id' => $productId,
+        ]);
+        Cache::forget('favorites:user:' . $userId);
+        return response()->json(['favorited' => true, 'message' => 'Ajouté aux favoris']);
     }
 
     /**
