@@ -269,6 +269,18 @@ export const orderService = {
       throw error.response?.data || { message: 'Erreur lors de la suppression de la commande' };
     }
   },
+
+  /**
+   * Récupère la facture HTML (pour affichage dans un nouvel onglet).
+   * Utilise la même instance api (auth, baseURL) avec responseType text.
+   */
+  getInvoiceHtml: async (orderId) => {
+    const response = await api.get(`/orders/${orderId}/invoice`, {
+      responseType: 'text',
+      headers: { Accept: 'text/html' },
+    });
+    return response.data;
+  },
 };
 
 // Service Admin (metrics dashboard)

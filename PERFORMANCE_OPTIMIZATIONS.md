@@ -112,7 +112,9 @@ This document describes the performance optimizations applied to reach **page lo
 
 ## 4. Running the migration
 
+From the project root:
 ```bash
+cd backend
 php artisan migrate
 ```
 

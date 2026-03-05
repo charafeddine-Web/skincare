@@ -1,6 +1,33 @@
-# 🧴 Skincare API - REST API avec Paiement CMI
+# 🧴 Skincare - E-commerce & API REST
 
-API REST complète pour une plateforme e-commerce de produits de soin de la peau avec intégration de paiement CMI (Maroc).
+Projet e-commerce de soins de la peau : **backend Laravel (API REST + Paiement CMI)** et **frontend React**.
+
+## 📁 Structure du projet
+
+```
+skincare/
+├── backend/          # Laravel (API REST, base de données, paiement CMI)
+│   ├── app/
+│   ├── config/
+│   ├── database/
+│   ├── public/
+│   ├── resources/
+│   ├── routes/
+│   ├── storage/
+│   ├── tests/
+│   ├── .env
+│   ├── artisan
+│   ├── composer.json
+│   └── ...
+├── frontend/         # React (Vite)
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   └── ...
+├── setup.ps1         # Script de vérification (Windows)
+├── setup.sh          # Script de vérification (Linux/Mac)
+└── README.md
+```
 
 ## 📋 Table des matières
 
@@ -20,18 +47,20 @@ API REST complète pour une plateforme e-commerce de produits de soin de la peau
 - PHP 8.1+
 - Composer
 - PostgreSQL/MySQL
+- Node.js 18+ (pour le frontend)
 - Git
 
-### Étapes d'Installation
+### Backend (Laravel API)
 
 1. **Cloner le projet**
 ```bash
 git clone <repository-url>
-cd skincare-api
+cd skincare
 ```
 
-2. **Installer les dépendances**
+2. **Aller dans le backend et installer les dépendances**
 ```bash
+cd backend
 composer install
 ```
 
@@ -41,9 +70,8 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-4. **Configuration de la base de données**
-```bash
-# Éditer .env
+4. **Configuration de la base de données** (éditer `backend/.env`)
+```env
 DB_CONNECTION=pgsql
 DB_HOST=127.0.0.1
 DB_DATABASE=skincare_db
@@ -56,12 +84,22 @@ DB_PASSWORD=votre_mot_de_passe
 php artisan migrate
 ```
 
-6. **Démarrer le serveur**
+6. **Démarrer le serveur API**
 ```bash
 php artisan serve
 ```
 
-L'API est maintenant accessible sur `http://localhost:8000`
+L'API est accessible sur `http://localhost:8000`
+
+### Frontend (React)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Le frontend tourne sur `http://localhost:5173` (ou le port indiqué par Vite). Configurez `VITE_API_URL=http://localhost:8000/api` si besoin (fichier `.env` dans `frontend/`).
 
 ## 🔧 Configuration
 
@@ -91,41 +129,36 @@ CMI_WEBHOOK_SECRET=your_secret
 CMI_CURRENCY=MAD
 ```
 
-Voir `.env.cmi.example` pour la configuration complète CMI.
+Voir `backend/.env.cmi.example` pour la configuration complète CMI.
 
-## 📁 Structure
+## 📁 Structure (Backend)
+
+Tous les fichiers Laravel sont dans le dossier **`backend/`** :
 
 ```
-app/
-├── Http/Controllers/          # Contrôleurs
-│   ├── AuthController.php
-│   ├── ProductController.php
-│   ├── OrderController.php
-│   └── PaymentController.php
-├── Models/                    # Modèles Eloquent
-│   ├── User.php
-│   ├── Product.php
-│   ├── Order.php
-│   ├── Payment.php
-│   └── ...
-├── Services/Payment/
-│   ├── CMIService.php         # Service CMI
-│   └── CMITokenizationService.php
-└── Events/                    # Événements
-    ├── PaymentSucceeded.php
-    └── PaymentFailed.php
-
-config/
-├── app.php
-├── database.php
-└── cmi.php                    # Configuration CMI
-
-database/
-├── migrations/                # Migrations
-└── seeders/                   # Seeders
-
-routes/
-└── api.php                    # Routes API
+backend/
+├── app/
+│   ├── Http/Controllers/      # Contrôleurs
+│   │   ├── AuthController.php
+│   │   ├── ProductController.php
+│   │   ├── OrderController.php
+│   │   └── PaymentController.php
+│   ├── Models/                # Modèles Eloquent
+│   ├── Services/Payment/
+│   │   └── CMIService.php
+│   └── Events/
+├── config/
+│   ├── app.php
+│   ├── database.php
+│   └── cmi.php
+├── database/
+│   ├── migrations/
+│   └── seeders/
+├── routes/
+│   └── api.php
+├── .env
+├── artisan
+└── composer.json
 ```
 
 ## 📡 API Endpoints
@@ -190,6 +223,7 @@ routes/
 
 1. **Copier les variables CMI**
 ```bash
+cd backend
 cat .env.cmi.example >> .env
 ```
 
@@ -378,9 +412,10 @@ curl -X POST http://localhost:8000/api/payments/initiate \
 
 ## 🧪 Tests
 
-### Tests Unitaires
+### Tests Unitaires (depuis `backend/`)
 
 ```bash
+cd backend
 php artisan test
 ```
 
@@ -391,9 +426,13 @@ php artisan test tests/Feature/PaymentControllerTest.php
 php artisan test --filter=PaymentControllerTest
 ```
 
-## 🛠️ Commandes Utiles
+## 🛠️ Commandes Utiles (Backend)
+
+Exécuter depuis le dossier **`backend/`** :
 
 ```bash
+cd backend
+
 # Tinker (REPL)
 php artisan tinker
 

@@ -46,10 +46,11 @@ Write-Host ""
 Write-Host "📋 ÉTAPE 2: Vérification des fichiers" -ForegroundColor Yellow
 Write-Host "---" -ForegroundColor Gray
 
+$backend = "backend"
 $files = @(
-    ".env",
-    "composer.json",
-    "routes/api.php"
+    "$backend/.env",
+    "$backend/composer.json",
+    "$backend/routes/api.php"
 )
 
 foreach ($file in $files) {
@@ -66,14 +67,14 @@ Write-Host "📋 ÉTAPE 3: Vérification des migrations" -ForegroundColor Yellow
 Write-Host "---" -ForegroundColor Gray
 
 $migrations = @(
-    "database/migrations/2014_10_12_000000_create_users_table.php",
-    "database/migrations/2026_02_24_000001_create_addresses_table.php",
-    "database/migrations/2026_02_24_000002_create_categories_table.php",
-    "database/migrations/2026_02_24_000003_create_products_table.php",
-    "database/migrations/2026_02_24_000004_create_product_images_table.php",
-    "database/migrations/2026_02_24_000005_create_orders_table.php",
-    "database/migrations/2026_02_24_000006_create_order_items_table.php",
-    "database/migrations/2026_02_24_000007_create_reviews_table.php"
+    "$backend/database/migrations/2014_10_12_000000_create_users_table.php",
+    "$backend/database/migrations/2026_02_24_000001_create_addresses_table.php",
+    "$backend/database/migrations/2026_02_24_000002_create_categories_table.php",
+    "$backend/database/migrations/2026_02_24_000003_create_products_table.php",
+    "$backend/database/migrations/2026_02_24_000004_create_product_images_table.php",
+    "$backend/database/migrations/2026_02_24_000005_create_orders_table.php",
+    "$backend/database/migrations/2026_02_24_000006_create_order_items_table.php",
+    "$backend/database/migrations/2026_02_24_000007_create_reviews_table.php"
 )
 
 foreach ($migration in $migrations) {
@@ -90,14 +91,14 @@ Write-Host "📋 ÉTAPE 4: Vérification des modèles" -ForegroundColor Yellow
 Write-Host "---" -ForegroundColor Gray
 
 $models = @(
-    "app/Models/User.php",
-    "app/Models/Address.php",
-    "app/Models/Category.php",
-    "app/Models/Product.php",
-    "app/Models/ProductImage.php",
-    "app/Models/Order.php",
-    "app/Models/OrderItem.php",
-    "app/Models/Review.php"
+    "$backend/app/Models/User.php",
+    "$backend/app/Models/Address.php",
+    "$backend/app/Models/Category.php",
+    "$backend/app/Models/Product.php",
+    "$backend/app/Models/ProductImage.php",
+    "$backend/app/Models/Order.php",
+    "$backend/app/Models/OrderItem.php",
+    "$backend/app/Models/Review.php"
 )
 
 foreach ($model in $models) {
@@ -114,15 +115,15 @@ Write-Host "📋 ÉTAPE 5: Vérification des contrôleurs" -ForegroundColor Yell
 Write-Host "---" -ForegroundColor Gray
 
 $controllers = @(
-    "app/Http/Controllers/AuthController.php",
-    "app/Http/Controllers/UserController.php",
-    "app/Http/Controllers/AddressController.php",
-    "app/Http/Controllers/CategoryController.php",
-    "app/Http/Controllers/ProductController.php",
-    "app/Http/Controllers/ProductImageController.php",
-    "app/Http/Controllers/OrderController.php",
-    "app/Http/Controllers/OrderItemController.php",
-    "app/Http/Controllers/ReviewController.php"
+    "$backend/app/Http/Controllers/AuthController.php",
+    "$backend/app/Http/Controllers/UserController.php",
+    "$backend/app/Http/Controllers/AddressController.php",
+    "$backend/app/Http/Controllers/CategoryController.php",
+    "$backend/app/Http/Controllers/ProductController.php",
+    "$backend/app/Http/Controllers/ProductImageController.php",
+    "$backend/app/Http/Controllers/OrderController.php",
+    "$backend/app/Http/Controllers/OrderItemController.php",
+    "$backend/app/Http/Controllers/ReviewController.php"
 )
 
 foreach ($controller in $controllers) {
@@ -165,22 +166,25 @@ Write-Host ""
 
 Write-Host "🚀 Prochaines étapes:" -ForegroundColor Green
 Write-Host ""
-Write-Host "1. Configurer .env" -ForegroundColor White
+Write-Host "1. Aller dans le dossier backend" -ForegroundColor White
+Write-Host "   cd backend" -ForegroundColor Gray
+Write-Host ""
+Write-Host "2. Configurer .env" -ForegroundColor White
 Write-Host "   notepad .env" -ForegroundColor Gray
 Write-Host ""
-Write-Host "2. Installer les dépendances" -ForegroundColor White
+Write-Host "3. Installer les dépendances" -ForegroundColor White
 Write-Host "   composer install" -ForegroundColor Gray
 Write-Host ""
-Write-Host "3. Générer la clé" -ForegroundColor White
+Write-Host "4. Générer la clé" -ForegroundColor White
 Write-Host "   php artisan key:generate" -ForegroundColor Gray
 Write-Host ""
-Write-Host "4. Exécuter les migrations" -ForegroundColor White
+Write-Host "5. Exécuter les migrations" -ForegroundColor White
 Write-Host "   php artisan migrate" -ForegroundColor Gray
 Write-Host ""
-Write-Host "5. Démarrer le serveur" -ForegroundColor White
+Write-Host "6. Démarrer le serveur API" -ForegroundColor White
 Write-Host "   php artisan serve" -ForegroundColor Gray
 Write-Host ""
-Write-Host "6. Tester l'API" -ForegroundColor White
+Write-Host "7. Tester l'API" -ForegroundColor White
 Write-Host "   curl http://localhost:8000/api/products" -ForegroundColor Gray
 Write-Host ""
 Write-Host "📚 Documentation:" -ForegroundColor Green

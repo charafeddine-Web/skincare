@@ -1,5 +1,7 @@
 # 🧴 Skincare API - Guide d'Installation et Configuration
 
+> **Note :** Toutes les commandes ci-dessous (composer, php artisan, etc.) doivent être exécutées depuis le dossier **`backend/`**.
+
 ## 📋 Prérequis
 
 - PHP 8.1 ou supérieur
@@ -12,7 +14,8 @@
 ### 1. Cloner le projet
 ```bash
 git clone <repository-url>
-cd skincare-api
+cd skincare
+cd backend
 ```
 
 ### 2. Installer les dépendances

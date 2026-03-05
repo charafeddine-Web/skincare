@@ -587,6 +587,21 @@ const Products = () => {
     }
   };
 
+  const handleEditProduct = async (id) => {
+    try {
+      setEditFormError(null);
+      const fullProduct = await productService.get(id);
+      setEditProduct({
+        ...fullProduct,
+        stock_quantity: fullProduct.stock_quantity ?? 0,
+        low_stock_threshold: fullProduct.low_stock_threshold ?? 10,
+      });
+    } catch (err) {
+      toast.error("Erreur lors du chargement du produit pour modification");
+      console.error(err);
+    }
+  };
+
   return (
     <div>
       <header style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
@@ -873,7 +888,7 @@ const Products = () => {
                             <button
                               title="Modifier"
                               type="button"
-                              onClick={() => setEditProduct(p)}
+                              onClick={() => handleEditProduct(p.id)}
                               style={{ border: 'none', background: 'var(--surface)', padding: '8px', borderRadius: '10px', color: 'var(--text-main)', cursor: 'pointer', display: 'flex' }}
                             >
                               <Edit size={16} />

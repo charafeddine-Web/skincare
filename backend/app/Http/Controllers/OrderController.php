@@ -156,12 +156,37 @@ class OrderController extends Controller
     }
 
     /**
-     * Génère une facture PDF/Imprimable
+     * Génère une facture PDF/Imprimable avec toutes les informations nécessaires
      */
     public function invoice(Order $order)
     {
         $order->load(['user', 'items.product', 'address']);
-        return view('invoices.order', compact('order'));
+
+        $invoiceNumber = 'FAC-' . str_pad((string) $order->id, 5, '0', STR_PAD_LEFT);
+        $invoiceDate = $order->created_at?->format('d/m/Y') ?? '—';
+        $orderDate = $order->created_at?->format('d/m/Y') ?? '—';
+        $printedAt = now()->format('d/m/Y') . ' à ' . now()->format('H:i');
+
+        $statusLabels = [
+            'pending' => 'En attente',
+            'paid' => 'Payée',
+            'shipped' => 'Expédiée',
+            'delivered' => 'Livrée',
+            'cancelled' => 'Annulée',
+        ];
+        $statusLabel = $statusLabels[$order->status] ?? $order->status ?? '—';
+
+        $paymentLabel = $order->payment_method ?: '—';
+
+        return view('invoices.order', compact(
+            'order',
+            'invoiceNumber',
+            'invoiceDate',
+            'orderDate',
+            'statusLabel',
+            'paymentLabel',
+            'printedAt'
+        ));
     }
 }
 

@@ -1,19 +1,35 @@
-/.phpunit.cache
+# Backend (Laravel)
+/backend/.phpunit.cache
+/backend/node_modules
+/backend/public/build
+/backend/public/hot
+/backend/public/storage
+/backend/storage/*.key
+/backend/vendor
+/backend/.env
+/backend/.env.backup
+/backend/.env.production
+/backend/.phpunit.result.cache
+
+# Frontend
+/frontend/node_modules
+
+# Root (legacy Laravel public if still present)
+/public
 /node_modules
-/public/build
-/public/hot
-/public/storage
-/storage/*.key
 /vendor
 .env
 .env.backup
 .env.production
-.phpunit.result.cache
+/.phpunit.cache
+/.phpunit.result.cache
+
+# IDE & misc
+/.fleet
+/.idea
+/.vscode
 Homestead.json
 Homestead.yaml
 auth.json
 npm-debug.log
 yarn-error.log
-/.fleet
-/.idea
-/.vscode

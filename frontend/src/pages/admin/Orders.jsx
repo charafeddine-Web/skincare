@@ -23,6 +23,7 @@ const Orders = () => {
   const [editOrder, setEditOrder] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [invoiceLoadingId, setInvoiceLoadingId] = useState(null);
 
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
@@ -111,9 +112,27 @@ const Orders = () => {
     }
   };
 
-  const handleDownloadInvoice = (orderId) => {
-    const url = `${import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}/orders/${orderId}/invoice`;
-    window.open(url, '_blank');
+  const handleDownloadInvoice = async (orderId) => {
+    setInvoiceLoadingId(orderId);
+    try {
+      const html = await orderService.getInvoiceHtml(orderId);
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(html);
+        newWindow.document.close();
+        toast.success('Facture ouverte dans un nouvel onglet. Utilisez "Imprimer" pour sauvegarder en PDF.');
+      } else {
+        toast.error('Autorisez les pop-ups pour ouvrir la facture.');
+      }
+    } catch (err) {
+      console.error('Invoice download error:', err);
+      const msg = err?.response?.status === 401
+        ? 'Session expirée. Reconnectez-vous.'
+        : (err?.response?.data?.message || err?.message || 'Impossible de charger la facture.');
+      toast.error(msg);
+    } finally {
+      setInvoiceLoadingId(null);
+    }
   };
 
   const formatStatus = (status) => {
@@ -411,6 +430,8 @@ const Orders = () => {
                 </div>
                 <div style={{ marginTop: 12, borderTop: '1px solid var(--divider)', paddingTop: 12 }}>
                   <button
+                    type="button"
+                    disabled={invoiceLoadingId === viewOrder.id}
                     onClick={() => handleDownloadInvoice(viewOrder.id)}
                     style={{
                       width: '100%',
@@ -421,15 +442,15 @@ const Orders = () => {
                       padding: '10px',
                       borderRadius: 12,
                       border: '1px solid var(--accent-deep)',
-                      background: 'rgba(197, 160, 89, 0.05)',
+                      background: invoiceLoadingId === viewOrder.id ? 'var(--surface)' : 'rgba(197, 160, 89, 0.05)',
                       color: 'var(--accent-deep)',
                       fontWeight: 600,
                       fontSize: '0.85rem',
-                      cursor: 'pointer'
+                      cursor: invoiceLoadingId === viewOrder.id ? 'wait' : 'pointer',
                     }}
                   >
                     <FileText size={16} />
-                    Télécharger la Facture PDF
+                    {invoiceLoadingId === viewOrder.id ? 'Chargement…' : 'Télécharger la facture'}
                   </button>
                 </div>
               </div>
@@ -459,6 +480,25 @@ const Orders = () => {
                   Aucun article trouvé pour cette commande.
                 </div>
               )}
+            </div>
+            <div style={{ marginTop: 8, paddingTop: 16, borderTop: '1px solid var(--divider)' }}>
+              <button
+                type="button"
+                onClick={() => setViewOrder(null)}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  borderRadius: 12,
+                  border: '1px solid var(--divider)',
+                  background: 'var(--surface)',
+                  color: 'var(--text-main)',
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Fermer
+              </button>
             </div>
           </div>
         )}
