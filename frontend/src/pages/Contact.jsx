@@ -1,18 +1,24 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Phone, MapPin, Clock, Send, Instagram, Facebook, Youtube, CheckCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, Clock, Instagram, Facebook, Youtube } from 'lucide-react';
 
 const fadeUp = {
-    hidden: { opacity: 0, y: 30 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
 };
 const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.1 } } };
 
 const contactInfos = [
-    { icon: Mail, title: 'Email', val: 'contact@eveline.fr', sub: 'Réponse sous 24h' },
-    { icon: Phone, title: 'Téléphone', val: '+33 1 23 45 67 89', sub: 'Lun–Ven, 9h–18h' },
-    { icon: MapPin, title: 'Adresse', val: '12 Rue du Faubourg, Paris 8e', sub: 'Showroom sur RDV' },
-    { icon: Clock, title: 'Horaires', val: 'Lun–Ven : 9h–18h', sub: 'Sam : 10h–16h' },
+  { icon: Mail, title: 'Email', val: 'contact@eveline.fr', sub: 'Réponse sous 24h' },
+  { icon: Phone, title: 'Téléphone', val: '+33 1 23 45 67 89', sub: 'Lun–Ven, 9h–18h' },
+  { icon: MapPin, title: 'Adresse', val: '12 Rue du Faubourg, Paris 8e', sub: 'Showroom sur RDV' },
+  { icon: Clock, title: 'Horaires', val: 'Lun–Ven : 9h–18h', sub: 'Sam : 10h–16h' },
+];
+
+const socialLinks = [
+  { icon: Instagram, label: 'Instagram', href: 'https://instagram.com' },
+  { icon: Facebook, label: 'Facebook', href: 'https://facebook.com' },
+  { icon: Youtube, label: 'YouTube', href: 'https://youtube.com' },
 ];
 
 const faqItems = [
@@ -23,16 +29,9 @@ const faqItems = [
 ];
 
 const Contact = () => {
-    const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
-    const [sent, setSent] = useState(false);
-    const [open, setOpen] = useState(null);
+  const [open, setOpen] = useState(null);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setSent(true);
-    };
-
-    return (
+  return (
         <div className="page-enter">
             {/* ── Hero ── */}
             <section style={{
@@ -56,144 +55,77 @@ const Contact = () => {
                         transition={{ delay: 0.35, duration: 0.7 }}
                         style={{ color: 'var(--text-muted)', fontSize: '1.05rem', maxWidth: '500px', margin: '0 auto' }}
                     >
-                        Une question, un conseil beauté ou une suggestion ? Notre équipe vous répond sous 24h.
+                        Retrouvez nos coordonnées et suivez-nous sur les réseaux sociaux.
                     </motion.p>
                 </div>
             </section>
 
-            {/* ── Main grid ── */}
+            {/* ── Infos de contact et réseaux sociaux ── */}
             <section className="section-spacer">
-                <div className="container">
-                    <div className="contact-grid">
-                        {/* ── Left: Info ── */}
-                        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
-                            <motion.h2 variants={fadeUp} style={{ marginBottom: '32px', fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', fontFamily: "'Cormorant Garant', serif", fontWeight: 700 }}>
-                                Parlons de votre <em style={{ fontStyle: 'italic', fontWeight: 400, color: 'var(--accent)' }}>beauté</em>
-                            </motion.h2>
+                <div className="container" style={{ maxWidth: 720, margin: '0 auto' }}>
+                    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={stagger}>
+                        <motion.h2 variants={fadeUp} style={{ marginBottom: '40px', fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', fontFamily: "'Cormorant Garant', serif", fontWeight: 700, textAlign: 'center' }}>
+                            Parlons de votre <em style={{ fontStyle: 'italic', fontWeight: 400, color: 'var(--accent)' }}>beauté</em>
+                        </motion.h2>
 
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', marginBottom: '48px' }}>
-                                {contactInfos.map(({ icon: Icon, title, val, sub }) => (
-                                    <motion.div key={title} variants={fadeUp} style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
-                                        <div style={{
-                                            width: '56px', height: '56px', borderRadius: '16px', flexShrink: 0,
-                                            background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '28px', marginBottom: '48px' }}>
+                            {contactInfos.map(({ icon: Icon, title, val, sub }) => (
+                                <motion.div key={title} variants={fadeUp} style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', padding: '24px', background: 'var(--white)', borderRadius: '20px', border: '1px solid var(--divider)', boxShadow: 'var(--shadow-sm)' }}>
+                                    <div style={{
+                                        width: '52px', height: '52px', borderRadius: '14px', flexShrink: 0,
+                                        background: 'var(--accent-light)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    }}>
+                                        <Icon size={22} style={{ color: 'var(--accent)' }} />
+                                    </div>
+                                    <div style={{ minWidth: 0 }}>
+                                        <div style={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '2.5px', color: 'var(--text-light)', fontWeight: 700, marginBottom: '6px' }}>{title}</div>
+                                        <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-main)', marginBottom: '4px' }}>{val}</div>
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{sub}</div>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+
+                        <motion.div variants={fadeUp} style={{ padding: '40px 32px', background: 'var(--surface)', borderRadius: '24px', border: '1px solid var(--divider)', textAlign: 'center' }}>
+                            <p style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '24px' }}>
+                                Suivez notre univers
+                            </p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '16px' }}>
+                                {socialLinks.map(({ icon: Icon, label, href }) => (
+                                    <motion.a
+                                        key={label}
+                                        href={href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        aria-label={label}
+                                        whileHover={{ y: -4, scale: 1.05 }}
+                                        whileTap={{ scale: 0.98 }}
+                                        style={{
+                                            width: '52px', height: '52px',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            borderRadius: '14px', border: '1px solid var(--divider)',
+                                            background: 'var(--white)',
+                                            color: 'var(--text-main)',
                                             boxShadow: 'var(--shadow-sm)',
-                                        }}>
-                                            <Icon size={24} style={{ color: 'var(--accent)' }} />
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '2.5px', color: 'var(--text-light)', fontWeight: 700, marginBottom: '6px' }}>{title}</div>
-                                            <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--text-main)', marginBottom: '4px' }}>{val}</div>
-                                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{sub}</div>
-                                        </div>
-                                    </motion.div>
+                                            transition: 'background 0.25s, color 0.25s, border-color 0.25s',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'var(--accent)';
+                                            e.currentTarget.style.color = 'white';
+                                            e.currentTarget.style.borderColor = 'var(--accent)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'var(--white)';
+                                            e.currentTarget.style.color = 'var(--text-main)';
+                                            e.currentTarget.style.borderColor = 'var(--divider)';
+                                        }}
+                                    >
+                                        <Icon size={22} />
+                                    </motion.a>
                                 ))}
                             </div>
-
-                            {/* Socials */}
-                            <motion.div variants={fadeUp} style={{ padding: '32px', background: 'var(--surface)', borderRadius: '20px', border: '1px solid var(--divider)' }}>
-                                <p style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--text-muted)', fontWeight: 700, marginBottom: '20px' }}>
-                                    Suivez notre univers
-                                </p>
-                                <div style={{ display: 'flex', gap: '16px' }}>
-                                    {[Instagram, Facebook, Youtube].map((Icon, i) => (
-                                        <motion.a key={i} href="#" whileHover={{ y: -5, background: 'var(--accent)', color: 'white', borderColor: 'var(--accent)' }} style={{
-                                            width: '48px', height: '48px',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            borderRadius: '12px', border: '1px solid var(--divider)',
-                                            background: 'var(--white)',
-                                            color: 'var(--text-main)', transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
-                                        }}>
-                                            <Icon size={20} />
-                                        </motion.a>
-                                    ))}
-                                </div>
-                            </motion.div>
                         </motion.div>
-
-                        {/* ── Right: Form ── */}
-                        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-                            {!sent ? (
-                                <form onSubmit={handleSubmit} style={{
-                                    background: 'var(--white)', border: '1px solid var(--divider)',
-                                    borderRadius: '24px', padding: 'clamp(24px, 5vw, 48px)',
-                                    display: 'flex', flexDirection: 'column', gap: '24px',
-                                    boxShadow: 'var(--shadow-md)',
-                                }}>
-                                    <div>
-                                        <h3 style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1.8rem', fontWeight: 700, marginBottom: '8px' }}>
-                                            Envoyer un message
-                                        </h3>
-                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Nous vous répondrons avec plaisir dans les meilleurs délais.</p>
-                                    </div>
-
-                                    <div className="form-grid">
-                                        <div className="form-group">
-                                            <label className="input-label">Prénom & Nom</label>
-                                            <input className="input" placeholder="Charlotte Martin" value={form.name}
-                                                onChange={e => setForm({ ...form, name: e.target.value })} required />
-                                        </div>
-                                        <div className="form-group">
-                                            <label className="input-label">Email</label>
-                                            <input className="input" type="email" placeholder="votre@email.com" value={form.email}
-                                                onChange={e => setForm({ ...form, email: e.target.value })} required />
-                                        </div>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label className="input-label">Sujet de votre demande</label>
-                                        <select className="input" value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} required
-                                            style={{ cursor: 'pointer', appearance: 'none' }}>
-                                            <option value="">Choisir une option…</option>
-                                            <option>Conseil produit personnalisé</option>
-                                            <option>Suivi de commande</option>
-                                            <option>Question sur une livraison</option>
-                                            <option>Partenariat & Presse</option>
-                                            <option>Autre demande</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label className="input-label">Votre message</label>
-                                        <textarea className="input" rows={6} placeholder="Comment pouvons-nous vous aider ?"
-                                            value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} required
-                                            style={{ resize: 'none', minHeight: '150px' }} />
-                                    </div>
-
-                                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                        type="submit" className="btn btn-primary btn-full"
-                                        style={{ display: 'flex', justifyContent: 'center', padding: '20px', borderRadius: '16px' }}
-                                    >
-                                        <Send size={18} style={{ marginRight: '10px' }} /> Envoyer le message
-                                    </motion.button>
-                                </form>
-                            ) : (
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    style={{
-                                        background: 'var(--white)', border: '1px solid var(--divider)',
-                                        borderRadius: '24px', padding: '64px 32px', textAlign: 'center',
-                                        boxShadow: 'var(--shadow-md)',
-                                    }}
-                                >
-                                    <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--success)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-                                        <CheckCircle size={40} />
-                                    </div>
-                                    <h3 style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '2rem', fontWeight: 700, marginBottom: '16px' }}>
-                                        Message envoyé !
-                                    </h3>
-                                    <p style={{ color: 'var(--text-muted)', lineHeight: 1.8, maxWidth: '320px', margin: '0 auto' }}>
-                                        Merci {form.name.split(' ')[0]}. Votre message est bien arrivé. Notre équipe vous répondra sous 24h ouvrées.
-                                    </p>
-                                    <button onClick={() => { setSent(false); setForm({ name: '', email: '', subject: '', message: '' }); }}
-                                        className="btn btn-secondary" style={{ marginTop: '32px' }}>
-                                        Envoyer un autre message
-                                    </button>
-                                </motion.div>
-                            )}
-                        </motion.div>
-                    </div>
+                    </motion.div>
                 </div>
             </section>
 
