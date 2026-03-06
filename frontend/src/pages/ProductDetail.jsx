@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Heart, Star, ArrowLeft, Plus, Minus, Leaf, Shield, Truck } from 'lucide-react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -7,23 +7,23 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { productService, reviewService, favoriteService, cartService, CART_UPDATED_EVENT } from '../services/api';
 
-/* â”€â”€ CONSTANTS â”€â”€ */
+/* ── CONSTANTS ── */
 const FALLBACK_PRODUCT = {
     id: 0,
-    name: 'Produit Ã‰veline',
+    name: 'Produit Éveline',
     category: 'Soins',
     price: 39,
     rating: 4.7,
     reviews: 430,
-    shortDesc: 'Un soin botanique formulÃ© avec passion pour rÃ©vÃ©ler votre Ã©clat naturel.',
-    description: 'DÃ©couvrez ce soin exceptionnel conÃ§u par nos laboratoires parisiens.',
+    shortDesc: 'Un soin botanique formulé avec passion pour révéler votre éclat naturel.',
+    description: 'Découvrez ce soin exceptionnel conçu par nos laboratoires parisiens.',
     ingredients: ['Aloe Vera', 'Vitamine E', 'Acide Hyaluronique'],
     howTo: 'Appliquez sur peau propre, matin et soir.',
     size: '30 ml',
     reviewsList: [],
 };
 
-/* â”€â”€ SMALL COMPONENTS â”€â”€ */
+/* ── SMALL COMPONENTS ── */
 const Stars = ({ rating }) => (
     <div style={{ display: 'flex', gap: '3px' }}>
         {[1, 2, 3, 4, 5].map(s => (
@@ -51,8 +51,8 @@ const Skeleton = () => (
 );
 
 const guarantee = [
-    { icon: Truck, text: 'Livraison offerte dÃ¨s 60â‚¬' },
-    { icon: Shield, text: 'Paiement 100% sÃ©curisÃ©' },
+    { icon: Truck, text: 'Livraison offerte dès 60€' },
+    { icon: Shield, text: 'Paiement 100% sécurisé' },
     { icon: Leaf, text: 'Retours gratuits 30 jours' },
 ];
 
@@ -69,7 +69,7 @@ const ReviewForm = ({ productId, onSuccess }) => {
         try {
             setSubmitting(true);
             await reviewService.submit(productId, { rating, comment });
-            setMsg({ type: 'success', text: 'Votre avis a Ã©tÃ© envoyÃ© et est en attente de modÃ©ration. Merci !' });
+            setMsg({ type: 'success', text: 'Votre avis a été envoyé et est en attente de modération. Merci !' });
             setTimeout(onSuccess, 3000);
         } catch (err) {
             setMsg({ type: 'error', text: err.message || 'Une erreur est survenue.' });
@@ -122,7 +122,7 @@ const ReviewForm = ({ productId, onSuccess }) => {
                     rows="4"
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    placeholder="Qu'avez-vous pensÃ© de ce produit ?"
+                    placeholder="Qu'avez-vous pensé de ce produit ?"
                     style={{
                         width: '100%',
                         padding: '16px',
@@ -162,8 +162,9 @@ const ReviewForm = ({ productId, onSuccess }) => {
     );
 };
 
-/* â”€â”€ COMPONENT â”€â”€ */
+/* ── COMPONENT ── */
 const ProductDetail = () => {
+    const queryClient = useQueryClient();
     const { id } = useParams();
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
@@ -173,6 +174,7 @@ const ProductDetail = () => {
     const [wishlisted, setWishlisted] = useState(false);
     const [added, setAdded] = useState(false);
     const [activeTab, setActiveTab] = useState('description');
+    const [currentImage, setCurrentImage] = useState('');
 
     const { data: rawProduct, isLoading: loading } = useQuery({
         queryKey: ['product', id],
@@ -223,6 +225,10 @@ const ProductDetail = () => {
     }, [rawProduct]);
 
     useEffect(() => {
+        setCurrentImage(product?.image || '');
+    }, [product?.id, product?.image]);
+
+    useEffect(() => {
         if (!isAuthenticated || !id) return;
         reviewService.canReview(id).then((s) => {
             setCanAddReview(s?.can_review ?? false);
@@ -235,7 +241,7 @@ const ProductDetail = () => {
         if (!product) return;
 
         // Meta (client-side) : titre et description simples
-        document.title = `${product.name} - â€” Ã‰veline Skincare`;
+        document.title = `${product.name} — Éveline Skincare`;
         const metaDesc = document.querySelector('meta[name="description"]');
         if (metaDesc) metaDesc.setAttribute('content', product.shortDesc || 'Soins naturels Éveline');
 
@@ -275,7 +281,7 @@ const ProductDetail = () => {
     }
 
     if (!product) {
-        return <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>Produit non trouvÃ©</div>;
+        return <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>Produit non trouvé</div>;
     }
 
     const handleAddToCart = async () => {
@@ -285,10 +291,12 @@ const ProductDetail = () => {
         }
         setAdded(true);
         setTimeout(() => setAdded(false), 2000);
-        toast.success('AjoutÃ© au panier');
+        toast.success('Ajouté au panier');
         try {
             const data = await cartService.addItem(product.id, qty);
-            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: data?.items_count } }));
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, {
+                detail: { cart_count: data?.total_quantity ?? data?.items_count },
+            }));
         } catch (err) {
             setAdded(false);
             if (err?.status === 401) navigate('/login');
@@ -307,6 +315,10 @@ const ProductDetail = () => {
         try {
             const res = await favoriteService.toggle(product.id);
             setWishlisted(res.favorited);
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['favorites'] }),
+                queryClient.invalidateQueries({ queryKey: ['shop', 'products'] }),
+            ]);
         } catch (err) {
             setWishlisted(previous);
             if (err?.status === 401) navigate('/login');
@@ -314,11 +326,11 @@ const ProductDetail = () => {
         }
     };
 
-    const tabs = ['description', 'ingrÃ©dients', 'utilisation', 'avis'];
+    const tabs = ['description', 'ingrédients', 'utilisation', 'avis'];
 
     return (
         <div className="page-enter">
-            {/* â”€â”€ Breadcrumb â”€â”€ */}
+            {/* ── Breadcrumb ── */}
             <div style={{
                 borderBottom: '1px solid var(--divider)',
                 padding: '16px 0',
@@ -348,7 +360,7 @@ const ProductDetail = () => {
             </div>
 
             <div className="container" style={{ padding: 'clamp(20px, 5vw, 60px) var(--container-pad)' }}>
-                {/* â”€â”€ Back link â”€â”€ */}
+                {/* ── Back link ── */}
                 <Motion.button
                     type="button"
                     onClick={() => navigate('/shop')}
@@ -365,10 +377,10 @@ const ProductDetail = () => {
                     onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
-                    <ArrowLeft size={16} /> Retour Ã  la boutique
+                    <ArrowLeft size={16} /> Retour à la boutique
                 </Motion.button>
 
-                {/* â”€â”€ Main: Image + Info â”€â”€ */}
+                {/* ── Main: Image + Info ── */}
                 <div className="split-grid" style={{ marginBottom: 'clamp(60px, 8vw, 100px)', alignItems: 'flex-start' }}>
                     {/* Left: Image Gallery */}
                     <Motion.div
@@ -391,9 +403,9 @@ const ProductDetail = () => {
                         }}>
                             {/* Product visual */}
                             <div style={{ textAlign: 'center', position: 'relative', zIndex: 1, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {product.image ? (
+                                {currentImage ? (
                                     <Motion.img
-                                        src={product.image}
+                                        src={currentImage}
                                         alt={product.name}
                                         initial={{ scale: 0.9, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
@@ -430,14 +442,14 @@ const ProductDetail = () => {
                         {/* Thumbnails */}
                         <div style={{ display: 'flex', gap: '12px' }}>
                             {product.images?.map((img, i) => (
-                                <div key={img.id}
-                                    onClick={() => setProduct({ ...product, image: img.image_url })}
+                                <div key={img.id || `${img.image_url}-${i}`}
+                                    onClick={() => setCurrentImage(img.image_url)}
                                     style={{
                                         flex: '0 0 80px', aspectRatio: '1',
                                         background: 'var(--surface)',
                                         borderRadius: '12px',
                                         cursor: 'pointer',
-                                        border: product.image === img.image_url ? '2px solid var(--accent)' : '1px solid var(--divider)',
+                                        border: currentImage === img.image_url ? '2px solid var(--accent)' : '1px solid var(--divider)',
                                         overflow: 'hidden',
                                         display: 'flex',
                                         alignItems: 'center',
@@ -476,7 +488,7 @@ const ProductDetail = () => {
                                 <Stars rating={product.rating} />
                             </div>
                             <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                                {product.rating > 0 ? product.rating.toFixed(1) : 'â€”'} Â· {product.reviewsCount} avis{product.reviewsCount > 1 ? '' : ''}
+                                {product.rating > 0 ? product.rating.toFixed(1) : '—'} · {product.reviewsCount} avis{product.reviewsCount > 1 ? '' : ''}
                             </span>
                         </div>
 
@@ -510,7 +522,7 @@ const ProductDetail = () => {
                                 fontSize: '2.8rem', fontWeight: 700,
                                 fontFamily: "'Cormorant Garant', serif",
                                 color: 'var(--text-main)',
-                            }}>{parseFloat(product.price).toFixed(2)} â‚¬</span>
+                            }}>{parseFloat(product.price).toFixed(2)} €</span>
                             {/* Stock indicator */}
                             {product.stock !== null && (
                                 <span style={{
@@ -521,7 +533,7 @@ const ProductDetail = () => {
                                     color: product.stock > 5 ? '#2d6a2d' : product.stock > 0 ? '#a06000' : 'var(--error)',
                                     border: `1px solid ${product.stock > 5 ? '#ccffcc' : product.stock > 0 ? '#ffe0cc' : '#ffcccc'}`
                                 }}>
-                                    {product.stock > 5 ? 'âœ“ En stock' : product.stock > 0 ? `âš  ${product.stock} restants` : 'âœ— Rupture'}
+                                    {product.stock > 5 ? '✓ En stock' : product.stock > 0 ? `⚠ ${product.stock} restants` : '✗ Rupture'}
                                 </span>
                             )}
                         </div>
@@ -545,7 +557,7 @@ const ProductDetail = () => {
                                 style={{ flex: 1, padding: '18px', gap: '12px' }}
                             >
                                 <ShoppingBag size={20} />
-                                {added ? 'AjoutÃ© !' : 'Ajouter au Panier'}
+                                {added ? 'Ajouté !' : 'Ajouter au Panier'}
                             </Motion.button>
 
                             <button className="btn-icon" onClick={handleWishlist} style={{
@@ -567,7 +579,7 @@ const ProductDetail = () => {
                     </Motion.div>
                 </div>
 
-                {/* â”€â”€ Tabs â”€â”€ */}
+                {/* ── Tabs ── */}
                 <div className="mobile-scroller" style={{ borderBottom: '1px solid var(--divider)', padding: 0, marginBottom: '40px' }}>
                     {tabs.map(tab => (
                         <button
@@ -608,25 +620,25 @@ const ProductDetail = () => {
                                 )}
                             </div>
                         )}
-                        {activeTab === 'ingrÃ©dients' && (
+                        {activeTab === 'ingrédients' && (
                             <div>
                                 {product.ingredients?.length > 0 ? (
                                     <>
-                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>IngrÃ©dients actifs du produit :</p>
+                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>Ingrédients actifs du produit :</p>
                                         <div className="grid-auto-fit" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', marginBottom: '32px' }}>
                                             {product.ingredients.map(ing => (
                                                 <div key={ing} style={{ padding: '14px 18px', background: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--divider)', fontSize: '0.88rem', fontWeight: 500 }}>
-                                                    <span style={{ color: 'var(--accent)', marginRight: '8px' }}>âœ¦</span> {ing}
+                                                    <span style={{ color: 'var(--accent)', marginRight: '8px' }}>✦</span> {ing}
                                                 </div>
                                             ))}
                                         </div>
                                     </>
                                 ) : (
-                                    <p style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>Aucun ingrÃ©dient renseignÃ©.</p>
+                                    <p style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>Aucun ingrédient renseigné.</p>
                                 )}
                                 {product.inciList?.length > 0 && (
                                     <>
-                                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Liste INCI complÃ¨te</p>
+                                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '1px' }}>Liste INCI complète</p>
                                         <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', lineHeight: 1.8 }}>{product.inciList.join(', ')}</p>
                                     </>
                                 )}
@@ -696,9 +708,9 @@ const ProductDetail = () => {
                                             {reviewReason === 'not_authenticated' ? (
                                                 <>Veuillez vous <Link to="/login" style={{ color: 'var(--accent)', fontWeight: 600 }}>connecter</Link> pour laisser un avis.</>
                                             ) : reviewReason === 'not_purchased' ? (
-                                                'Seules les clientes ayant achetÃ© ce produit peuvent laisser un avis.'
+                                                'Seules les clientes ayant acheté ce produit peuvent laisser un avis.'
                                             ) : reviewReason === 'already_reviewed' ? (
-                                                'âœ“ Vous avez dÃ©jÃ  laissÃ© un avis pour ce produit. Merci !'
+                                                '✓ Vous avez déjà laissé un avis pour ce produit. Merci !'
                                             ) : (
                                                 'Achetez ce produit pour laisser votre avis.'
                                             )}
@@ -735,7 +747,7 @@ const ProductDetail = () => {
                                                             <Stars rating={rev.rating} />
                                                         </div>
                                                         <div style={{ fontSize: '0.72rem', color: 'var(--text-light)' }}>
-                                                            {rev.date} {rev.verified && <span style={{ color: 'var(--accent)', marginLeft: '8px' }}>âœ“ Achat vÃ©rifiÃ©</span>}
+                                                            {rev.date} {rev.verified && <span style={{ color: 'var(--accent)', marginLeft: '8px' }}>✓ Achat vérifié</span>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -748,7 +760,7 @@ const ProductDetail = () => {
                                         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-light)' }}>
                                             <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>ðŸ’¬</div>
                                             <div style={{ fontWeight: 600, marginBottom: '6px' }}>Aucun avis pour le moment</div>
-                                            <div style={{ fontSize: '0.85rem' }}>Soyez la premiÃ¨re Ã  donner le vÃ´tre !</div>
+                                            <div style={{ fontSize: '0.85rem' }}>Soyez la première à donner le vôtre !</div>
                                         </div>
                                     )}
                                 </div>

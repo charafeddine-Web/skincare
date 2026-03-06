@@ -13,12 +13,18 @@ class OrderController extends Controller
      */
     public function index(Request $request)
     {
+        $authUser = $request->user();
+        $isAdmin = $authUser && (($authUser->role ?? null) === 'admin' || (bool) ($authUser->is_admin ?? false));
+
         $query = Order::query()
             ->select('id', 'user_id', 'address_id', 'total_amount', 'status', 'payment_method', 'transaction_id', 'created_at')
             ->with(['user:id,first_name,last_name,email'])
             ->withCount('items');
 
-        if ($request->has('user_id')) {
+        // Client: ne voir que ses propres commandes (même si user_id est passé en query)
+        if (!$isAdmin) {
+            $query->where('user_id', $authUser->id);
+        } elseif ($request->has('user_id')) {
             $query->where('user_id', $request->user_id);
         }
 
@@ -119,6 +125,12 @@ class OrderController extends Controller
      */
     public function show(Order $order)
     {
+        $authUser = request()->user();
+        $isAdmin = $authUser && (($authUser->role ?? null) === 'admin' || (bool) ($authUser->is_admin ?? false));
+        if (!$isAdmin && $order->user_id !== $authUser->id) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         $order->load([
             'user:id,first_name,last_name,email',
             'address:id,user_id,label,street,city,postal_code,country,phone',

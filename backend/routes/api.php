@@ -56,6 +56,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Authentification
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
+    Route::put('/profile', [AuthController::class, 'updateProfile']);
 
     // Utilisateur courant
     Route::get('/user', function (Request $request) {

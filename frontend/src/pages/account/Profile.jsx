@@ -25,18 +25,42 @@ const Profile = () => {
     const [form, setForm] = useState(initial);
     const [saved, setSaved] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+
+    React.useEffect(() => {
+        setForm(initial);
+    }, [initial]);
 
     const onChange = (key) => (e) => {
         setSaved(false);
         setForm((prev) => ({ ...prev, [key]: e.target.value }));
     };
 
-    const onSubmit = (e) => {
+    const onSubmit = async (e) => {
         e.preventDefault();
-        updateProfile(form);
-        setSaved(true);
-        setIsEditing(false);
-        setTimeout(() => setSaved(false), 3000);
+        setError('');
+        setSaving(true);
+        try {
+            const fullName = (form.name || '').trim();
+            const [firstName = '', ...rest] = fullName.split(/\s+/);
+            const lastName = rest.join(' ') || '.';
+
+            await updateProfile({
+                first_name: firstName,
+                last_name: lastName,
+                email: form.email,
+                phone: form.phone,
+            });
+
+            setSaved(true);
+            setIsEditing(false);
+            setTimeout(() => setSaved(false), 3000);
+        } catch (err) {
+            setError(err?.message || 'Erreur lors de la mise à jour du profil');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const inputClasses = "w-full h-12 rounded-xl border border-gray-200 bg-gray-50/50 px-4 outline-none focus:bg-white focus:ring-2 focus:ring-[var(--accent-light)] focus:border-[var(--accent)] transition-all duration-200 text-sm";
@@ -128,9 +152,10 @@ const Profile = () => {
                                             </button>
                                             <button
                                                 type="submit"
+                                                disabled={saving}
                                                 className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[var(--accent-deep)] text-white text-xs font-bold shadow-lg shadow-[var(--accent-light)] transition-all hover:brightness-110"
                                             >
-                                                <Save size={14} /> Enregistrer
+                                                <Save size={14} /> {saving ? 'Enregistrement...' : 'Enregistrer'}
                                             </button>
                                         </div>
                                     )}
@@ -148,6 +173,20 @@ const Profile = () => {
                                                 <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-3 flex items-center gap-3 text-emerald-700 text-sm">
                                                     <CheckCircle size={18} />
                                                     Profil mis à jour avec succès
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                    <AnimatePresence>
+                                        {error && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0, marginBottom: 0 }}
+                                                animate={{ height: 'auto', opacity: 1, marginBottom: 24 }}
+                                                exit={{ height: 0, opacity: 0, marginBottom: 0 }}
+                                                className="overflow-hidden"
+                                            >
+                                                <div className="bg-rose-50 border border-rose-100 rounded-2xl px-4 py-3 text-rose-700 text-sm">
+                                                    {error}
                                                 </div>
                                             </motion.div>
                                         )}

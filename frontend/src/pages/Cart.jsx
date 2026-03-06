@@ -13,6 +13,9 @@ const Cart = () => {
     const [shipping, setShipping] = useState(0);
     const [freeShippingThreshold, setFreeShippingThreshold] = useState(60);
     const [loading, setLoading] = useState(true);
+    const getTotalQty = useCallback((list) => (
+        Array.isArray(list) ? list.reduce((sum, item) => sum + Number(item?.quantity || 0), 0) : 0
+    ), []);
 
     const applyCartData = useCallback((data) => {
         if (!data) {
@@ -68,12 +71,14 @@ const Cart = () => {
         setItems(nextItems);
         setSubtotal(nextSubtotal);
         setShipping(nextSubtotal >= freeShippingThreshold ? 0 : prevShipping);
-        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: nextItems.length } }));
+        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { cart_count: getTotalQty(nextItems) } }));
 
         try {
             const data = await cartService.updateQuantity(cartItemId, newQty);
             applyCartData(data);
-            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: data?.items_count } }));
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, {
+                detail: { cart_count: data?.total_quantity ?? data?.items_count },
+            }));
         } catch (err) {
             setItems(prevItems);
             setSubtotal(prevSubtotal);
@@ -93,12 +98,14 @@ const Cart = () => {
         setItems(remaining);
         setSubtotal(nextSubtotal);
         setShipping(nextSubtotal >= freeShippingThreshold ? 0 : prevShipping);
-        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: remaining.length } }));
+        window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { cart_count: getTotalQty(remaining) } }));
 
         try {
             const data = await cartService.removeItem(cartItemId);
             applyCartData(data);
-            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: data?.items_count } }));
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, {
+                detail: { cart_count: data?.total_quantity ?? data?.items_count },
+            }));
             toast.success('Article retiré du panier');
         } catch (err) {
             setItems(prevItems);

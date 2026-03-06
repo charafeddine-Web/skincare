@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { ShoppingBag, Heart, Eye, Star } from 'lucide-react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
@@ -26,6 +27,7 @@ const StarRating = ({ rating = 4.5, count }) => (
 
 const ProductCard = React.memo(function ProductCard({ product, onQuickView, showQuickAddBar }) {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { isAuthenticated } = useAuth();
     const [wishlisted, setWishlisted] = useState(product.is_favorited ?? false);
     const [addedToCart, setAddedToCart] = useState(false);
@@ -35,11 +37,13 @@ const ProductCard = React.memo(function ProductCard({ product, onQuickView, show
             setWishlisted(false);
             return;
         }
-        if (product.is_favorited === undefined) {
-            favoriteService.check(product.id)
-                .then(res => setWishlisted(res.favorited))
-                .catch(() => {});
+        if (typeof product.is_favorited === 'boolean') {
+            setWishlisted(product.is_favorited);
+            return;
         }
+        favoriteService.check(product.id)
+            .then(res => setWishlisted(res.favorited))
+            .catch(() => {});
     }, [isAuthenticated, product.id, product.is_favorited]);
 
     const rating = product.rating ?? 4.5;
@@ -67,7 +71,9 @@ const ProductCard = React.memo(function ProductCard({ product, onQuickView, show
         toast.success('Ajouté au panier');
         try {
             const data = await cartService.addItem(product.id, 1);
-            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: data?.items_count } }));
+            window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, {
+                detail: { cart_count: data?.total_quantity ?? data?.items_count },
+            }));
         } catch (err) {
             setAddedToCart(false);
             if (err?.status === 401) {
@@ -90,6 +96,10 @@ const ProductCard = React.memo(function ProductCard({ product, onQuickView, show
         try {
             const res = await favoriteService.toggle(product.id);
             setWishlisted(res.favorited);
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['favorites'] }),
+                queryClient.invalidateQueries({ queryKey: ['shop', 'products'] }),
+            ]);
         } catch (err) {
             setWishlisted(previous);
             if (err?.status === 401) navigate('/login');

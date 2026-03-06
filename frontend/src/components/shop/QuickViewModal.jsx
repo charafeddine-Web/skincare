@@ -47,7 +47,9 @@ const QuickViewModal = ({ productId, product: initialProduct, onClose }) => {
     const t = setTimeout(() => setAdding(false), 400);
     try {
       const data = await cartService.addItem(product.id, 1);
-      window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: { items_count: data?.items_count } }));
+      window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, {
+        detail: { cart_count: data?.total_quantity ?? data?.items_count },
+      }));
     } catch (err) {
       if (err?.status === 401) navigate('/login');
       else toast.error(err?.message || 'Erreur');

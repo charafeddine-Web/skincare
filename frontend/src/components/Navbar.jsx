@@ -72,7 +72,7 @@ const Navbar = () => {
         }
         try {
             const data = await cartService.getCartSummary();
-            setCartCount(data?.items_count ?? 0);
+            setCartCount(data?.total_quantity ?? data?.items_count ?? 0);
         } catch {
             setCartCount(0);
         }
@@ -84,7 +84,7 @@ const Navbar = () => {
 
     useEffect(() => {
         const handler = (e) => {
-            const count = e?.detail?.items_count;
+            const count = e?.detail?.cart_count ?? e?.detail?.total_quantity ?? e?.detail?.items_count;
             if (typeof count === 'number') {
                 setCartCount(count);
             } else {

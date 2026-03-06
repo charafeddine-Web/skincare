@@ -85,12 +85,14 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Fonction pour mettre à jour le profil utilisateur
-  const updateProfile = (newUserData) => {
-    setUser((prevUser) => {
-      const next = { ...(prevUser || {}), ...(newUserData || {}) };
-      localStorage.setItem('user_data', JSON.stringify(next));
-      return next;
-    });
+  const updateProfile = async (newUserData) => {
+    const response = await authService.updateProfile(newUserData);
+    const nextUser = response?.user || null;
+    if (nextUser) {
+      setUser(nextUser);
+      localStorage.setItem('user_data', JSON.stringify(nextUser));
+    }
+    return response;
   };
 
   const isAdmin = user?.role === 'admin' || user?.is_admin;

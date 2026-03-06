@@ -114,6 +114,19 @@ export const authService = {
     }
   },
 
+  // Mettre à jour le profil utilisateur
+  updateProfile: async (payload) => {
+    try {
+      const response = await api.put('/profile', payload);
+      if (response.data?.user) {
+        localStorage.setItem('user_data', JSON.stringify(response.data.user));
+      }
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors de la mise à jour du profil' };
+    }
+  },
+
   // Vérifier si l'utilisateur est connecté
   isAuthenticated: () => {
     return !!localStorage.getItem('auth_token');

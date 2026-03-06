@@ -60,7 +60,7 @@ const Auth = () => {
         res = await register({ name: form.name, email: form.email, password: form.password });
       }
       const u = res?.user;
-      navigate(u?.role === 'admin' || u?.is_admin ? '/admin' : '/');
+      navigate(u?.role === 'admin' || u?.is_admin ? '/admin' : '/shop');
     } catch (err) {
       if (err.errors) {
         const fe = {};

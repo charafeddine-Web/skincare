@@ -38,14 +38,21 @@ const Favorites = () => {
     }, []);
 
     const handleRemove = async (productId) => {
-        const removed = favorites.find((f) => f.product_id === productId);
         setRemoving(productId);
+        const previousFavorites = favorites;
+        queryClient.setQueryData(['favorites'], (prev) => (
+            Array.isArray(prev) ? prev.filter((item) => item.product_id !== productId) : prev
+        ));
         try {
             await favoriteService.toggle(productId);
-            queryClient.invalidateQueries({ queryKey: ['favorites'] });
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: ['favorites'] }),
+                queryClient.invalidateQueries({ queryKey: ['shop', 'products'] }),
+            ]);
         } catch (err) {
             toast.error('Erreur lors de la suppression du favori');
-            queryClient.invalidateQueries({ queryKey: ['favorites'] });
+            queryClient.setQueryData(['favorites'], previousFavorites);
+            await queryClient.invalidateQueries({ queryKey: ['favorites'] });
         } finally {
             setRemoving(null);
         }

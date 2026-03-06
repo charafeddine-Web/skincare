@@ -1,0 +1,48 @@
+name: Deploy Laravel + React
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd ${{ secrets.SERVER_PATH }}
+
+            echo "Pull latest code"
+            git pull origin main
+
+            echo "Install Laravel dependencies"
+            composer install --no-dev --optimize-autoloader
+
+            echo "Run migrations"
+            php artisan migrate --force
+
+            echo "Optimize Laravel"
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            echo "Build React"
+            cd frontend
+            npm install
+            npm run build
+
+            echo "Copy React build to public_html"
+            cp -r dist/* ~/public_html/
+
+            echo "Fix permissions"
+            chmod -R 775 storage bootstrap/cache

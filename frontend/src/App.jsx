@@ -61,6 +61,11 @@ const AppContent = () => {
   const location = useLocation();
   const isAdminPath = location.pathname.startsWith('/admin');
 
+  // À chaque changement de route, remonter en haut de la page (header)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
+
   // Prefetch Home au chargement pour affichage immédiat (Boutique utilise React Query)
   useEffect(() => {
     const t = setTimeout(() => { prefetchHomeData(); }, 150);
