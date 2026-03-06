@@ -307,14 +307,17 @@ const Cart = () => {
                                             <span style={{ color: 'var(--text-main)' }}>{total.toFixed(2)} €</span>
                                         </div>
                                     </div>
-                                    <motion.button
-                                        whileHover={{ scale: 1.02, translateY: -2 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        className="btn btn-primary btn-full btn-lg"
-                                        style={{ height: '70px', borderRadius: '20px', fontSize: '1rem', boxShadow: 'var(--shadow-glow-gold)' }}
-                                    >
-                                        Paiement Sécurisé <ArrowRight size={20} />
-                                    </motion.button>
+                                    <Link to="/checkout">
+                                        <motion.button
+                                            type="button"
+                                            whileHover={{ scale: 1.02, translateY: -2 }}
+                                            whileTap={{ scale: 0.98 }}
+                                            className="btn btn-primary btn-full btn-lg"
+                                            style={{ height: '70px', borderRadius: '20px', fontSize: '1rem', boxShadow: 'var(--shadow-glow-gold)', width: '100%' }}
+                                        >
+                                            Paiement Sécurisé <ArrowRight size={20} />
+                                        </motion.button>
+                                    </Link>
                                     <div style={{ marginTop: '40px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                         <div style={{ textAlign: 'center', padding: '16px', background: 'var(--surface)', borderRadius: '16px' }}>
                                             <ShieldCheck size={24} style={{ color: 'var(--accent)', marginBottom: '8px', marginInline: 'auto' }} />

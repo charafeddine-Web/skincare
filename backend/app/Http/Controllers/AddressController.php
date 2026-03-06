@@ -12,7 +12,11 @@ class AddressController extends Controller
      */
     public function index()
     {
-        return response()->json(Address::with('user')->get(), 200);
+        $query = Address::query();
+        if (auth()->check() && auth()->user()->role !== 'admin') {
+            $query->where('user_id', auth()->id());
+        }
+        return response()->json($query->with('user')->get(), 200);
     }
 
     /**

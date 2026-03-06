@@ -74,16 +74,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Fonction de déconnexion
+  // Fonction de déconnexion : on nettoie l'état et le stockage tout de suite pour une UX instantanée,
+  // puis on appelle l'API en arrière-plan (sans attendre) pour invalider le token côté serveur.
   const logout = async () => {
-    try {
-      await authService.logout();
-    } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
-    } finally {
-      setUser(null);
-      setIsAuthenticated(false);
-    }
+    setUser(null);
+    setIsAuthenticated(false);
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_data');
+    authService.logout().catch((err) => console.warn('Logout API (background):', err?.message || err));
   };
 
   // Fonction pour mettre à jour le profil utilisateur

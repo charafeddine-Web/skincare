@@ -34,9 +34,12 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user_data');
-      window.dispatchEvent(new CustomEvent('auth:session-expired'));
+      const isLogoutRequest = error.config?.url?.includes?.('/logout');
+      if (!isLogoutRequest) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_data');
+        window.dispatchEvent(new CustomEvent('auth:session-expired'));
+      }
     }
     return Promise.reject(error);
   }
@@ -84,12 +87,17 @@ export const authService = {
     }
   },
 
-  // Déconnexion
+  // Déconnexion : nettoie localement ; l’API peut renvoyer 401 si le token est déjà invalide
   logout: async () => {
     try {
-      await api.post('/logout');
+      await Promise.race([
+        api.post('/logout'),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000)),
+      ]);
     } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
+      if (error?.message !== 'timeout') {
+        console.warn('Logout API:', error?.response?.data || error?.message);
+      }
     } finally {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_data');
@@ -576,6 +584,34 @@ export const shopSettingsService = {
 // Événement émis quand le panier change (pour mettre à jour le badge Navbar/BottomNav).
 // Si detail.items_count est fourni, la Navbar/BottomNav mettent à jour le badge sans appel API.
 export const CART_UPDATED_EVENT = 'cart:updated';
+
+// Service Checkout & Payment (CMI)
+export const checkoutService = {
+  /** Create order and get payment URL for redirect to CMI */
+  checkout: async (payload) => {
+    try {
+      const response = await api.post('/checkout', payload);
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 401) throw { status: 401, message: 'Non connecté' };
+      const data = error.response?.data;
+      throw data || { message: 'Erreur lors du passage en caisse' };
+    }
+  },
+};
+
+// Service Adresses (pour checkout)
+export const addressService = {
+  list: async () => {
+    try {
+      const response = await api.get('/addresses');
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 401) throw { status: 401, message: 'Non connecté' };
+      throw error.response?.data || { message: 'Erreur chargement des adresses' };
+    }
+  },
+};
 
 // Service Panier
 export const cartService = {

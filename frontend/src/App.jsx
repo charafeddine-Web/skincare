@@ -19,6 +19,9 @@ const About = lazy(() => import('./pages/About'));
 const Contact = lazy(() => import('./pages/Contact'));
 const Auth = lazy(() => import('./pages/Auth'));
 const Cart = lazy(() => import('./pages/Cart'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const PaymentSuccess = lazy(() => import('./pages/PaymentSuccess'));
+const PaymentFailed = lazy(() => import('./pages/PaymentFailed'));
 const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const AdminProducts = lazy(() => import('./pages/admin/Products'));
 const AdminCategories = lazy(() => import('./pages/admin/Categories'));
@@ -78,9 +81,12 @@ const AppContent = () => {
             <Route path="/contact" element={<Contact />} />
             <Route path="/login" element={<Auth />} />
             <Route path="/cart" element={<Cart />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/payment-failed" element={<PaymentFailed />} />
 
             {/* Zone client "Mon compte" */}
             <Route element={<ProtectedRoute />}>
+              <Route path="/checkout" element={<Checkout />} />
               <Route path="/account">
                 <Route index element={<AccountProfile />} />
                 <Route path="commandes" element={<AccountOrders />} />

@@ -24,7 +24,7 @@ const Auth = () => {
   const { login, register, isAuthenticated, isAdmin } = useAuth();
   const navigate = useNavigate();
 
-  if (isAuthenticated) return <Navigate to={isAdmin ? '/admin' : '/'} replace />;
+  if (isAuthenticated) return <Navigate to={isAdmin ? '/admin' : '/shop'} replace />;
 
   useEffect(() => {
     setError('');

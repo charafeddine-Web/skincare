@@ -2,11 +2,12 @@
 
 namespace App\Services\Payment;
 
+use App\Events\PaymentFailed;
+use App\Events\PaymentSucceeded;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\PaymentLog;
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
@@ -16,6 +17,7 @@ class CMIService
     private ?string $merchantId = null;
     private ?string $merchantUsername = null;
     private ?string $merchantPassword = null;
+    private ?string $storeKey = null;
     private string $baseUrl = '';
     private string $paymentUrl = '';
     private string $currency = 'MAD';
@@ -23,19 +25,23 @@ class CMIService
 
     public function __construct()
     {
-        $this->merchantId = config('cmi.merchant.id');
-        $this->merchantUsername = config('cmi.merchant.username');
-        $this->merchantPassword = config('cmi.merchant.password');
-        $this->mode = config('cmi.mode', 'sandbox');
-        $this->currency = config('cmi.currency', 'MAD');
+        $this->merchantId = config('payment.cmi.merchant_id') ?? config('cmi.merchant.id');
+        $this->storeKey = config('payment.cmi.store_key') ?? config('cmi.merchant.password');
+        $this->merchantUsername = config('payment.cmi.username') ?? config('cmi.merchant.username');
+        $this->merchantPassword = config('payment.cmi.password') ?? config('payment.cmi.store_key') ?? config('cmi.merchant.password');
+        if ($this->merchantPassword === null) {
+            $this->merchantPassword = $this->storeKey;
+        }
+        $this->mode = config('payment.cmi.mode') ?? config('cmi.mode', 'sandbox');
+        $this->currency = config('payment.cmi.currency') ?? config('cmi.currency', 'MAD');
 
-        $urls = config('cmi.urls.' . $this->mode);
-        $this->baseUrl = $urls['base'];
-        $this->paymentUrl = $urls['payment'];
+        $urls = config('payment.cmi.urls.' . $this->mode) ?? config('cmi.urls.' . $this->mode);
+        $this->baseUrl = $urls['base'] ?? '';
+        $this->paymentUrl = $urls['payment'] ?? '';
 
         $this->httpClient = new Client([
-            'timeout' => config('cmi.timeout', 30),
-            'verify' => config('cmi.security.verify_ssl', true),
+            'timeout' => config('payment.cmi.timeout') ?? config('cmi.timeout', 30),
+            'verify' => config('payment.cmi.verify_ssl') ?? config('cmi.security.verify_ssl', true),
         ]);
     }
 
@@ -48,7 +54,7 @@ class CMIService
             // Générer la référence unique
             $reference = Payment::generateReference();
 
-            // Créer l'enregistrement de paiement
+            // Créer l'enregistrement de paiement (metadata cast as array, donc passer un tableau)
             $payment = Payment::create([
                 'order_id' => $order->id,
                 'user_id' => $order->user_id,
@@ -58,10 +64,10 @@ class CMIService
                 'status' => 'pending',
                 'payment_method' => 'cmi',
                 'ip_address' => request()->ip(),
-                'metadata' => json_encode([
+                'metadata' => [
                     'customer_data' => $customerData,
                     'order_items' => $order->items->count(),
-                ]),
+                ],
             ]);
 
             // Préparer les données pour CMI
@@ -113,7 +119,7 @@ class CMIService
             $result = json_decode($response->getBody(), true);
 
             $this->updatePaymentFromResponse($payment, $result);
-            $this->logPayment($payment, 'status_check', 'checked', json_encode($result));
+            $this->logPayment($payment, 'webhook', 'status_checked', json_encode($result));
 
             return [
                 'success' => true,
@@ -241,9 +247,10 @@ class CMIService
      */
     private function preparePaymentRequest(Payment $payment, array $customerData): array
     {
-        $callbackUrl = route('api.payments.webhook');
-        $successUrl = route('api.payments.success', ['payment' => $payment->id]);
-        $failureUrl = route('api.payments.failure', ['payment' => $payment->id]);
+        $callbackUrl = config('payment.cmi.callback_url')
+            ?? route('api.payment.callback');
+        $successUrl = route('payments.success', ['payment' => $payment->id]);
+        $failureUrl = route('payments.failure', ['payment' => $payment->id]);
 
         return [
             'Eci' => $this->merchantId,
@@ -255,13 +262,13 @@ class CMIService
             'Description' => 'Commande #' . $payment->order_id,
             'ClientIp' => request()->ip(),
             'Lang' => 'fr',
-            'Email' => $customerData['email'] ?? $payment->user->email,
-            'PhoneNumber' => $customerData['phone'] ?? null,
+            'Email' => $customerData['email'] ?? $payment->user?->email ?? '',
+            'PhoneNumber' => $customerData['phone'] ?? $payment->user?->phone ?? null,
             'OkUrl' => $successUrl,
             'FailUrl' => $failureUrl,
             'CallbackUrl' => $callbackUrl,
             'Hash' => $this->generateHash($payment, $customerData),
-            'PreAuth' => config('cmi.features.3d_secure') ? '1' : '0',
+            'PreAuth' => config('payment.cmi.3d_secure', config('cmi.features.3d_secure', true)) ? '1' : '0',
         ];
     }
 
@@ -278,12 +285,13 @@ class CMIService
      */
     private function generateHash(Payment $payment, array $customerData): string
     {
+        $secret = $this->storeKey ?? $this->merchantPassword;
         $hashString = implode('|', [
             $this->merchantId,
             $payment->reference,
             $this->formatAmount($payment->amount),
             $this->currency,
-            $this->merchantPassword,
+            $secret,
         ]);
 
         return hash('sha512', $hashString);
@@ -298,12 +306,13 @@ class CMIService
             return false;
         }
 
+        $secret = $this->storeKey ?? $this->merchantPassword;
         $expectedHash = hash('sha512', implode('|', [
             $data['Eci'] ?? '',
             $data['OrderId'] ?? '',
             $data['Amount'] ?? '',
             $data['Currency'] ?? '',
-            $this->merchantPassword,
+            $secret,
         ]));
 
         return hash_equals($expectedHash, $data['Hash']);
@@ -356,7 +365,7 @@ class CMIService
      */
     private function logPayment(Payment $payment, string $action, string $status, string $data = null): void
     {
-        if (config('cmi.log')) {
+        if (config('payment.cmi.log', config('cmi.log', true))) {
             PaymentLog::create([
                 'payment_id' => $payment->id,
                 'action' => $action,

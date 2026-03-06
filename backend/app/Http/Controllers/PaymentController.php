@@ -5,17 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\Payment\CMIService;
+use App\Services\Payment\PaymentService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
-    private CMIService $cmiService;
-
-    public function __construct(CMIService $cmiService)
-    {
-        $this->cmiService = $cmiService;
-    }
+    public function __construct(
+        private CMIService $cmiService,
+        private PaymentService $paymentService
+    ) {}
 
     /**
      * Initier un paiement pour une commande
@@ -148,9 +148,8 @@ class PaymentController extends Controller
             $payment->order->update(['status' => 'paid']);
         }
 
-        // Rediriger vers la page de succès du frontend
-        $frontendUrl = config('app.frontend_url', 'http://localhost:3000');
-        return redirect()->to($frontendUrl . '/payment/success?payment_id=' . $payment->id);
+        $frontendUrl = rtrim(config('payment.frontend_url', config('app.frontend_url', 'http://localhost:3000')), '/');
+        return redirect()->to($frontendUrl . '/payment-success?payment_id=' . $payment->id);
     }
 
     /**
@@ -159,28 +158,36 @@ class PaymentController extends Controller
      */
     public function failure(Payment $payment)
     {
-        // Rediriger vers la page d'échec du frontend
-        $frontendUrl = config('app.frontend_url', 'http://localhost:3000');
-        return redirect()->to($frontendUrl . '/payment/failure?payment_id=' . $payment->id . '&error=' . urlencode($payment->response_message ?? 'Erreur de paiement'));
+        $frontendUrl = rtrim(config('payment.frontend_url', config('app.frontend_url', 'http://localhost:3000')), '/');
+        return redirect()->to($frontendUrl . '/payment-failed?payment_id=' . $payment->id . '&error=' . urlencode($payment->response_message ?? 'Erreur de paiement'));
     }
 
     /**
-     * Webhook CMI
+     * Webhook CMI (legacy route name)
      * POST /api/payments/webhook
      */
-    public function webhook(Request $request)
+    public function webhook(Request $request): JsonResponse
     {
-        Log::channel('cmi')->info('Webhook reçu', $request->all());
+        return $this->callback($request);
+    }
 
-        $result = $this->cmiService->handleWebhookResponse($request->all());
+    /**
+     * Payment gateway callback (signature verification, replay protection, order update).
+     * POST /api/payment/callback
+     */
+    public function callback(Request $request): JsonResponse
+    {
+        Log::channel('cmi')->info('Payment callback received', ['keys' => array_keys($request->all())]);
 
-        // Répondre à CMI
+        $data = $request->all();
+        $result = $this->paymentService->handleCallback($data);
+
         if ($result['success']) {
-            return response()->json(['status' => 'ok'], 200);
-        } else {
-            Log::channel('cmi')->error('Webhook erreur', $result);
-            return response()->json(['status' => 'error'], 400);
+            return response()->json(['status' => 'ok', 'payment_id' => $result['payment_id'] ?? null], 200);
         }
+
+        Log::channel('cmi')->error('Payment callback error', $result);
+        return response()->json(['status' => 'error', 'message' => $result['error'] ?? 'Callback processing failed'], 400);
     }
 }
 

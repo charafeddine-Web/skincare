@@ -13,6 +13,7 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\OrderItemController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\CartController;
 
@@ -42,10 +43,11 @@ Route::get('/product-images/{productImage}', [ProductImageController::class, 'sh
 Route::get('/reviews', [ReviewController::class, 'index']);
 Route::get('/reviews/{review}', [ReviewController::class, 'show']);
 
-// Webhook CMI (public mais sécurisé par signature)
+// CMI callback (public; secured by signature verification + replay protection)
+Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('api.payment.callback');
 Route::post('/payments/webhook', [PaymentController::class, 'webhook'])->name('payments.webhook');
 
-// Routes de redirection CMI (publiques)
+// CMI redirect URLs (public) – redirect to frontend
 Route::get('/payments/{payment}/success', [PaymentController::class, 'success'])->name('payments.success');
 Route::get('/payments/{payment}/failure', [PaymentController::class, 'failure'])->name('payments.failure');
 
@@ -73,6 +75,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // Routes pour les utilisateurs
     Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
     Route::apiResource('users', UserController::class);
+
+    // Checkout: create order + payment init (returns payment_url for CMI redirect)
+    Route::post('/checkout', [CheckoutController::class, 'checkout'])->name('api.checkout');
 
     // Routes pour les adresses
     Route::apiResource('addresses', AddressController::class);
