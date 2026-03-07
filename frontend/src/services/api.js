@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configuration de base de l'API
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://evelinecosmetics.ma/api';
 
 // Création de l'instance axios
 const api = axios.create({
