@@ -219,8 +219,8 @@ const ShopFilters = ({
             style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer', height: 8, borderRadius: 4 }}
           />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginTop: 12 }}>
-            <span>{minP} €</span>
-            <span>Jusqu'à {currentMax} €</span>
+            <span>{minP} MAD</span>
+            <span>Jusqu'à {currentMax} MAD</span>
           </div>
         </div>
       </div>

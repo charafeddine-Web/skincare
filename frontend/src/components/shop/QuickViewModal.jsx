@@ -189,7 +189,7 @@ const QuickViewModal = ({ productId, product: initialProduct, onClose }) => {
                   </span>
                 </div>
                 <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: 24 }}>
-                  {product.price} €
+                  {product.price} MAD
                 </p>
               </div>
               <div style={{ padding: 24, borderTop: '1px solid var(--divider)', display: 'flex', gap: 12 }}>

@@ -221,9 +221,9 @@ const ProductCard = React.memo(function ProductCard({ product, onQuickView, show
                 <div className="product-card__footer">
                     <div className="product-card__prices">
                         {product.originalPrice != null && (
-                            <span className="product-card__price-old">{product.originalPrice} €</span>
+                            <span className="product-card__price-old">{product.originalPrice} MAD</span>
                         )}
-                        <span className="product-card__price">{product.price} €</span>
+                        <span className="product-card__price">{product.price} MAD</span>
                     </div>
 
                     {!showQuickAddBar && (

@@ -48,7 +48,7 @@ class AdminDashboardController extends Controller
             return [
                 'id' => $order->id,
                 'customer' => $order->user ? ($order->user->first_name . ' ' . $order->user->last_name) : 'Client inconnu',
-                'total' => number_format($order->total_amount, 2, ',', ' ') . ' €',
+                'total' => number_format($order->total_amount, 2, ',', ' ') . ' MAD',
                 'status' => $order->status,
             ];
         });
@@ -97,7 +97,7 @@ class AdminDashboardController extends Controller
                     'id' => $item->id,
                     'name' => $item->name,
                     'category' => $item->category_name ?? 'Sans catégorie',
-                    'revenue' => number_format($item->total_revenue, 2, ',', ' ') . ' €',
+                    'revenue' => number_format($item->total_revenue, 2, ',', ' ') . ' MAD',
                     'quantity_sold' => $item->total_quantity,
                 ];
             });
@@ -176,12 +176,12 @@ class AdminDashboardController extends Controller
             });
 
         return response()->json([
-            'revenue' => number_format($revenue, 2, ',', ' ') . ' €',
+            'revenue' => number_format($revenue, 2, ',', ' ') . ' MAD',
             'revenue_raw' => (float) $revenue,
             'orders_count' => $ordersCount,
             'conversion_rate' => number_format($conversionRate, 1) . ' %',
             'conversion_rate_raw' => (float) $conversionRate,
-            'average_cart' => number_format($averageCart, 2, ',', ' ') . ' €',
+            'average_cart' => number_format($averageCart, 2, ',', ' ') . ' MAD',
             'average_cart_raw' => (float) $averageCart,
             'sales_chart' => $salesChartData,
             'top_categories' => $topCategories,

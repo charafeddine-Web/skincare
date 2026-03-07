@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Truck, RefreshCw, Shield, Headphones } from 'lucide-react';
 
 const items = [
-  { icon: Truck, label: 'Livraison offerte dès 50 €' },
+  { icon: Truck, label: 'Livraison offerte dès 500 MAD' },
   { icon: RefreshCw, label: 'Retours sous 30 jours' },
   { icon: Shield, label: 'Paiement sécurisé' },
   { icon: Headphones, label: 'Conseil personnalisé' },

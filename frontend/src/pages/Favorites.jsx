@@ -201,7 +201,7 @@ const Favorites = () => {
                                             </h3>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                                                 <span style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                                                    {product.price} €
+                                                    {product.price} MAD
                                                 </span>
                                                 <Motion.button
                                                     whileTap={{ scale: 0.95 }}

@@ -72,7 +72,7 @@ class UserController extends Controller
         $formattedOrders = $user->orders->map(function ($order) {
             return [
                 'id' => $order->id,
-                'total_amount' => number_format($order->total_amount, 2, ',', ' ') . ' €',
+                'total_amount' => number_format($order->total_amount, 2, ',', ' ') . ' MAD',
                 'total_amount_raw' => (float) $order->total_amount,
                 'status' => $order->status,
                 'status_label' => $this->getStatusLabel($order->status),
@@ -82,7 +82,7 @@ class UserController extends Controller
                     return [
                         'product_name' => $item->product->name ?? 'Produit supprimé',
                         'quantity' => $item->quantity,
-                        'price' => number_format($item->price, 2, ',', ' ') . ' €',
+                        'price' => number_format($item->price, 2, ',', ' ') . ' MAD',
                     ];
                 }),
             ];
@@ -91,7 +91,7 @@ class UserController extends Controller
         return response()->json([
             ...$user->toArray(),
             'statistics' => [
-                'total_spent' => number_format($totalSpent, 2, ',', ' ') . ' €',
+                'total_spent' => number_format($totalSpent, 2, ',', ' ') . ' MAD',
                 'total_spent_raw' => (float) $totalSpent,
                 'orders_count' => $ordersCount,
                 'paid_orders_count' => $paidOrdersCount,

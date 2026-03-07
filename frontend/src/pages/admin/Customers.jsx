@@ -339,7 +339,7 @@ const Customers = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                   <div>
                     <span style={{ color: 'var(--text-light)', fontSize: '0.85rem', display: 'block' }}>Montant total dépensé</span>
-                    <strong style={{ fontSize: '1rem', color: 'var(--accent-deep)' }}>{viewCustomer.statistics.total_spent || '0 €'}</strong>
+                    <strong style={{ fontSize: '1rem', color: 'var(--accent-deep)' }}>{viewCustomer.statistics.total_spent || '0 MAD'}</strong>
                   </div>
                   <div>
                     <span style={{ color: 'var(--text-light)', fontSize: '0.85rem', display: 'block' }}>Nombre de commandes</span>

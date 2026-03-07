@@ -59,7 +59,7 @@ const Dashboard = () => {
   const statCards = [
     {
       label: 'Revenu du jour',
-      value: `${todayRevenue.toFixed(2)} €`,
+      value: `${todayRevenue.toFixed(2)} MAD`,
       trend: '',
       icon: CreditCard,
     },

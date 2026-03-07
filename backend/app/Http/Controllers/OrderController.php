@@ -133,7 +133,7 @@ class OrderController extends Controller
 
         $order->load([
             'user:id,first_name,last_name,email',
-            'address:id,user_id,label,street,city,postal_code,country,phone',
+            'address:id,user_id,full_name,address_line,city,postal_code,country,phone',
             'items' => function ($q) {
                 $q->select('id', 'order_id', 'product_id', 'price', 'quantity')
                     ->with('product:id,name,slug');

@@ -219,7 +219,7 @@ const Cart = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                 <div className="cart-list-header">
                                     <h3 className="section-title">Articles ({items.length})</h3>
-                                    <span className="shipping-note hide-mobile">Livraison offerte dès {freeShippingThreshold}€</span>
+                                    <span className="shipping-note hide-mobile">Livraison offerte dès {freeShippingThreshold} MAD</span>
                                 </div>
 
                                 <AnimatePresence mode="popLayout">
@@ -281,8 +281,8 @@ const Cart = () => {
                                             </div>
 
                                             <div className="cart-item-price" style={{ textAlign: 'right', minWidth: '80px' }}>
-                                                <div className="price-tag" style={{ fontSize: '1.2rem' }}>{(item.price * item.quantity).toFixed(2)} €</div>
-                                                {item.quantity > 1 && <div style={{ fontSize: '0.7rem', color: 'var(--text-light)' }}>{Number(item.price).toFixed(2)} € / ut.</div>}
+                                                <div className="price-tag" style={{ fontSize: '1.2rem' }}>{(item.price * item.quantity).toFixed(2)} MAD</div>
+                                                {item.quantity > 1 && <div style={{ fontSize: '0.7rem', color: 'var(--text-light)' }}>{Number(item.price).toFixed(2)} MAD / ut.</div>}
                                             </div>
                                         </motion.div>
                                     ))}
@@ -295,23 +295,23 @@ const Cart = () => {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
                                         <div className="flex-between">
                                             <span style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Sous-total</span>
-                                            <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>{subtotal.toFixed(2)} €</span>
+                                            <span style={{ fontWeight: 600, fontSize: '1.1rem' }}>{subtotal.toFixed(2)} MAD</span>
                                         </div>
                                         <div className="flex-between">
                                             <span style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Frais de livraison</span>
                                             <span style={{ fontWeight: 600 }}>
-                                                {shipping === 0 ? <span style={{ color: 'var(--success)' }}>Gratuit</span> : `${shipping.toFixed(2)} €`}
+                                                {shipping === 0 ? <span style={{ color: 'var(--success)' }}>Gratuit</span> : `${shipping.toFixed(2)} MAD`}
                                             </span>
                                         </div>
                                         {shipping > 0 && (
                                             <div style={{ background: 'var(--surface)', padding: '12px', borderRadius: '12px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                                                Encore <strong>{(freeShippingThreshold - subtotal).toFixed(2)} €</strong> pour la livraison gratuite.
+                                                Encore <strong>{(freeShippingThreshold - subtotal).toFixed(2)} MAD</strong> pour la livraison gratuite.
                                             </div>
                                         )}
                                         <div style={{ height: '1px', background: 'var(--divider)', margin: '10px 0' }} />
                                         <div className="flex-between" style={{ fontSize: '1.5rem', fontWeight: 800 }}>
                                             <span>Total</span>
-                                            <span style={{ color: 'var(--text-main)' }}>{total.toFixed(2)} €</span>
+                                            <span style={{ color: 'var(--text-main)' }}>{total.toFixed(2)} MAD</span>
                                         </div>
                                     </div>
                                     <Link to="/checkout">

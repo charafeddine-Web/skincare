@@ -3,6 +3,7 @@ import { Navigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Mail, Phone, MapPin, CheckCircle, Edit3, Save, X, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { addressService } from '../../services/api';
 
 const Profile = () => {
     const { user, isAuthenticated, isAdmin, updateProfile } = useAuth();
@@ -27,10 +28,45 @@ const Profile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [primaryAddressId, setPrimaryAddressId] = useState(null);
+    const [addressCountry, setAddressCountry] = useState('Maroc');
+    const [profileAddress, setProfileAddress] = useState(null);
 
     React.useEffect(() => {
-        setForm(initial);
-    }, [initial]);
+        if (!isEditing) {
+            setForm(initial);
+        }
+    }, [initial, isEditing]);
+
+    React.useEffect(() => {
+        let active = true;
+        if (!isAuthenticated) return undefined;
+
+        const loadAddress = async () => {
+            try {
+                const res = await addressService.list();
+                const list = Array.isArray(res) ? res : res?.data ?? [];
+                const primary = list[0];
+                if (!active || !primary) return;
+
+                setPrimaryAddressId(primary.id);
+                setAddressCountry(primary.country || 'Maroc');
+                setProfileAddress(primary);
+                setForm((prev) => ({
+                    ...prev,
+                    phone: prev.phone || primary.phone || '',
+                    address: prev.address || primary.address_line || '',
+                    city: prev.city || primary.city || '',
+                    zip: prev.zip || primary.postal_code || '',
+                }));
+            } catch {
+                // Ne pas bloquer l'édition du profil si la récupération des adresses échoue.
+            }
+        };
+
+        loadAddress();
+        return () => { active = false; };
+    }, [isAuthenticated]);
 
     const onChange = (key) => (e) => {
         setSaved(false);
@@ -52,6 +88,51 @@ const Profile = () => {
                 email: form.email,
                 phone: form.phone,
             });
+
+            const hasAnyAddressInput = [form.address, form.city, form.zip]
+                .some((v) => (v || '').trim().length > 0);
+
+            if (primaryAddressId || hasAnyAddressInput) {
+                const normalizedAddress = {
+                    full_name: fullName || `${firstName} ${lastName}`.trim(),
+                    phone: (form.phone || '').trim(),
+                    address_line: (form.address || '').trim(),
+                    city: (form.city || '').trim(),
+                    postal_code: (form.zip || '').trim(),
+                    country: addressCountry || 'Maroc',
+                };
+
+                if (!normalizedAddress.address_line || !normalizedAddress.city || !normalizedAddress.postal_code) {
+                    throw { message: 'Adresse incomplète: renseignez adresse, ville et code postal.' };
+                }
+
+                if (primaryAddressId) {
+                    await addressService.update(primaryAddressId, normalizedAddress);
+                } else {
+                    if (!user?.id) {
+                        throw { message: 'Utilisateur introuvable pour créer l’adresse.' };
+                    }
+                    const created = await addressService.create({
+                        user_id: user.id,
+                        ...normalizedAddress,
+                    });
+                    setPrimaryAddressId(created?.id || null);
+                    setAddressCountry(created?.country || normalizedAddress.country);
+                    setProfileAddress(created || null);
+                }
+            }
+
+            if (primaryAddressId) {
+                setProfileAddress((prev) => prev ? ({
+                    ...prev,
+                    full_name: fullName || `${firstName} ${lastName}`.trim(),
+                    phone: (form.phone || '').trim(),
+                    address_line: (form.address || '').trim(),
+                    city: (form.city || '').trim(),
+                    postal_code: (form.zip || '').trim(),
+                    country: addressCountry || prev.country || 'Maroc',
+                }) : prev);
+            }
 
             setSaved(true);
             setIsEditing(false);

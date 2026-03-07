@@ -116,7 +116,7 @@ const Settings = () => {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-light)', display: 'block', marginBottom: '4px' }}>Tarif de livraison (€)</label>
+                      <label style={{ fontSize: '0.75rem', color: 'var(--text-light)', display: 'block', marginBottom: '4px' }}>Tarif de livraison (MAD)</label>
                       <input
                         type="number"
                         value={method.price}

@@ -235,7 +235,7 @@ const Orders = () => {
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <input
               type="number"
-              placeholder="Min €"
+              placeholder="Min MAD"
               value={minAmount}
               onChange={(e) => setMinAmount(e.target.value)}
               style={{
@@ -249,7 +249,7 @@ const Orders = () => {
             <span style={{ color: 'var(--text-light)' }}>—</span>
             <input
               type="number"
-              placeholder="Max €"
+              placeholder="Max MAD"
               value={maxAmount}
               onChange={(e) => setMaxAmount(e.target.value)}
               style={{
@@ -316,7 +316,7 @@ const Orders = () => {
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>{dateLabel}</td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>{customerName}</td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)', fontWeight: 600 }}>
-                          {Number(o.total_amount).toFixed(2)} €
+                          {Number(o.total_amount).toFixed(2)} MAD
                         </td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
                           <span
@@ -418,7 +418,7 @@ const Orders = () => {
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-light)', marginBottom: 8 }}>Récapitulatif</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: '0.85rem' }}>Montant Total:</span>
-                  <span style={{ fontWeight: 600 }}>{Number(viewOrder.total_amount).toFixed(2)} €</span>
+                  <span style={{ fontWeight: 600 }}>{Number(viewOrder.total_amount).toFixed(2)} MAD</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: '0.85rem' }}>Statut:</span>
@@ -468,10 +468,10 @@ const Orders = () => {
                         </div>
                         <div>
                           <div style={{ fontWeight: 500, fontSize: '0.9rem' }}>{item.product?.name || 'Produit inconnu'}</div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Quantité : {item.quantity} × {Number(item.price).toFixed(2)} €</div>
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Quantité : {item.quantity} × {Number(item.price).toFixed(2)} MAD</div>
                         </div>
                       </div>
-                      <div style={{ fontWeight: 600 }}>{Number(item.quantity * item.price).toFixed(2)} €</div>
+                      <div style={{ fontWeight: 600 }}>{Number(item.quantity * item.price).toFixed(2)} MAD</div>
                     </div>
                   ))}
                 </div>
@@ -517,7 +517,7 @@ const Orders = () => {
             <div style={{ textAlign: 'center', margin: '10px 0' }}>
               <h4 style={{ fontSize: '1.1rem', fontWeight: 500, marginBottom: 8 }}>Voulez-vous approuver ou refuser cette commande ?</h4>
               <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>
-                Total de <strong>{Number(editOrder.total_amount).toFixed(2)} €</strong> par {editOrder.user?.first_name || 'Client'}.
+                Total de <strong>{Number(editOrder.total_amount).toFixed(2)} MAD</strong> par {editOrder.user?.first_name || 'Client'}.
                 Statut actuel: <span style={{ fontWeight: 600 }}>{formatStatus(editOrder.status)}</span>
               </p>
             </div>

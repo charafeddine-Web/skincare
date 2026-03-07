@@ -858,7 +858,7 @@ const Products = () => {
                         </td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>{categoryName}</td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)', fontWeight: 600 }}>
-                          {Number(p.price).toFixed(2)} €
+                          {Number(p.price).toFixed(2)} MAD
                         </td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
                           <span
@@ -1032,7 +1032,7 @@ const Products = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Prix (€)</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Prix (MAD)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1301,7 +1301,7 @@ const Products = () => {
                 <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 4px 0' }}>{viewProduct.name}</h4>
                 <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{viewProduct.category?.name || 'Sans catégorie'}</p>
                 <div style={{ display: 'flex', gap: 12 }}>
-                  <span style={{ fontWeight: 600, color: 'var(--accent-deep)' }}>{Number(viewProduct.price).toFixed(2)} €</span>
+                  <span style={{ fontWeight: 600, color: 'var(--accent-deep)' }}>{Number(viewProduct.price).toFixed(2)} MAD</span>
                   <span style={{ color: viewProduct.stock_quantity > 0 ? '#166534' : '#b91c1c', fontSize: '0.85rem', fontWeight: 500 }}>
                     {viewProduct.stock_quantity > 0 ? `${viewProduct.stock_quantity} en stock` : 'Rupture de stock'}
                   </span>
@@ -1367,7 +1367,7 @@ const Products = () => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 12 }}>
               <div>
-                <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Prix (€)</label>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Prix (MAD)</label>
                 <input
                   type="number"
                   step="0.01"

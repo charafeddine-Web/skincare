@@ -199,17 +199,17 @@ const Checkout = () => {
                     </h3>
                     <div className="checkout-summary-row">
                       <span style={{ color: 'var(--text-muted)' }}>Sous-total</span>
-                      <span style={{ fontWeight: 600 }}>{Number(subtotal).toFixed(2)} €</span>
+                      <span style={{ fontWeight: 600 }}>{Number(subtotal).toFixed(2)} MAD</span>
                     </div>
                     <div className="checkout-summary-row">
                       <span style={{ color: 'var(--text-muted)' }}>Livraison</span>
                       <span style={{ fontWeight: 600 }}>
-                        {shipping === 0 ? <span style={{ color: 'var(--success)' }}>Gratuit</span> : `${Number(shipping).toFixed(2)} €`}
+                        {shipping === 0 ? <span style={{ color: 'var(--success)' }}>Gratuit</span> : `${Number(shipping).toFixed(2)} MAD`}
                       </span>
                     </div>
                     <div className="checkout-summary-row total">
                       <span>Total</span>
-                      <span>{Number(total).toFixed(2)} €</span>
+                      <span>{Number(total).toFixed(2)} MAD</span>
                     </div>
                     <motion.button
                       type="button"

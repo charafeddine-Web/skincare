@@ -51,7 +51,7 @@ const Skeleton = () => (
 );
 
 const guarantee = [
-    { icon: Truck, text: 'Livraison offerte dès 60€' },
+    { icon: Truck, text: 'Livraison offerte dès 600 MAD' },
     { icon: Shield, text: 'Paiement 100% sécurisé' },
     { icon: Leaf, text: 'Retours gratuits 30 jours' },
 ];
@@ -258,7 +258,7 @@ const ProductDetail = () => {
             "brand": { "@type": "Brand", "name": "Éveline Skincare" },
             "offers": {
                 "@type": "Offer",
-                "priceCurrency": "EUR",
+                "priceCurrency": "MAD",
                 "price": product.price,
                 "availability": "https://schema.org/InStock"
             },
@@ -522,7 +522,7 @@ const ProductDetail = () => {
                                 fontSize: '2.8rem', fontWeight: 700,
                                 fontFamily: "'Cormorant Garant', serif",
                                 color: 'var(--text-main)',
-                            }}>{parseFloat(product.price).toFixed(2)} €</span>
+                            }}>{parseFloat(product.price).toFixed(2)} MAD</span>
                             {/* Stock indicator */}
                             {product.stock !== null && (
                                 <span style={{

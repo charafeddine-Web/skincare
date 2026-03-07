@@ -5,10 +5,10 @@ import AdminLoader from '../../components/AdminLoader';
 
 const Analytics = () => {
   const [analytics, setAnalytics] = useState({
-    revenue: '0 €',
+    revenue: '0 MAD',
     orders_count: 0,
     conversion_rate: '0 %',
-    average_cart: '0 €',
+    average_cart: '0 MAD',
     sales_chart: [],
     top_categories: [],
   });
@@ -111,7 +111,7 @@ const Analytics = () => {
               }}
             >
               <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '6px' }}>Revenu 30 derniers jours</p>
-              <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>{analytics.revenue || '0 €'}</p>
+              <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>{analytics.revenue || '0 MAD'}</p>
             </article>
             <article
               style={{
@@ -144,7 +144,7 @@ const Analytics = () => {
               }}
             >
               <p style={{ fontSize: '0.78rem', color: 'var(--text-light)', marginBottom: '6px' }}>Panier moyen</p>
-              <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>{analytics.average_cart || '0 €'}</p>
+              <p style={{ fontSize: '1.2rem', fontWeight: 600 }}>{analytics.average_cart || '0 MAD'}</p>
             </article>
           </section>
 

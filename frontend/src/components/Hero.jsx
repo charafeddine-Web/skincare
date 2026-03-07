@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 const trustPills = [
     { icon: Leaf, text: '100% Naturel' },
     { icon: Rabbit, text: 'Vegan & Cruelty-Free' },
-    { icon: Truck, text: 'Livraison Offerte dès 60€' },
+    { icon: Truck, text: 'Livraison Offerte dès 600 MAD' },
 ];
 
 const Hero = () => {

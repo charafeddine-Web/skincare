@@ -624,6 +624,24 @@ export const addressService = {
       throw error.response?.data || { message: 'Erreur chargement des adresses' };
     }
   },
+
+  create: async (payload) => {
+    try {
+      const response = await api.post('/addresses', payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur création adresse' };
+    }
+  },
+
+  update: async (id, payload) => {
+    try {
+      const response = await api.put(`/addresses/${id}`, payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur mise à jour adresse' };
+    }
+  },
 };
 
 // Service Panier

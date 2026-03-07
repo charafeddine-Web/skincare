@@ -115,9 +115,9 @@
                         <th>#</th>
                         <th>Désignation</th>
                         <th>Réf.</th>
-                        <th>Prix unit. €</th>
+                        <th>Prix unit. MAD</th>
                         <th>Qté</th>
-                        <th>Total €</th>
+                        <th>Total MAD</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -139,21 +139,21 @@
             <div class="totals">
                 <div class="totals-row">
                     <span>Sous-total HT</span>
-                    <span>{{ number_format((float) ($order->total_amount ?? 0), 2, ',', ' ') }} €</span>
+                    <span>{{ number_format((float) ($order->total_amount ?? 0), 2, ',', ' ') }} MAD</span>
                 </div>
                 <div class="totals-row">
                     <span>Livraison</span>
-                    <span>0,00 €</span>
+                    <span>0,00 MAD</span>
                 </div>
                 <div class="totals-row grand-total">
                     <span>TOTAL TTC</span>
-                    <span>{{ number_format((float) ($order->total_amount ?? 0), 2, ',', ' ') }} €</span>
+                    <span>{{ number_format((float) ($order->total_amount ?? 0), 2, ',', ' ') }} MAD</span>
                 </div>
             </div>
         </div>
 
         <div class="conditions">
-            <strong>Conditions :</strong> Paiement à la commande. Les prix sont indiqués en euros TTC. En cas de retard de paiement, des pénalités pourront être appliquées.
+            <strong>Conditions :</strong> Paiement à la commande. Les prix sont indiqués en MAD TTC. En cas de retard de paiement, des pénalités pourront être appliquées.
         </div>
 
         <footer class="footer">

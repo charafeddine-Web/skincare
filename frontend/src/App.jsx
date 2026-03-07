@@ -32,6 +32,7 @@ const AdminSettings = lazy(() => import('./pages/admin/Settings'));
 const AdminReviews = lazy(() => import('./pages/admin/Reviews'));
 const AccountProfile = lazy(() => import('./pages/account/Profile'));
 const AccountOrders = lazy(() => import('./pages/account/Orders'));
+const AccountOrderDetails = lazy(() => import('./pages/account/OrderDetails'));
 const Favorites = lazy(() => import('./pages/Favorites'));
 
 const Loader = () => (
@@ -95,6 +96,7 @@ const AppContent = () => {
               <Route path="/account">
                 <Route index element={<AccountProfile />} />
                 <Route path="commandes" element={<AccountOrders />} />
+                <Route path="commandes/:id" element={<AccountOrderDetails />} />
               </Route>
               <Route path="/favorites" element={<Favorites />} />
             </Route>
