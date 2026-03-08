@@ -54,6 +54,7 @@ const Shop = () => {
   const sortRef = useRef(null);
   const searchInputRef = useRef(null);
   const searchBarRef = useRef(null);
+  const lastUrlSearchRef = useRef(null);
 
   // React Query: categories (cached 10 min)
   const { data: categoriesData } = useQuery({
@@ -144,14 +145,22 @@ const Shop = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Sync category from URL (e.g. from navbar dropdown) — uniquement au chargement / navigation, pas quand l’utilisateur a cliqué « Tous »
+  // Sync category from URL uniquement quand l’URL a vraiment changé (nav, lien), pas à chaque render.
+  // Sinon après un clic « Tous », navigate() n’a pas encore mis à jour l’URL et cet effet réappliquait l’ancienne catégorie.
   useEffect(() => {
-    if (!initialCat) return;
-    const slug = initialCat.trim().toLowerCase();
+    const urlChanged = lastUrlSearchRef.current !== location.search;
+    if (!urlChanged && lastUrlSearchRef.current !== null) return;
+    lastUrlSearchRef.current = location.search;
+    if (!initialCat) {
+      setSelectedCategory('Tous');
+      return;
+    }
+    const slug = initialCat.trim().toLowerCase().replace(/\s+/g, '-');
     if (!slug) return;
-    const found = categories.find((c) => c.name && c.name.toLowerCase() === slug);
+    const norm = (s) => String(s).toLowerCase().replace(/\s+/g, '-').trim();
+    const found = categories.find((c) => c.name && norm(c.name) === slug);
     setSelectedCategory(found ? found.name : initialCat.charAt(0).toUpperCase() + initialCat.slice(1));
-  }, [initialCat, categories]);
+  }, [location.search, initialCat, categories]);
 
   // Mettre à jour l’URL quand la catégorie change (pour que « Tous » retire ?cat= et évite que le sync ci‑dessus réapplique l’ancienne catégorie)
   const updateShopUrl = useCallback((updates) => {
