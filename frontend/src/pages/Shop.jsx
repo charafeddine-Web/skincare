@@ -73,14 +73,20 @@ const Shop = () => {
     : categories.find((c) => c.name === selectedCategory)?.id;
   const { data: priceBoundsData } = useQuery({
     queryKey: ['shop', 'priceRange', categoryIdForPrice],
-    queryFn: () => productService.getPriceRange(categoryIdForPrice ? { category_id: categoryIdForPrice } : {}),
-    enabled: typeof categoryIdForPrice === 'undefined' || typeof categoryIdForPrice === 'number',
+    queryFn: () => productService.getPriceRange(categoryIdForPrice != null ? { category_id: categoryIdForPrice } : {}),
+    enabled: categories.length > 0,
   });
   useEffect(() => {
     if (priceBoundsData) {
       const next = { min: Number(priceBoundsData?.min) || 0, max: Math.max(Number(priceBoundsData?.max) || 500, 1) };
       setPriceBounds(next);
-      setPriceRange((prev) => (prev[0] === 0 && prev[1] === 500 ? [next.min, next.max] : prev));
+      setPriceRange((prev) => {
+        const isInitial = prev[0] === 0 && prev[1] === 500;
+        if (isInitial) return [next.min, next.max];
+        const min = Math.max(next.min, Math.min(prev[0], next.max));
+        const max = Math.min(next.max, Math.max(prev[1], next.min));
+        return [min, max];
+      });
     }
   }, [priceBoundsData]);
 
@@ -98,8 +104,8 @@ const Shop = () => {
       sort: sortParam,
       ...(categoryId && categoryId !== 'Tous' && { category_id: categoryId }),
       ...(debouncedSearch?.trim() && { search: debouncedSearch.trim() }),
-      min_price: priceRange[0],
-      max_price: priceRange[1],
+      min_price: Number(priceRange[0]) || 0,
+      max_price: Number(priceRange[1]) || 500,
       ...(skinTypeFilters.length > 0 && {
         skin_type: skinTypeFilters.map((id) => SKIN_TYPE_TO_BACKEND[id]).filter(Boolean),
       }),
@@ -234,7 +240,7 @@ const Shop = () => {
                   Soins formulés pour prendre soin de votre peau au quotidien.
                 </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div className="shop-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
                 <button
                   type="button"
                   onClick={() => setFiltersOpen(true)}
@@ -243,13 +249,15 @@ const Shop = () => {
                 >
                   <SlidersHorizontal size={16} /> Filtres
                 </button>
-                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                <span className="shop-toolbar-count" style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                   {totalProducts} produit{totalProducts !== 1 ? 's' : ''}
                 </span>
-                <div ref={sortRef} style={{ position: 'relative' }}>
+                <div ref={sortRef} className="shop-sort-wrap" style={{ position: 'relative', minWidth: 0 }}>
+                  <span className="shop-sort-label-mobile" aria-hidden="true">Tri :</span>
                   <button
                     type="button"
                     onClick={() => setSortOpen(!sortOpen)}
+                    className="shop-sort-trigger"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -273,6 +281,7 @@ const Shop = () => {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 8 }}
+                        className="shop-sort-dropdown"
                         style={{
                           position: 'absolute',
                           right: 0,
@@ -553,17 +562,19 @@ const Shop = () => {
                 background: 'var(--white)',
                 zIndex: 9991,
                 overflowY: 'auto',
+                overflowX: 'hidden',
                 padding: 24,
                 boxShadow: '-8px 0 32px rgba(0,0,0,0.12)',
+                WebkitOverflowScrolling: 'touch',
               }}
               className="show-mobile"
             >
               <ShopFilters
                 categories={categories}
                 selectedCategory={selectedCategory}
-                onCategoryChange={(name) => { setSelectedCategory(name); setPage(1); }}
+                onCategoryChange={(name) => { setSelectedCategory(name); setPage(1); setFiltersOpen(false); }}
                 priceRange={priceRange}
-                onPriceChange={setPriceRange}
+                onPriceChange={(v) => { setPriceRange(v); setPage(1); }}
                 priceBounds={priceBounds}
                 skinTypeFilters={skinTypeFilters}
                 onSkinTypeToggle={handleSkinTypeToggle}

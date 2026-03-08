@@ -209,19 +209,29 @@ const ShopFilters = ({
           Budget
         </h3>
         <div style={{ padding: '0 4px' }}>
-          <input
-            type="range"
-            min={minP}
-            max={maxP}
-            step={maxP - minP > 100 ? 10 : maxP - minP > 20 ? 5 : 1}
-            value={currentMax}
-            onChange={(e) => onPriceChange([minP, Number(e.target.value)])}
-            style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer', height: 8, borderRadius: 4 }}
-          />
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginTop: 12 }}>
-            <span>{minP} MAD</span>
-            <span>Jusqu'à {currentMax} MAD</span>
-          </div>
+          {minP >= maxP ? (
+            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+              Jusqu'à {maxP} MAD
+            </div>
+          ) : (
+            <>
+              <input
+                type="range"
+                min={minP}
+                max={maxP}
+                step={Math.max(0.01, maxP - minP > 100 ? 10 : maxP - minP > 20 ? 5 : 1)}
+                value={currentMax}
+                onChange={(e) => onPriceChange([minP, Number(e.target.value)])}
+                onInput={(e) => onPriceChange([minP, Number(e.target.value)])}
+                style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer', height: 10, borderRadius: 4, touchAction: 'none' }}
+                aria-label="Prix maximum en MAD"
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginTop: 12 }}>
+                <span>{minP} MAD</span>
+                <span>Jusqu'à {Math.round(currentMax * 100) / 100} MAD</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 

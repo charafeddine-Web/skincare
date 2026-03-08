@@ -2459,6 +2459,12 @@ a:focus {
   align-items: flex-start;
 }
 
+.shop-page .shop-sidebar {
+  flex-shrink: 0;
+  overflow-y: auto;
+  max-height: calc(100vh - 140px);
+}
+
 @media (max-width: 1024px) {
   .shop-page .shop-sidebar {
     display: none;
@@ -2467,6 +2473,58 @@ a:focus {
 
 .shop-page .shop-main {
   min-width: 0;
+}
+
+/* Toolbar boutique : Filtres + compteur + Tri — desktop */
+.shop-sort-label-mobile {
+  display: none;
+}
+
+/* Mobile : afficher le filtre Tri (Populaires, Prix croissant…) correctement */
+@media (max-width: 600px) {
+  .shop-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .shop-toolbar .shop-toolbar-count {
+    order: -1;
+    margin-bottom: 0;
+  }
+
+  .shop-toolbar .show-mobile {
+    order: -2;
+  }
+
+  .shop-toolbar .shop-sort-wrap {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .shop-sort-label-mobile {
+    display: inline;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-main);
+    flex-shrink: 0;
+  }
+
+  .shop-toolbar .shop-sort-trigger {
+    flex: 1;
+    min-width: 0;
+    justify-content: space-between;
+  }
+
+  .shop-toolbar .shop-sort-dropdown {
+    left: 0;
+    right: 0;
+    min-width: auto;
+    width: 100%;
+  }
 }
 
 /* Grille : chaque cellule a la même hauteur, la carte remplit la cellule */
