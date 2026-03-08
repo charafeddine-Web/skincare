@@ -65,7 +65,10 @@ const Shop = () => {
     },
     staleTime: 10 * 60 * 1000,
   });
-  const categories = categoriesData ?? [{ id: 'Tous', name: 'Tous' }];
+  const categories = useMemo(
+    () => categoriesData ?? [{ id: 'Tous', name: 'Tous' }],
+    [categoriesData]
+  );
 
   // React Query: price range (depends on category for filter)
   const categoryIdForPrice = selectedCategory === 'Tous'
@@ -141,7 +144,7 @@ const Shop = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Sync category from URL (e.g. from navbar dropdown) — au chargement et quand les catégories sont dispo
+  // Sync category from URL (e.g. from navbar dropdown) — uniquement au chargement / navigation, pas quand l’utilisateur a cliqué « Tous »
   useEffect(() => {
     if (!initialCat) return;
     const slug = initialCat.trim().toLowerCase();
@@ -149,6 +152,21 @@ const Shop = () => {
     const found = categories.find((c) => c.name && c.name.toLowerCase() === slug);
     setSelectedCategory(found ? found.name : initialCat.charAt(0).toUpperCase() + initialCat.slice(1));
   }, [initialCat, categories]);
+
+  // Mettre à jour l’URL quand la catégorie change (pour que « Tous » retire ?cat= et évite que le sync ci‑dessus réapplique l’ancienne catégorie)
+  const updateShopUrl = useCallback((updates) => {
+    const params = new URLSearchParams(location.search);
+    if (updates.cat !== undefined) {
+      if (updates.cat == null || updates.cat === 'Tous' || updates.cat === '') params.delete('cat');
+      else params.set('cat', typeof updates.cat === 'string' ? updates.cat.toLowerCase().trim() : updates.cat);
+    }
+    if (updates.search !== undefined) {
+      if (updates.search == null || updates.search === '') params.delete('search');
+      else params.set('search', updates.search);
+    }
+    const qs = params.toString();
+    navigate(qs ? `${location.pathname}?${qs}` : location.pathname, { replace: true });
+  }, [location.pathname, location.search, navigate]);
 
   // Sync search from URL
   useEffect(() => {
@@ -192,6 +210,7 @@ const Shop = () => {
     setSkinTypeFilters([]);
     setPage(1);
     setFiltersOpen(false);
+    updateShopUrl({ cat: null, search: null });
   };
 
   const handleSkinTypeToggle = (id, checked) => {
@@ -210,7 +229,11 @@ const Shop = () => {
           <ShopFilters
             categories={categories}
             selectedCategory={selectedCategory}
-            onCategoryChange={(name) => { setSelectedCategory(name); setPage(1); }}
+            onCategoryChange={(name) => {
+              setSelectedCategory(name);
+              setPage(1);
+              updateShopUrl({ cat: name === 'Tous' ? null : name });
+            }}
             priceRange={priceRange}
             onPriceChange={(v) => { setPriceRange(v); setPage(1); }}
             priceBounds={priceBounds}
