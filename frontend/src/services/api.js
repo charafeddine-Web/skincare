@@ -25,7 +25,6 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
-
 // Intercepteur pour gérer les erreurs d'authentification (401)
 // On nettoie la session et on signale la déconnexion sans rediriger : ainsi les pages
 // publiques (Accueil, Boutique, Catégories) restent accessibles. Seule la ProtectedRoute
