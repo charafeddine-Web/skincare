@@ -28,10 +28,14 @@ const Favorites = () => {
     const queryClient = useQueryClient();
     const [removing, setRemoving] = useState(null);
 
-    const { data: favorites = [], isLoading: loading } = useQuery({
+    const { data: favoritesRaw, isLoading: loading } = useQuery({
         queryKey: ['favorites'],
-        queryFn: () => favoriteService.list(),
+        queryFn: async () => {
+            const r = await favoriteService.list();
+            return Array.isArray(r) ? r : (r?.data ?? []);
+        },
     });
+    const favorites = Array.isArray(favoritesRaw) ? favoritesRaw : [];
 
     React.useEffect(() => {
         document.title = 'Mes Favoris — Éveline Skincare';

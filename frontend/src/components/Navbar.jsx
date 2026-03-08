@@ -27,14 +27,14 @@ const Navbar = () => {
     const publicNavLinks = [
         { label: 'Accueil', href: '/' },
         { label: 'Boutique', href: '/shop' },
-        { label: 'Catégories', href: '#', children: categories.map(c => c.name) },
+        { label: 'Catégories', href: '#', children: (Array.isArray(categories) ? categories : []).map(c => c.name) },
         { label: 'À Propos', href: '/about' },
         { label: 'Contact', href: '/contact' },
     ];
 
     const authenticatedNavLinks = [
         { label: 'Boutique', href: '/shop' },
-        { label: 'Catégories', href: '#', children: categories.map(c => c.name) },
+        { label: 'Catégories', href: '#', children: (Array.isArray(categories) ? categories : []).map(c => c.name) },
         { label: 'Mes commandes', href: '/account/commandes' },
     ];
 
@@ -59,8 +59,12 @@ const Navbar = () => {
         const fetchCategories = async () => {
             try {
                 const res = await categoryService.list();
-                setCategories(res || []);
-            } catch (err) { console.error("Error categories:", err); }
+                const list = Array.isArray(res) ? res : (res?.data ?? []);
+                setCategories(list);
+            } catch (err) {
+                console.error("Error categories:", err);
+                setCategories([]);
+            }
         };
         fetchCategories();
     }, []);

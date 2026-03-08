@@ -48,8 +48,9 @@ const SkeletonCategoryCard = () => (
 
 const FeaturedCategories = ({ categories, loading }) => {
   const navigate = useNavigate();
+  const list = Array.isArray(categories) ? categories : [];
 
-  if (categories.length === 0 && !loading) return null;
+  if (list.length === 0 && !loading) return null;
 
   return (
     <section className="section-spacer" style={{ background: 'transparent' }}>
@@ -93,7 +94,7 @@ const FeaturedCategories = ({ categories, loading }) => {
         >
           {loading
             ? Array.from({ length: 4 }).map((_, i) => <SkeletonCategoryCard key={i} />)
-            : categories.map((cat) => {
+            : list.map((cat) => {
                 const name = (cat.name || '').toLowerCase();
                 const key = name.includes('nettoy') ? 'nettoyants' : name.includes('sérum') || name.includes('serum') ? 'sérums' : name.includes('hydrat') ? 'hydratants' : name.includes('spf') ? 'spf' : 'default';
                 const Icon = categoryIcons[key] || categoryIcons.default;
