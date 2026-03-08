@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Truck } from 'lucide-react';
+import { Trash2, Plus, Minus, ArrowRight, ShieldCheck, Truck, ShoppingCart, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { cartService, CART_UPDATED_EVENT } from '../services/api';
@@ -127,26 +127,29 @@ const Cart = () => {
 
     if (!isAuthenticated) {
         return (
-            <div className="page-enter" style={{ background: 'var(--background)' }}>
-                <section className="cart-header-premium">
-                    <div className="container" style={{ maxWidth: '800px' }}>
-                        <h1 style={{ marginBottom: '24px' }}>Votre Panier</h1>
-                    </div>
-                </section>
-                <section className="section-spacer" style={{ paddingTop: '0' }}>
+            <div className="page-enter cart-guest-page">
+               
+                <section className="cart-guest-content section-spacer">
                     <div className="container">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            style={{ textAlign: 'center', padding: '100px 0', background: 'var(--white)', borderRadius: '40px', border: '1px solid var(--divider)', boxShadow: 'var(--shadow-sm)' }}
+                            initial={{ opacity: 0, y: 24 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="cart-guest-card"
                         >
-                            <div style={{ fontSize: '5rem', marginBottom: '32px' }}>🛒</div>
-                            <h2 style={{ marginBottom: '20px' }}>Connectez-vous pour voir votre panier</h2>
-                            <p style={{ color: 'var(--text-muted)', marginBottom: '40px', maxWidth: '400px', marginInline: 'auto', fontSize: '1.1rem' }}>
-                                Vos articles seront sauvegardés une fois connecté.
-                            </p>
-                            <Link to="/login" className="btn btn-primary btn-lg" style={{ marginRight: '12px' }}>Se connecter</Link>
-                            <Link to="/shop" className="btn btn-secondary btn-lg">Continuer mes achats</Link>
+                            <div className="cart-guest-card__body">
+                                <div className="cart-guest-card__icon-wrap">
+                                    <ShoppingCart size={40} strokeWidth={1.5} />
+                                </div>
+                                <h2 className="cart-guest-card__title">Connectez-vous pour voir votre panier</h2>
+                                <p className="cart-guest-card__text">
+                                    Vos articles seront sauvegardés une fois connecté. Créez un compte ou connectez-vous en quelques secondes.
+                                </p>
+                                <div className="cart-guest-card__actions">
+                                    <Link to="/login" className="btn btn-primary btn-lg">Se connecter</Link>
+                                    <Link to="/shop" className="btn btn-secondary btn-lg">Continuer mes achats</Link>
+                                </div>
+                            </div>
                         </motion.div>
                     </div>
                 </section>
@@ -205,10 +208,12 @@ const Cart = () => {
                         <motion.div
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            style={{ textAlign: 'center', padding: '100px 0', background: 'var(--white)', borderRadius: '40px', border: '1px solid var(--divider)', boxShadow: 'var(--shadow-sm)' }}
+                            className="cart-empty-card"
                         >
-                            <div style={{ fontSize: '5rem', marginBottom: '32px' }}>🛍️</div>
-                            <h2 style={{ marginBottom: '20px' }}>Votre panier est vide</h2>
+                            <div className="cart-empty-icon cart-empty-icon--empty">
+                                <ShoppingBag size={56} strokeWidth={1.5} />
+                            </div>
+                            <h2 className="cart-empty-title">Votre panier est vide</h2>
                             <p style={{ color: 'var(--text-muted)', marginBottom: '40px', maxWidth: '400px', marginInline: 'auto', fontSize: '1.1rem' }}>
                                 Il semble que vous n'ayez pas encore ajouté de trésors à votre routine beauté.
                             </p>

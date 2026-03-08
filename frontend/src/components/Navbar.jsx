@@ -253,17 +253,27 @@ const Navbar = () => {
                             </div>
                         )}
 
-                        {/* PANIER — visible pour tous, affiche le nombre d'articles (0 si non connecté) */}
+                        {/* PANIER — desktop */}
                         <Link to="/cart" className="hide-mobile" style={{ textDecoration: 'none' }}>
-                            <Motion.button style={{ background: '#1a1a1a', color: 'white', borderRadius: '18px', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '12px', border: 'none', cursor: 'pointer' }}>
+                            <Motion.button style={{ background: 'var(--secondary)', color: 'white', borderRadius: '18px', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: '12px', border: 'none', cursor: 'pointer', boxShadow: 'var(--shadow-sm)' }}>
                                 <ShoppingBag size={18} strokeWidth={2} />
                                 <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{cartCount}</span>
                             </Motion.button>
                         </Link>
 
+                        {/* PANIER — mobile (icône compacte à côté du menu) */}
+                        <Link to="/cart" className="show-mobile navbar-mobile-cart" style={{ textDecoration: 'none' }}>
+                            <span style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 14, background: 'var(--surface)', border: '1px solid var(--divider)', color: 'var(--text-main)' }}>
+                                <ShoppingBag size={20} strokeWidth={2} />
+                                {cartCount > 0 && (
+                                    <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9, background: 'var(--accent)', color: 'white', fontSize: '0.65rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{cartCount > 99 ? '99+' : cartCount}</span>
+                                )}
+                            </span>
+                        </Link>
+
                         {/* MOBILE TOGGLE */}
-                        <button className="show-mobile" onClick={() => setIsOpen(!isOpen)} style={{ background: 'white', border: '1px solid #eee', padding: '10px', borderRadius: '12px' }}>
-                            {isOpen ? <X size={20} /> : <Menu size={20} />}
+                        <button type="button" className="show-mobile navbar-mobile-menu-btn" onClick={() => setIsOpen(!isOpen)} aria-label={isOpen ? 'Fermer le menu' : 'Ouvrir le menu'}>
+                            {isOpen ? <X size={22} /> : <Menu size={22} />}
                         </button>
                     </div>
                 </div>
@@ -271,34 +281,55 @@ const Navbar = () => {
 
             <div style={{ height: scrolled ? '64px' : '95px', transition: 'height 0.4s ease', width: '100%' }} />
 
-            {/* MOBILE MENU */}
+            {/* MOBILE MENU — design aligné au site (surfaces, accent, typo) */}
             <AnimatePresence>
                 {isOpen && (
-                    <Motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                style={{ position: 'fixed', inset: 0, background: 'white', zIndex: 2000, padding: '100px 30px', overflowY: 'auto' }}>
-                        <button onClick={() => setIsOpen(false)} style={{ position: 'absolute', top: '30px', right: '30px', background: 'none', border: 'none' }}><X size={30}/></button>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                    <Motion.div
+                        initial={{ x: '100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '100%' }}
+                        transition={{ type: 'spring', damping: 28, stiffness: 200 }}
+                        className="navbar-mobile-drawer"
+                    >
+                        <div className="navbar-mobile-drawer__header">
+                            <Link to="/" onClick={() => setIsOpen(false)}>
+                                <img src="/logo2.png" alt="Éveline" style={{ height: 36 }} />
+                            </Link>
+                            <button type="button" onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__close" aria-label="Fermer">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <nav className="navbar-mobile-drawer__nav">
                             {(isAuthenticated ? authenticatedNavLinks : publicNavLinks).map(l => (
                                 l.href === '#' && l.children?.length ? (
-                                    <div key={l.label}>
-                                        <span style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{l.label}</span>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+                                    <div key={l.label} className="navbar-mobile-drawer__block">
+                                        <span className="navbar-mobile-drawer__label">{l.label}</span>
+                                        <div className="navbar-mobile-drawer__sublinks">
                                             {l.children.map(child => (
-                                                <Link key={child} to={`/shop?cat=${encodeURIComponent(child.toLowerCase().trim())}`} onClick={() => setIsOpen(false)} style={{ fontSize: '1.25rem', fontWeight: 600, textDecoration: 'none', color: '#000' }}>{child}</Link>
+                                                <Link key={child} to={`/shop?cat=${encodeURIComponent(child.toLowerCase().trim())}`} onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__sublink">{child}</Link>
                                             ))}
                                         </div>
                                     </div>
                                 ) : (
-                                    <Link key={l.label} to={l.href} onClick={(e) => { handleNavigation(e, l.href); setIsOpen(false); }} style={{ fontSize: '1.8rem', fontWeight: 700, textDecoration: 'none', color: '#000' }}>{l.label}</Link>
+                                    <Link key={l.label} to={l.href} onClick={(e) => { handleNavigation(e, l.href); setIsOpen(false); }} className="navbar-mobile-drawer__link">{l.label}</Link>
                                 )
                             ))}
-                            <div style={{ height: '1px', background: '#eee', margin: '10px 0' }} />
-                            {!isAuthenticated ? (
-                                <Link to="/login" onClick={() => setIsOpen(false)} style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--accent)' }}>Se connecter</Link>
-                            ) : (
-                                <button onClick={handleLogout} style={{ textAlign: 'left', background: 'none', border: 'none', fontSize: '1.2rem', fontWeight: 600, color: '#e74c3c', padding: 0 }}>Déconnexion</button>
+                            <div className="navbar-mobile-drawer__divider" />
+                            <Link to="/cart" onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__link navbar-mobile-drawer__link--cart">
+                                <ShoppingBag size={20} /> Panier {cartCount > 0 && <span className="navbar-mobile-drawer__badge">{cartCount}</span>}
+                            </Link>
+                            {isAuthenticated && (
+                                <Link to="/favorites" onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__link">
+                                    <Heart size={20} /> Favoris
+                                </Link>
                             )}
-                        </div>
+                            <div className="navbar-mobile-drawer__divider" />
+                            {!isAuthenticated ? (
+                                <Link to="/login" onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__cta">Se connecter</Link>
+                            ) : (
+                                <button type="button" onClick={() => { handleLogout(); setIsOpen(false); }} className="navbar-mobile-drawer__logout">Déconnexion</button>
+                            )}
+                        </nav>
                     </Motion.div>
                 )}
             </AnimatePresence>
