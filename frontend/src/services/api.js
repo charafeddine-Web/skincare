@@ -3,6 +3,7 @@ import axios from 'axios';
 // Configuration de base de l'API
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://evelinecosmetics.ma/api';
 
+
 // Création de l'instance axios
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -11,7 +12,6 @@ const api = axios.create({
     'Accept': 'application/json',
   },
 });
-
 // Intercepteur pour ajouter le token d'authentification
 api.interceptors.request.use(
   (config) => {
