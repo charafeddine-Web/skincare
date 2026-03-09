@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { flushSync } from 'react-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import ProductCard, { SkeletonCard } from '../components/ProductCard';
@@ -35,6 +36,7 @@ const stagger = { hidden: {}, visible: { transition: { staggerChildren: 0.06 } }
 const Shop = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const queryParams = new URLSearchParams(location.search);
   const initialCat = queryParams.get('cat');
   const initialSearch = queryParams.get('search');
@@ -55,6 +57,7 @@ const Shop = () => {
   const searchInputRef = useRef(null);
   const searchBarRef = useRef(null);
   const lastUrlSearchRef = useRef(null);
+  const userChoseTousRef = useRef(false);
 
   // React Query: categories (cached 10 min)
   const { data: categoriesData } = useQuery({
@@ -94,35 +97,35 @@ const Shop = () => {
     }
   }, [priceBoundsData]);
 
-  // Build params for products query (memoized)
+  // Build params for products query — ne jamais envoyer category_id quand "Tous"
   const listParams = useMemo(() => {
-    const categoryId =
-      selectedCategory === 'Tous'
-        ? undefined
-        : categories.find((c) => c.name === selectedCategory)?.id;
+    const isAll = selectedCategory === 'Tous';
+    const category = isAll ? null : categories.find((c) => c.name === selectedCategory);
+    const categoryId = category && category.id !== 'Tous' ? category.id : undefined;
     const sortParam = sortBy === 'price-asc' ? 'price_asc' : sortBy === 'price-desc' ? 'price_desc' : sortBy;
-    return {
+    const params = {
       page,
       per_page: PRODUCTS_PER_PAGE,
       is_active: true,
       sort: sortParam,
-      ...(categoryId && categoryId !== 'Tous' && { category_id: categoryId }),
-      ...(debouncedSearch?.trim() && { search: debouncedSearch.trim() }),
       min_price: Number(priceRange[0]) || 0,
       max_price: Number(priceRange[1]) || 500,
-      ...(skinTypeFilters.length > 0 && {
-        skin_type: skinTypeFilters.map((id) => SKIN_TYPE_TO_BACKEND[id]).filter(Boolean),
-      }),
     };
+    if (!isAll && categoryId != null) params.category_id = categoryId;
+    if (debouncedSearch?.trim()) params.search = debouncedSearch.trim();
+    if (skinTypeFilters.length > 0) {
+      params.skin_type = skinTypeFilters.map((id) => SKIN_TYPE_TO_BACKEND[id]).filter(Boolean);
+    }
+    return params;
   }, [page, selectedCategory, categories, debouncedSearch, priceRange, sortBy, skinTypeFilters]);
 
-  // React Query: products list
+  // React Query: products list (selectedCategory dans la clé pour éviter cache incorrect)
   const {
     data: productsPayload,
     isLoading: loadingProducts,
     isFetching: isFetchingProducts,
   } = useQuery({
-    queryKey: ['shop', 'products', listParams],
+    queryKey: ['shop', 'products', selectedCategory, listParams],
     queryFn: () => productService.list(listParams),
     enabled: categories.length > 0,
   });
@@ -145,9 +148,24 @@ const Shop = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Sync category from URL uniquement quand l’URL a vraiment changé (nav, lien), pas à chaque render.
-  // Sinon après un clic « Tous », navigate() n’a pas encore mis à jour l’URL et cet effet réappliquait l’ancienne catégorie.
+  // Normaliser slug pour comparaison (accents, espaces → tirets) — URL peut être "cremes-visage", API "Crèmes visage"
+  const normalizeCategorySlug = useCallback((s) => {
+    if (!s || typeof s !== 'string') return '';
+    return s
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+  }, []);
+
+  // Sync category from URL quand l’URL a changé (nav). Ne jamais réécraser si l’utilisateur vient de cliquer « Tous » tant que l’URL n’a pas été mise à jour.
   useEffect(() => {
+    if (userChoseTousRef.current) {
+      if (!initialCat) userChoseTousRef.current = false;
+      return;
+    }
     const urlChanged = lastUrlSearchRef.current !== location.search;
     if (!urlChanged && lastUrlSearchRef.current !== null) return;
     lastUrlSearchRef.current = location.search;
@@ -155,12 +173,11 @@ const Shop = () => {
       setSelectedCategory('Tous');
       return;
     }
-    const slug = initialCat.trim().toLowerCase().replace(/\s+/g, '-');
+    const slug = normalizeCategorySlug(initialCat);
     if (!slug) return;
-    const norm = (s) => String(s).toLowerCase().replace(/\s+/g, '-').trim();
-    const found = categories.find((c) => c.name && norm(c.name) === slug);
-    setSelectedCategory(found ? found.name : initialCat.charAt(0).toUpperCase() + initialCat.slice(1));
-  }, [location.search, initialCat, categories]);
+    const found = categories.find((c) => c.name && normalizeCategorySlug(c.name) === slug);
+    setSelectedCategory(found ? found.name : 'Tous');
+  }, [location.search, initialCat, categories, normalizeCategorySlug]);
 
   // Mettre à jour l’URL quand la catégorie change (pour que « Tous » retire ?cat= et évite que le sync ci‑dessus réapplique l’ancienne catégorie)
   const updateShopUrl = useCallback((updates) => {
@@ -213,13 +230,28 @@ const Shop = () => {
   const currentSortLabel = sortOptions.find((o) => o.value === sortBy)?.label;
 
   const resetFilters = () => {
-    setSelectedCategory('Tous');
-    setPriceRange([priceBounds.min, priceBounds.max]);
-    setSearchQuery('');
-    setSkinTypeFilters([]);
+    userChoseTousRef.current = true;
+    flushSync(() => {
+      setSelectedCategory('Tous');
+      setPage(1);
+      setPriceRange([priceBounds.min, priceBounds.max]);
+      setSearchQuery('');
+      setSkinTypeFilters([]);
+      setFiltersOpen(false);
+    });
+    updateShopUrl({ cat: null, search: null });
+    queryClient.invalidateQueries({ queryKey: ['shop', 'products'] });
+  };
+
+  const handleCategoryChange = (name) => {
+    if (name === 'Tous') {
+      resetFilters();
+      return;
+    }
+    setSelectedCategory(name);
     setPage(1);
     setFiltersOpen(false);
-    updateShopUrl({ cat: null, search: null });
+    updateShopUrl({ cat: name });
   };
 
   const handleSkinTypeToggle = (id, checked) => {
@@ -238,11 +270,7 @@ const Shop = () => {
           <ShopFilters
             categories={categories}
             selectedCategory={selectedCategory}
-            onCategoryChange={(name) => {
-              setSelectedCategory(name);
-              setPage(1);
-              updateShopUrl({ cat: name === 'Tous' ? null : name });
-            }}
+            onCategoryChange={handleCategoryChange}
             priceRange={priceRange}
             onPriceChange={(v) => { setPriceRange(v); setPage(1); }}
             priceBounds={priceBounds}
@@ -386,14 +414,14 @@ const Shop = () => {
               </p>
             )}
 
-            {/* Pills catégories (mobile) */}
+            {/* Pills catégories (au-dessus des produits — même logique que filtre gauche) */}
             <div className="mobile-scroller no-scrollbar" style={{ display: 'flex', gap: 10, padding: '4px 0' }}>
               {categories.map((cat) => (
                 <motion.button
                   key={cat.id || cat.name}
                   type="button"
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => { setSelectedCategory(cat.name); setPage(1); }}
+                  onClick={() => handleCategoryChange(cat.name)}
                   style={{
                     padding: '10px 20px',
                     borderRadius: 100,
@@ -604,7 +632,7 @@ const Shop = () => {
               <ShopFilters
                 categories={categories}
                 selectedCategory={selectedCategory}
-                onCategoryChange={(name) => { setSelectedCategory(name); setPage(1); setFiltersOpen(false); }}
+                onCategoryChange={handleCategoryChange}
                 priceRange={priceRange}
                 onPriceChange={(v) => { setPriceRange(v); setPage(1); }}
                 priceBounds={priceBounds}

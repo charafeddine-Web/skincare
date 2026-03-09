@@ -1201,22 +1201,55 @@ p {
   margin-top: auto;
 }
 
+/* Prix style grand site e‑commerce (Sephora, Harrods, Net‑a‑Porter) */
 .product-card__prices {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.product-card__price-line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.product-card__price-value {
+  font-size: clamp(1.15rem, 1.4vw, 1.35rem);
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.product-card__currency {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  opacity: 0.9;
 }
 
 .product-card__price-old {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
+  font-weight: 500;
   color: var(--text-light);
   text-decoration: line-through;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
 }
 
-.product-card__price {
-  font-size: clamp(1.1rem, 1.35vw, 1.28rem);
-  font-weight: 700;
-  color: var(--text-main);
+.product-card__prices--promo .product-card__price-value {
+  color: var(--action);
+  font-weight: 800;
+}
+
+.product-card__prices--promo .product-card__currency {
+  color: var(--action);
+  opacity: 0.85;
 }
 
 .product-card__cta {
@@ -2945,8 +2978,8 @@ a:focus {
   font-size: 0.68rem;
 }
 
-.shop-grid .product-card__price {
-  font-size: 1.05rem;
+.shop-grid .product-card__price-value {
+  font-size: 1.18rem;
 }
 
 /* Footer sans bouton Ajouter en shop (ajout via quick-add bar) */

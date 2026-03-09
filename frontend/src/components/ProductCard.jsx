@@ -8,6 +8,12 @@ import { useAuth } from '../contexts/AuthContext';
 import { favoriteService, cartService, CART_UPDATED_EVENT } from '../services/api';
 import { productThumbnailUrl } from '../utils/imageUrl';
 
+const formatPrice = (value) => {
+    const n = Number(value);
+    if (Number.isNaN(n)) return '0';
+    return n % 1 === 0 ? String(n) : n.toFixed(2);
+};
+
 const StarRating = ({ rating = 4.5, count }) => (
     <div className="product-card__stars">
         {[1, 2, 3, 4, 5].map((star) => (
@@ -219,11 +225,16 @@ const ProductCard = React.memo(function ProductCard({ product, onQuickView, show
                 </div>
 
                 <div className="product-card__footer">
-                    <div className="product-card__prices">
+                    <div className={`product-card__prices ${product.originalPrice != null ? 'product-card__prices--promo' : ''}`}>
                         {product.originalPrice != null && (
-                            <span className="product-card__price-old">{product.originalPrice} MAD</span>
+                            <span className="product-card__price-old">
+                                {formatPrice(product.originalPrice)} <span className="product-card__currency">MAD</span>
+                            </span>
                         )}
-                        <span className="product-card__price">{product.price} MAD</span>
+                        <div className="product-card__price-line">
+                            <span className="product-card__price-value">{formatPrice(product.price)}</span>
+                            <span className="product-card__currency">MAD</span>
+                        </div>
                     </div>
 
                     {!showQuickAddBar && (
