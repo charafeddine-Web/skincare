@@ -160,12 +160,13 @@ const Shop = () => {
       .replace(/-+/g, '-');
   }, []);
 
-  // Sync category from URL quand l’URL a changé (nav). Ne jamais réécraser si l’utilisateur vient de cliquer « Tous » tant que l’URL n’a pas été mise à jour.
+  // Sync category from URL quand l’URL a changé (nav). En prod les catégories chargent après la page : ne pas syncer tant qu’on n’a pas la vraie liste.
   useEffect(() => {
     if (userChoseTousRef.current) {
       if (!initialCat) userChoseTousRef.current = false;
       return;
     }
+    if (initialCat && categories.length <= 1) return;
     const urlChanged = lastUrlSearchRef.current !== location.search;
     if (!urlChanged && lastUrlSearchRef.current !== null) return;
     lastUrlSearchRef.current = location.search;
