@@ -59,7 +59,6 @@ export function getCachedHomeData() {
   }
   return null;
 }
-
 /**
  * Charge les données home (API), les met en cache et les retourne.
  */
