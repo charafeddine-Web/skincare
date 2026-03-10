@@ -259,7 +259,7 @@ const ProductDetail = () => {
             "offers": {
                 "@type": "Offer",
                 "priceCurrency": "MAD",
-                "price": product.price,
+                "price": (product.promo_price != null && product.promo_price !== '') ? product.promo_price : product.price,
                 "availability": "https://schema.org/InStock"
             },
             "aggregateRating": {
@@ -517,12 +517,23 @@ const ProductDetail = () => {
                             </div>
                         )}
 
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px', marginBottom: '32px' }}>
-                            <span style={{
-                                fontSize: '2.8rem', fontWeight: 700,
-                                fontFamily: "'Cormorant Garant', serif",
-                                color: 'var(--text-main)',
-                            }}>{parseFloat(product.price).toFixed(2)} MAD</span>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>
+                            {product.promo_price != null && product.promo_price !== '' ? (
+                                <>
+                                    <span style={{
+                                        fontSize: '2.8rem', fontWeight: 700,
+                                        fontFamily: "'Cormorant Garant', serif",
+                                        color: 'var(--accent)',
+                                    }}>{parseFloat(product.promo_price).toFixed(2)} MAD</span>
+                                    <span style={{ fontSize: '1.4rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>{parseFloat(product.price).toFixed(2)} MAD</span>
+                                </>
+                            ) : (
+                                <span style={{
+                                    fontSize: '2.8rem', fontWeight: 700,
+                                    fontFamily: "'Cormorant Garant', serif",
+                                    color: 'var(--text-main)',
+                                }}>{parseFloat(product.price).toFixed(2)} MAD</span>
+                            )}
                             {/* Stock indicator */}
                             {product.stock !== null && (
                                 <span style={{

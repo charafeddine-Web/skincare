@@ -90,6 +90,7 @@ export async function fetchPriceRange(categoryId = null) {
  * Normalise un produit renvoyé par l’API pour l’affichage liste (image, category name, rating, etc.).
  */
 export function normalizeProduct(p) {
+  const hasPromo = p.promo_price != null && p.promo_price !== '';
   return {
     ...p,
     image: p.images?.find((img) => img.is_main)?.image_url || p.images?.[0]?.image_url,
@@ -97,6 +98,8 @@ export function normalizeProduct(p) {
     category: p.category?.name,
     rating: p.rating ?? 4.5,
     reviews: p.reviews_count ?? 0,
+    price: hasPromo ? Number(p.promo_price) : Number(p.price),
+    originalPrice: hasPromo ? Number(p.price) : null,
   };
 }
 

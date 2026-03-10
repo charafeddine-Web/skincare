@@ -25,7 +25,7 @@ class FavoriteController extends Controller
                 ->select('id', 'user_id', 'product_id', 'created_at')
                 ->with([
                     'product' => function ($q) {
-                        $q->select('id', 'name', 'slug', 'price', 'category_id')
+                        $q->select('id', 'name', 'slug', 'price', 'promo_price', 'category_id')
                             ->with([
                                 'category:id,name',
                                 'images' => function ($iq) {

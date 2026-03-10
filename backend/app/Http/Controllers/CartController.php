@@ -55,8 +55,8 @@ class CartController extends Controller
             ['user_id' => $user->id]
         );
 
-        $cart->load(['items' => fn ($q) => $q->with('product:id,price')]);
-        $subtotal = $cart->items->sum(fn (CartItem $i) => (float) $i->product->price * $i->quantity);
+        $cart->load(['items' => fn ($q) => $q->with('product:id,price,promo_price')]);
+        $subtotal = $cart->items->sum(fn (CartItem $i) => (float) $i->product->effective_price * $i->quantity);
         $subtotal = round($subtotal, 2);
         $total_quantity = $cart->items->sum('quantity');
         $items_count = $cart->items->count(); // nombre de produits différents (lignes)
@@ -87,7 +87,7 @@ class CartController extends Controller
 
         $cart->load([
             'items.product' => function ($q) {
-                $q->select('id', 'name', 'price', 'category_id')
+                $q->select('id', 'name', 'price', 'promo_price', 'category_id')
                     ->with(['category:id,name', 'images' => function ($img) {
                         $img->where('is_main', true)->select('id', 'product_id', 'image_url');
                     }]);
@@ -101,7 +101,7 @@ class CartController extends Controller
                 'id' => $item->id,
                 'product_id' => $product->id,
                 'name' => $product->name,
-                'price' => (float) $product->price,
+                'price' => (float) $product->effective_price,
                 'quantity' => $item->quantity,
                 'category' => $product->category?->name,
                 'image' => $imageUrl,

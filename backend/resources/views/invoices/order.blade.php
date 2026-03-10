@@ -64,8 +64,9 @@
             <div class="company-block">
                 <h1 class="company-name">ÉVELINE SKINCARE</h1>
                 <div class="company-details">
-                    <span>www.evelineskincare.ma</span>
-                    <span>contact@evelineskincare.ma</span>
+                    <span>www.evelinecosmetics.ma</span>
+                    <span>contact@evelinecosmetics.ma</span>
+                    <span>support@evelinecosmetics.ma · info@evelinecosmetics.ma</span>
                 </div>
             </div>
             <div class="invoice-meta-block">
@@ -159,7 +160,7 @@
         <footer class="footer">
             <p>Facture émise le <strong>{{ $printedAt }}</strong></p>
             <p>Merci pour votre confiance.</p>
-            <p><span class="highlight">www.evelineskincare.ma</span> — contact@evelineskincare.ma</p>
+            <p><span class="highlight">www.evelinecosmetics.ma</span> — contact@evelinecosmetics.ma · support@evelinecosmetics.ma · info@evelinecosmetics.ma</p>
         </footer>
     </div>
 </body>

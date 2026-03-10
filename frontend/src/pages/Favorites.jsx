@@ -203,10 +203,15 @@ const Favorites = () => {
                                             <h3 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: '12px', lineHeight: 1.3 }}>
                                                 {product.name}
                                             </h3>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
-                                                <span style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                                                    {product.price} MAD
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: '1.3rem', fontWeight: 700, color: (product.promo_price != null && product.promo_price !== '') ? 'var(--accent)' : 'var(--text-main)' }}>
+                                                    {((product.promo_price != null && product.promo_price !== '') ? Number(product.promo_price) : Number(product.price)).toFixed(2)} MAD
                                                 </span>
+                                                {(product.promo_price != null && product.promo_price !== '') && (
+                                                    <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
+                                                        {Number(product.price).toFixed(2)} MAD
+                                                    </span>
+                                                )}
                                                 <Motion.button
                                                     whileTap={{ scale: 0.95 }}
                                                     whileHover={{ scale: 1.05 }}

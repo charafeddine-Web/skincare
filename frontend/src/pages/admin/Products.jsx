@@ -37,6 +37,7 @@ const Products = () => {
     name: '',
     sku: '',
     price: '',
+    promo_price: '',
     stock_quantity: 0,
     category_id: '',
     is_active: true,
@@ -139,6 +140,7 @@ const Products = () => {
       name: '',
       sku: '',
       price: '',
+      promo_price: '',
       stock_quantity: 0,
       category_id: categories[0]?.id || '',
       is_active: true,
@@ -395,7 +397,8 @@ const Products = () => {
 
     try {
       setIsSubmitting(true);
-      let created = await productService.create(newProduct);
+      const payload = { ...newProduct, promo_price: newProduct.promo_price === '' || newProduct.promo_price == null ? null : Number(newProduct.promo_price) };
+      let created = await productService.create(payload);
 
       if (selectedFiles.length > 0) {
         let uploaded = await productImageService.uploadFiles(created.id, selectedFiles, { is_main: true });
@@ -444,7 +447,8 @@ const Products = () => {
 
     try {
       setIsSubmitting(true);
-      const updatedProduct = await productService.update(editProduct.id, editProduct);
+      const updatePayload = { ...editProduct, promo_price: editProduct.promo_price === '' || editProduct.promo_price == null ? null : Number(editProduct.promo_price) };
+      const updatedProduct = await productService.update(editProduct.id, updatePayload);
 
       // Handle image uploads for the edit modal
       const files = editImageFileInputRef.current?.files;
@@ -858,7 +862,14 @@ const Products = () => {
                         </td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>{categoryName}</td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)', fontWeight: 600 }}>
-                          {Number(p.price).toFixed(2)} MAD
+                          {p.promo_price != null && p.promo_price !== '' ? (
+                            <span>
+                              <span style={{ color: 'var(--accent-deep)' }}>{Number(p.promo_price).toFixed(2)} MAD</span>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-light)', textDecoration: 'line-through', marginLeft: 6 }}>{Number(p.price).toFixed(2)} MAD</span>
+                            </span>
+                          ) : (
+                            <span>{Number(p.price).toFixed(2)} MAD</span>
+                          )}
                         </td>
                         <td style={{ padding: '10px 16px', borderTop: '1px solid var(--divider)' }}>
                           <span
@@ -1030,9 +1041,9 @@ const Products = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 20 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Prix (MAD)</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Prix normal (MAD)</label>
                   <input
                     type="number"
                     step="0.01"
@@ -1041,6 +1052,18 @@ const Products = () => {
                     onChange={(e) => setNewProduct((prev) => ({ ...prev, price: e.target.value }))}
                     style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, color: '#1C1C1E', background: '#FAFAF9' }}
                     required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#6B6560', marginBottom: 8 }}>Prix promo (optionnel)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="—"
+                    value={newProduct.promo_price ?? ''}
+                    onChange={(e) => setNewProduct((prev) => ({ ...prev, promo_price: e.target.value }))}
+                    style={{ width: '100%', borderRadius: 10, border: '1px solid #E5E2DE', padding: '12px 14px', fontSize: 15, color: '#1C1C1E', background: '#FAFAF9' }}
                   />
                 </div>
                 <div>
@@ -1300,8 +1323,15 @@ const Products = () => {
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <h4 style={{ fontSize: '1.1rem', fontWeight: 600, margin: '0 0 4px 0' }}>{viewProduct.name}</h4>
                 <p style={{ color: 'var(--text-light)', fontSize: '0.85rem', margin: '0 0 8px 0' }}>{viewProduct.category?.name || 'Sans catégorie'}</p>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <span style={{ fontWeight: 600, color: 'var(--accent-deep)' }}>{Number(viewProduct.price).toFixed(2)} MAD</span>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                  {viewProduct.promo_price != null && viewProduct.promo_price !== '' ? (
+                    <>
+                      <span style={{ fontWeight: 600, color: 'var(--accent-deep)' }}>{Number(viewProduct.promo_price).toFixed(2)} MAD</span>
+                      <span style={{ fontSize: '0.9rem', color: 'var(--text-light)', textDecoration: 'line-through' }}>{Number(viewProduct.price).toFixed(2)} MAD</span>
+                    </>
+                  ) : (
+                    <span style={{ fontWeight: 600, color: 'var(--accent-deep)' }}>{Number(viewProduct.price).toFixed(2)} MAD</span>
+                  )}
                   <span style={{ color: viewProduct.stock_quantity > 0 ? '#166534' : '#b91c1c', fontSize: '0.85rem', fontWeight: 500 }}>
                     {viewProduct.stock_quantity > 0 ? `${viewProduct.stock_quantity} en stock` : 'Rupture de stock'}
                   </span>
@@ -1367,7 +1397,7 @@ const Products = () => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 12 }}>
               <div>
-                <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Prix (MAD)</label>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Prix normal (MAD)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -1376,6 +1406,18 @@ const Products = () => {
                   onChange={(e) => setEditProduct({ ...editProduct, price: e.target.value })}
                   style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)' }}
                   required
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Prix promo (MAD, optionnel)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="—"
+                  value={editProduct.promo_price ?? ''}
+                  onChange={(e) => setEditProduct({ ...editProduct, promo_price: e.target.value || null })}
+                  style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)' }}
                 />
               </div>
               <div>

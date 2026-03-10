@@ -260,7 +260,7 @@ const About = () => (
             </div>
         </section>
 
-        {/* ── Team ── */}
+        {/* Team ── 
         <section className="section-spacer">
             <div className="container">
                 <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="section-title text-center">
@@ -290,8 +290,7 @@ const About = () => (
                     ))}
                 </motion.div>
             </div>
-        </section>
-
+        </section>}
         {/* ── CTA ── */}
         <section style={{ background: 'var(--secondary)', padding: 'clamp(64px, 10vw, 120px) 0' }}>
             <motion.div

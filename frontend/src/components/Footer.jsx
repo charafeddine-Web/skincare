@@ -10,9 +10,8 @@ const trustItems = [
 ];
 
 const socials = [
-    { Icon: Instagram, href: '#', label: 'Instagram' },
-    { Icon: Facebook, href: '#', label: 'Facebook' },
-    { Icon: Youtube, href: '#', label: 'YouTube' },
+    { Icon: Instagram, href: 'https://www.instagram.com/eveline_skincare_maroc?igsh=MTM0M2E1djQ0cWd3Nw%3D%3D&utm_source=qr', label: 'Instagram' },
+    { Icon: Facebook, href: 'https://www.facebook.com/share/1ZirEzTN9T/?mibextid=wwXIfr', label: 'Facebook' },
 ];
 
 const Footer = () => {
@@ -96,9 +95,9 @@ const Footer = () => {
                         <h4 style={{ fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '28px' }}>Contact</h4>
                         <ul style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                             {[
-                                { Icon: Mail, text: 'contact@eveline.fr' },
-                                { Icon: Phone, text: '+33 1 23 45 67 89' },
-                                { Icon: MapPin, text: 'Paris, France' },
+                                { Icon: Mail, text: 'orders@evelinecosmetics.ma' },
+                                { Icon: Phone, text: '+212 6 63 13 88 00' },
+                                { Icon: MapPin, text: 'Bd de la résistance, Rue Libourne, Résidence du centre, 2ème Étage, Bureau 04' },
                             ].map(({ Icon, text }) => (
                                 <li key={text} style={{ display: 'flex', gap: '14px' }}>
                                     <Icon size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />

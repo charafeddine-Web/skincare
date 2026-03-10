@@ -62,7 +62,7 @@ class PaymentService
         foreach ($items as $row) {
             $product = Product::findOrFail($row['product_id']);
             $qty = (int) ($row['quantity'] ?? 1);
-            $total += $product->price * $qty;
+            $total += $product->effective_price * $qty;
         }
 
         $currency = config('payment.cmi.currency', 'MAD');
@@ -83,7 +83,7 @@ class PaymentService
                 OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $product->id,
-                    'price' => $product->price,
+                    'price' => $product->effective_price,
                     'quantity' => $qty,
                 ]);
             }

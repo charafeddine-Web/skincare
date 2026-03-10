@@ -20,6 +20,7 @@ class Product extends Model
         'skin_type',
         'application_time',
         'price',
+        'promo_price',
         'stock_quantity',
         'category_id',
         'is_active',
@@ -28,6 +29,7 @@ class Product extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'promo_price' => 'decimal:2',
         'is_active' => 'boolean',
         'low_stock_threshold' => 'integer',
         'created_at' => 'datetime',
@@ -60,6 +62,17 @@ class Product extends Model
     public function favorites()
     {
         return $this->hasMany(Favorite::class);
+    }
+
+    /**
+     * Prix effectif pour la vente : promo si défini, sinon prix normal.
+     */
+    public function getEffectivePriceAttribute(): float
+    {
+        if ($this->promo_price !== null && $this->promo_price !== '') {
+            return (float) $this->promo_price;
+        }
+        return (float) $this->price;
     }
 }
 

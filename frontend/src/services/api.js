@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Configuration de base de l'API
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://evelinecosmetics.ma/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/';
 
 
 // Création de l'instance axios
@@ -184,6 +184,7 @@ export const productService = {
         skin_type: productData.skin_type || null,
         application_time: productData.application_time || null,
         price: Number(productData.price),
+        promo_price: productData.promo_price != null && productData.promo_price !== '' ? Number(productData.promo_price) : null,
         stock_quantity: Number(productData.stock_quantity || 0),
         category_id: Number(productData.category_id),
         is_active: productData.is_active ?? true,

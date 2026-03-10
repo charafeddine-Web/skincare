@@ -91,11 +91,11 @@ class OrderController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
-        // Calculer le montant total
+        // Calculer le montant total (prix effectif : promo si défini, sinon prix normal)
         $total = 0;
         foreach ($validated['items'] as $item) {
             $product = \App\Models\Product::find($item['product_id']);
-            $total += $product->price * $item['quantity'];
+            $total += $product->effective_price * $item['quantity'];
         }
 
         $order = Order::create([
@@ -106,13 +106,13 @@ class OrderController extends Controller
             'status' => 'pending',
         ]);
 
-        // Créer les items de la commande
+        // Créer les items de la commande (prix effectif enregistré)
         foreach ($validated['items'] as $item) {
             $product = \App\Models\Product::find($item['product_id']);
             OrderItem::create([
                 'order_id' => $order->id,
                 'product_id' => $item['product_id'],
-                'price' => $product->price,
+                'price' => $product->effective_price,
                 'quantity' => $item['quantity'],
             ]);
         }

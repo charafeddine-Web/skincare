@@ -107,6 +107,7 @@ class ProductController extends Controller
                 'products.slug',
                 'products.sku',
                 'products.price',
+                'products.promo_price',
                 'products.stock_quantity',
                 'products.category_id',
                 'products.is_active',
@@ -143,10 +144,10 @@ class ProductController extends Controller
         }
 
         if ($request->has('min_price') && is_numeric($request->min_price)) {
-            $query->where('price', '>=', (float) $request->min_price);
+            $query->whereRaw('COALESCE(products.promo_price, products.price) >= ?', [(float) $request->min_price]);
         }
         if ($request->has('max_price') && is_numeric($request->max_price)) {
-            $query->where('price', '<=', (float) $request->max_price);
+            $query->whereRaw('COALESCE(products.promo_price, products.price) <= ?', [(float) $request->max_price]);
         }
 
         $skinTypes = $request->input('skin_type');
@@ -169,10 +170,10 @@ class ProductController extends Controller
             $sort = $request->input('sort', 'new');
             switch ($sort) {
                 case 'price_asc':
-                    $query->orderBy('price', 'asc');
+                    $query->orderByRaw('COALESCE(products.promo_price, products.price) ASC');
                     break;
                 case 'price_desc':
-                    $query->orderBy('price', 'desc');
+                    $query->orderByRaw('COALESCE(products.promo_price, products.price) DESC');
                     break;
                 case 'rating':
                     $query->orderBy('rating', 'desc')->orderBy('reviews_count', 'desc');
@@ -198,12 +199,14 @@ class ProductController extends Controller
         $version = Cache::get('product_price_range_version', 0);
         $cacheKey = 'product_price_range:v' . $version . ':' . ($request->input('category_id') ?? 'all');
         $result = Cache::remember($cacheKey, self::PRODUCT_LIST_CACHE_TTL, function () use ($request) {
-            $query = Product::query()->where('is_active', true)->select('price');
+            $query = Product::query()->where('is_active', true)
+                ->selectRaw('MIN(COALESCE(promo_price, price)) as min_price, MAX(COALESCE(promo_price, price)) as max_price');
             if ($request->has('category_id')) {
                 $query->where('category_id', $request->category_id);
             }
-            $min = (float) (clone $query)->min('price');
-            $max = (float) (clone $query)->max('price');
+            $row = $query->first();
+            $min = (float) ($row->min_price ?? 0);
+            $max = (float) ($row->max_price ?? 0);
             return ['min' => $min, 'max' => max($max, $min + 1)];
         });
 
@@ -226,6 +229,7 @@ class ProductController extends Controller
             'skin_type' => 'nullable|in:sèche,grasse,mixte,sensible,normale',
             'application_time' => 'nullable|in:matin,soir,jour/nuit',
             'price' => 'required|numeric|min:0',
+            'promo_price' => 'nullable|numeric|min:0',
             'stock_quantity' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
             'is_active' => 'boolean',
@@ -285,6 +289,7 @@ class ProductController extends Controller
             'skin_type' => 'nullable|in:sèche,grasse,mixte,sensible,normale',
             'application_time' => 'nullable|in:matin,soir,jour/nuit',
             'price' => 'sometimes|numeric|min:0',
+            'promo_price' => 'nullable|numeric|min:0',
             'stock_quantity' => 'sometimes|integer|min:0',
             'category_id' => 'sometimes|exists:categories,id',
             'is_active' => 'sometimes|boolean',
@@ -376,6 +381,7 @@ class ProductController extends Controller
                     $product->skin_type ?? '',
                     $product->application_time ?? '',
                     $product->price ?? 0,
+                    $product->promo_price ?? '',
                     $product->stock_quantity ?? 0,
                     $categoryName,
                     $product->is_active ? 'Actif' : 'Inactif',

@@ -33,7 +33,7 @@ class OrderItemController extends Controller
         ]);
 
         $product = \App\Models\Product::find($validated['product_id']);
-        $validated['price'] = $product->price;
+        $validated['price'] = $product->effective_price;
 
         $orderItem = OrderItem::create($validated);
 

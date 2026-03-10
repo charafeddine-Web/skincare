@@ -19,12 +19,15 @@ const QuickViewModal = ({ productId, product: initialProduct, onClose }) => {
         .get(productId)
         .then((p) => {
           const img = p.images?.find((i) => i.is_main)?.image_url || p.images?.[0]?.image_url;
+          const hasPromo = p.promo_price != null && p.promo_price !== '';
           setProduct({
             ...p,
             image: img,
             category: p.category?.name,
             rating: p.rating ?? 4.5,
             reviews: p.reviews_count ?? 0,
+            price: hasPromo ? Number(p.promo_price) : Number(p.price),
+            originalPrice: hasPromo ? Number(p.price) : null,
           });
         })
         .catch(() => setProduct(null))
@@ -188,9 +191,16 @@ const QuickViewModal = ({ productId, product: initialProduct, onClose }) => {
                     ({product.reviews ?? 0} avis)
                   </span>
                 </div>
-                <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: 24 }}>
-                  {product.price} MAD
-                </p>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 24 }}>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 700, color: product.originalPrice != null ? 'var(--accent)' : 'var(--text-main)' }}>
+                    {Number(product.price).toFixed(2)} MAD
+                  </span>
+                  {product.originalPrice != null && (
+                    <span style={{ fontSize: '1rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
+                      {Number(product.originalPrice).toFixed(2)} MAD
+                    </span>
+                  )}
+                </div>
               </div>
               <div style={{ padding: 24, borderTop: '1px solid var(--divider)', display: 'flex', gap: 12 }}>
                 <button
