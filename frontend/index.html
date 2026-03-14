@@ -35,6 +35,10 @@
 
     <meta name="theme-color" content="#FFFCFA" />
 
+    <!-- Security: reduce XSS and clickjacking risk (CSP may need tuning for your API/fonts domain) -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+
     <title>Éveline — Skincare Paris</title>
   </head>
   <body>

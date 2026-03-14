@@ -42,14 +42,14 @@ class FavoriteController extends Controller
     }
 
     /**
-     * Toggle favorite
+     * Toggle favorite. Product resolved via route model binding (404 if product does not exist).
      */
-    public function toggle(Request $request, $productId)
+    public function toggle(Request $request, Product $product)
     {
         $userId = $request->user()->id;
-        
+
         $favorite = Favorite::where('user_id', $userId)
-            ->where('product_id', $productId)
+            ->where('product_id', $product->id)
             ->first();
 
         if ($favorite) {
@@ -59,19 +59,19 @@ class FavoriteController extends Controller
         }
         Favorite::create([
             'user_id' => $userId,
-            'product_id' => $productId,
+            'product_id' => $product->id,
         ]);
         Cache::forget('favorites:user:' . $userId);
         return response()->json(['favorited' => true, 'message' => 'Ajouté aux favoris']);
     }
 
     /**
-     * Check if product is favorited
+     * Check if product is favorited. Product resolved via route model binding (404 if not found).
      */
-    public function check(Request $request, $productId)
+    public function check(Request $request, Product $product)
     {
         $isFavorited = Favorite::where('user_id', $request->user()->id)
-            ->where('product_id', $productId)
+            ->where('product_id', $product->id)
             ->exists();
 
         return response()->json(['favorited' => $isFavorited]);

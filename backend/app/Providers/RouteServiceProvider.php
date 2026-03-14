@@ -28,6 +28,18 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // Stricter limits for auth: brute-force and credential stuffing protection
+        RateLimiter::for('auth', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip())->response(function () {
+                return response()->json(['message' => 'Too many login attempts. Please try again later.'], 429);
+            });
+        });
+
+        // Payment callback: prevent abuse (replay, DDoS)
+        RateLimiter::for('payment-callback', function (Request $request) {
+            return Limit::perMinute(30)->by($request->ip());
+        });
+
         // Contraintes de route pour éviter que 'export' et 'import' soient interprétés comme des IDs
         Route::pattern('product', '[0-9]+');
         Route::pattern('category', '[0-9]+');

@@ -46,7 +46,8 @@ return [
     |
     */
 
-    'expiration' => null,
+    // Token expiration: 24 hours. Set SANCTUM_EXPIRATION in .env (minutes) or null for no expiry.
+    'expiration' => env('SANCTUM_EXPIRATION', 60 * 24),
 
     /*
     |--------------------------------------------------------------------------

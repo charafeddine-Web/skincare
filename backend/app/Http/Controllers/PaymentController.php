@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\IndexPaymentRequest;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Services\Payment\CMIService;
@@ -88,26 +89,25 @@ class PaymentController extends Controller
      * Lister tous les paiements de l'utilisateur
      * GET /api/payments
      */
-    public function index(Request $request)
+    public function index(IndexPaymentRequest $request)
     {
+        $validated = $request->validated();
         $payments = Payment::where('user_id', auth()->id())
             ->with(['order', 'logs'])
             ->orderBy('created_at', 'desc');
 
-        // Filtrer par statut
-        if ($request->has('status')) {
-            $payments->where('status', $request->status);
+        if (!empty($validated['status'])) {
+            $payments->where('status', $validated['status']);
+        }
+        if (!empty($validated['from_date'])) {
+            $payments->whereDate('created_at', '>=', $validated['from_date']);
+        }
+        if (!empty($validated['to_date'])) {
+            $payments->whereDate('created_at', '<=', $validated['to_date']);
         }
 
-        // Filtrer par date
-        if ($request->has('from_date')) {
-            $payments->whereDate('created_at', '>=', $request->from_date);
-        }
-        if ($request->has('to_date')) {
-            $payments->whereDate('created_at', '<=', $request->to_date);
-        }
-
-        return response()->json($payments->paginate(15), 200);
+        $perPage = (int) ($validated['per_page'] ?? 15);
+        return response()->json($payments->paginate($perPage), 200);
     }
 
     /**

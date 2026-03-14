@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\IndexOrderRequest;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
@@ -10,9 +11,11 @@ class OrderController extends Controller
 {
     /**
      * Affiche toutes les commandes (eager load user + items count; no full items for list).
+     * Input validation via IndexOrderRequest to prevent injection and abuse.
      */
-    public function index(Request $request)
+    public function index(IndexOrderRequest $request)
     {
+        $validated = $request->validated();
         $authUser = $request->user();
         $isAdmin = $authUser && (($authUser->role ?? null) === 'admin' || (bool) ($authUser->is_admin ?? false));
 
@@ -21,27 +24,26 @@ class OrderController extends Controller
             ->with(['user:id,first_name,last_name,email'])
             ->withCount('items');
 
-        // Client: ne voir que ses propres commandes (même si user_id est passé en query)
         if (!$isAdmin) {
             $query->where('user_id', $authUser->id);
-        } elseif ($request->has('user_id')) {
-            $query->where('user_id', $request->user_id);
+        } elseif (!empty($validated['user_id'])) {
+            $query->where('user_id', $validated['user_id']);
         }
 
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
+        if (!empty($validated['status'])) {
+            $query->where('status', $validated['status']);
         }
 
-        if ($request->has('min_amount')) {
-            $query->where('total_amount', '>=', $request->min_amount);
+        if (isset($validated['min_amount'])) {
+            $query->where('total_amount', '>=', $validated['min_amount']);
         }
 
-        if ($request->has('max_amount')) {
-            $query->where('total_amount', '<=', $request->max_amount);
+        if (isset($validated['max_amount'])) {
+            $query->where('total_amount', '<=', $validated['max_amount']);
         }
 
-        if ($request->has('search')) {
-            $searchTerm = $request->search;
+        if (!empty($validated['search'])) {
+            $searchTerm = $validated['search'];
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('id', 'like', '%' . $searchTerm . '%')
                   ->orWhereHas('user', function ($uq) use ($searchTerm) {
@@ -52,19 +54,24 @@ class OrderController extends Controller
             });
         }
 
-        if ($request->has('date')) {
-            $query->whereDate('created_at', $request->date);
+        if (!empty($validated['date'])) {
+            $query->whereDate('created_at', $validated['date']);
         }
 
-        $perPage = (int) ($request->per_page ?? 10);
+        $perPage = (int) ($validated['per_page'] ?? 10);
         return response()->json($query->orderByDesc('created_at')->paginate($perPage), 200);
     }
 
     /**
-     * Met à jour uniquement le statut d'une commande
+     * Met à jour uniquement le statut d'une commande (admin only).
      */
     public function updateStatus(Request $request, Order $order)
     {
+        $user = $request->user();
+        if (($user->role ?? null) !== 'admin' && !(bool) ($user->is_admin ?? false)) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+
         $validated = $request->validate([
             'status' => 'required|in:pending,paid,failed,shipped,delivered,cancelled',
         ]);

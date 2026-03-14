@@ -1,8 +1,57 @@
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 // Configuration de base de l'API
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://evelinecosmetics.ma/api';
 
+// Token is stored in localStorage; ensure no untrusted scripts run on the same origin (CSP, dependency hygiene).
+
+/** Cooldown pour éviter d'afficher 10 toasts si 10 requêtes échouent en même temps (même message). */
+const TOAST_SAME_MSG_COOLDOWN_MS = 4000;
+let lastToastMessage = '';
+let lastToastTime = 0;
+
+/**
+ * Retourne un message d'erreur clair pour l'utilisateur (toast global).
+ */
+function getErrorMessage(error) {
+  if (!error.response) {
+    return error.code === 'ECONNABORTED'
+      ? 'Délai dépassé. Réessayez.'
+      : 'Problème de connexion. Vérifiez votre réseau.';
+  }
+  const { status, data } = error.response;
+  const msg = data?.message || data?.error;
+  if (typeof msg === 'string' && msg.trim()) return msg;
+  if (data?.errors && typeof data.errors === 'object') {
+    const first = Object.values(data.errors).flat()[0];
+    if (first) return first;
+  }
+  switch (status) {
+    case 400: return 'Requête invalide.';
+    case 401: return 'Session expirée. Veuillez vous reconnecter.';
+    case 403: return 'Accès refusé.';
+    case 404: return 'Ressource introuvable.';
+    case 422: return 'Données invalides.';
+    case 429: return 'Trop de requêtes. Réessayez plus tard.';
+    default: return status >= 500 ? 'Erreur serveur. Réessayez plus tard.' : 'Une erreur s\'est produite.';
+  }
+}
+
+/**
+ * Affiche un seul toast d'erreur : déduplique le même message (cooldown) et utilise un toastId
+ * pour les erreurs réseau pour ne pas empiler "Problème de connexion" x N.
+ */
+function showErrorToast(message, isNetworkError) {
+  const now = Date.now();
+  if (message === lastToastMessage && now - lastToastTime < TOAST_SAME_MSG_COOLDOWN_MS) {
+    return;
+  }
+  lastToastMessage = message;
+  lastToastTime = now;
+  const toastId = isNetworkError ? 'global-network-error' : undefined;
+  toast.error(message, { toastId });
+}
 
 // Création de l'instance axios
 const api = axios.create({
@@ -25,13 +74,11 @@ api.interceptors.request.use(
     return Promise.reject(error);
   }
 );
-// Intercepteur pour gérer les erreurs d'authentification (401)
-// On nettoie la session et on signale la déconnexion sans rediriger : ainsi les pages
-// publiques (Accueil, Boutique, Catégories) restent accessibles. Seule la ProtectedRoute
-// redirige vers /login si l'utilisateur est sur /account ou /favorites.
+// Intercepteur global : erreurs d'auth (401) + toast pour toutes les erreurs API (client & admin)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const skipToast = error.config?.skipGlobalErrorToast === true;
     if (error.response?.status === 401) {
       const isLogoutRequest = error.config?.url?.includes?.('/logout');
       if (!isLogoutRequest) {
@@ -39,6 +86,11 @@ api.interceptors.response.use(
         localStorage.removeItem('user_data');
         window.dispatchEvent(new CustomEvent('auth:session-expired'));
       }
+    }
+    if (!skipToast) {
+      const message = getErrorMessage(error);
+      const isNetworkError = !error.response;
+      showErrorToast(message, isNetworkError);
     }
     return Promise.reject(error);
   }

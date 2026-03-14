@@ -34,6 +34,7 @@ const AccountProfile = lazy(() => import('./pages/account/Profile'));
 const AccountOrders = lazy(() => import('./pages/account/Orders'));
 const AccountOrderDetails = lazy(() => import('./pages/account/OrderDetails'));
 const Favorites = lazy(() => import('./pages/Favorites'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 const Loader = () => (
   <div style={{
@@ -117,7 +118,7 @@ const AppContent = () => {
               </Route>
             </Route>
 
-            <Route path="*" element={<Home />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </main>

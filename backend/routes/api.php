@@ -28,9 +28,11 @@ use App\Http\Controllers\CartController;
 |
 */
 
-// Routes d'authentification (publiques)
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
+// Routes d'authentification (publiques) — rate limit strict pour limiter brute-force / credential stuffing
+Route::middleware('throttle:auth')->group(function () {
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
 // Routes publiques (sans authentification)
 Route::get('/products/price-range', [ProductController::class, 'priceRange']);
@@ -44,16 +46,18 @@ Route::get('/product-images/{productImage}', [ProductImageController::class, 'sh
 Route::get('/reviews', [ReviewController::class, 'index']);
 Route::get('/reviews/{review}', [ReviewController::class, 'show']);
 
-// CMI callback (public; secured by signature verification + replay protection)
-Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('api.payment.callback');
-Route::post('/payments/webhook', [PaymentController::class, 'webhook'])->name('payments.webhook');
+// CMI callback (public; secured by signature verification + replay protection + rate limit)
+Route::middleware('throttle:payment-callback')->group(function () {
+    Route::post('/payment/callback', [PaymentController::class, 'callback'])->name('api.payment.callback');
+    Route::post('/payments/webhook', [PaymentController::class, 'webhook'])->name('payments.webhook');
+});
 
 // CMI redirect URLs (public) – redirect to frontend
 Route::get('/payments/{payment}/success', [PaymentController::class, 'success'])->name('payments.success');
 Route::get('/payments/{payment}/failure', [PaymentController::class, 'failure'])->name('payments.failure');
 
-// Routes protégées (authentification requise)
-Route::middleware('auth:sanctum')->group(function () {
+// Routes protégées (authentification requise + security logging)
+Route::middleware(['auth:sanctum', 'security.log'])->group(function () {
     // Authentification
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/profile', [AuthController::class, 'profile']);
@@ -74,39 +78,35 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{payment}/refund', [PaymentController::class, 'refund'])->name('refund');
     });
 
-    // Routes pour les utilisateurs
-    Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
-    Route::apiResource('users', UserController::class);
-
     // Checkout: create order + payment init (returns payment_url for CMI redirect)
     Route::post('/checkout', [CheckoutController::class, 'checkout'])->name('api.checkout');
 
     // Routes pour les adresses
     Route::apiResource('addresses', AddressController::class);
 
-    // Routes pour les catégories (admin)
-    Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
+    // Routes admin (RBAC: admin middleware)
+    Route::middleware('admin')->group(function () {
+        Route::get('/users/export', [UserController::class, 'export'])->name('users.export');
+        Route::apiResource('users', UserController::class);
 
-    // Routes pour les produits (admin)
-    // IMPORTANT: Les routes export/import doivent être définies AVANT apiResource pour éviter les conflits
-    Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
-    Route::post('/products/import', [ProductController::class, 'import'])->name('products.import');
-    Route::apiResource('products', ProductController::class)->except(['index', 'show']);
+        Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
 
-    // Routes pour les images de produits
-    Route::apiResource('product-images', ProductImageController::class);
-    Route::post('/products/{product}/images/upload', [ProductImageController::class, 'upload']);
+        Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
+        Route::post('/products/import', [ProductController::class, 'import'])->name('products.import');
+        Route::apiResource('products', ProductController::class)->except(['index', 'show']);
 
-    // Tableau de bord admin (métriques légères)
-    Route::get('/admin/metrics', [AdminDashboardController::class, 'metrics']);
-    Route::get('/admin/best-sellers', [AdminDashboardController::class, 'bestSellers']);
-    Route::get('/admin/analytics', [AdminDashboardController::class, 'analytics']);
+        Route::apiResource('product-images', ProductImageController::class);
+        Route::post('/products/{product}/images/upload', [ProductImageController::class, 'upload']);
 
-    // Routes pour les paramètres de livraison
-    Route::get('/admin/settings/shipping', [\App\Http\Controllers\ShippingMethodController::class, 'index']);
-    Route::put('/admin/settings/shipping', [\App\Http\Controllers\ShippingMethodController::class, 'updateSettings']);
+        Route::get('/admin/metrics', [AdminDashboardController::class, 'metrics']);
+        Route::get('/admin/best-sellers', [AdminDashboardController::class, 'bestSellers']);
+        Route::get('/admin/analytics', [AdminDashboardController::class, 'analytics']);
 
-    // Routes pour les commandes
+        Route::get('/admin/settings/shipping', [\App\Http\Controllers\ShippingMethodController::class, 'index']);
+        Route::put('/admin/settings/shipping', [\App\Http\Controllers\ShippingMethodController::class, 'updateSettings']);
+    });
+
+    // Routes pour les commandes (index accessible client + admin; admin voit tous avec user_id filter)
     Route::get('/orders/user/{userId}', [OrderController::class, 'index']);
     Route::get('/orders/{order}/invoice', [OrderController::class, 'invoice'])->name('orders.invoice');
     Route::put('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.status');

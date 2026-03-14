@@ -73,8 +73,12 @@ class AdminDashboardController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $limit = $request->get('limit', 10);
-        $days = $request->get('days', 30);
+        $validated = $request->validate([
+            'limit' => 'nullable|integer|min:1|max:100',
+            'days' => 'nullable|integer|min:1|max:365',
+        ]);
+        $limit = (int) ($validated['limit'] ?? 10);
+        $days = (int) ($validated['days'] ?? 30);
 
         $bestSellers = \App\Models\OrderItem::selectRaw('
                 products.id,
@@ -116,7 +120,10 @@ class AdminDashboardController extends Controller
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
-        $days = $request->get('days', 30);
+        $validated = $request->validate([
+            'days' => 'nullable|integer|min:1|max:365',
+        ]);
+        $days = (int) ($validated['days'] ?? 30);
         $startDate = now()->subDays($days);
 
         // Revenue and orders
