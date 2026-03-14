@@ -197,7 +197,7 @@ const ProductDetail = () => {
         })) || [];
         const avgRating = reviewsList.length > 0
             ? reviewsList.reduce((sum, r) => sum + r.rating, 0) / reviewsList.length
-            : (data.rating || 0);
+            : 0;
         return {
             ...data,
             category: data.category?.name || 'Soins',

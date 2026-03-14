@@ -79,15 +79,16 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     const skipToast = error.config?.skipGlobalErrorToast === true;
+    const isLogoutRequest = error.config?.url?.includes?.('/logout');
     if (error.response?.status === 401) {
-      const isLogoutRequest = error.config?.url?.includes?.('/logout');
       if (!isLogoutRequest) {
         localStorage.removeItem('auth_token');
         localStorage.removeItem('user_data');
         window.dispatchEvent(new CustomEvent('auth:session-expired'));
       }
     }
-    if (!skipToast) {
+    // Ne pas afficher de toast pour la déconnexion : le backend peut renvoyer 401 (Unauthenticated) si le token est déjà invalide
+    if (!skipToast && !isLogoutRequest) {
       const message = getErrorMessage(error);
       const isNetworkError = !error.response;
       showErrorToast(message, isNetworkError);
@@ -356,6 +357,16 @@ export const orderService = {
   },
 };
 
+// Newsletter (inscription publique)
+export const newsletterService = {
+  subscribe: async (email) => {
+    const response = await api.post('/newsletter/subscribe', { email }, {
+      skipGlobalErrorToast: true,
+    });
+    return response.data;
+  },
+};
+
 // Service Admin (metrics dashboard)
 export const adminService = {
   getMetrics: async () => {
@@ -382,6 +393,15 @@ export const adminService = {
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Erreur lors du chargement des analytics' };
+    }
+  },
+
+  getNewsletterSubscribers: async (params = {}) => {
+    try {
+      const response = await api.get('/admin/newsletter', { params });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erreur lors du chargement des abonnés newsletter' };
     }
   },
 };

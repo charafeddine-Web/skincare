@@ -16,6 +16,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\FavoriteController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\NewsletterController;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,6 +46,9 @@ Route::get('/product-images', [ProductImageController::class, 'index']);
 Route::get('/product-images/{productImage}', [ProductImageController::class, 'show']);
 Route::get('/reviews', [ReviewController::class, 'index']);
 Route::get('/reviews/{review}', [ReviewController::class, 'show']);
+
+// Newsletter (public)
+Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
 
 // CMI callback (public; secured by signature verification + replay protection + rate limit)
 Route::middleware('throttle:payment-callback')->group(function () {
@@ -104,6 +108,8 @@ Route::middleware(['auth:sanctum', 'security.log'])->group(function () {
 
         Route::get('/admin/settings/shipping', [\App\Http\Controllers\ShippingMethodController::class, 'index']);
         Route::put('/admin/settings/shipping', [\App\Http\Controllers\ShippingMethodController::class, 'updateSettings']);
+
+        Route::get('/admin/newsletter', [NewsletterController::class, 'index']);
     });
 
     // Routes pour les commandes (index accessible client + admin; admin voit tous avec user_id filter)

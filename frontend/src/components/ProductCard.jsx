@@ -14,7 +14,7 @@ const formatPrice = (value) => {
     return n % 1 === 0 ? String(n) : n.toFixed(2);
 };
 
-const StarRating = ({ rating = 4.5, count }) => (
+const StarRating = ({ rating = 0, count }) => (
     <div className="product-card__stars">
         {[1, 2, 3, 4, 5].map((star) => (
             <Star
@@ -52,12 +52,8 @@ const ProductCard = React.memo(function ProductCard({ product, onQuickView, show
             .catch(() => {});
     }, [isAuthenticated, product.id, product.is_favorited]);
 
-    const rating = product.rating ?? 4.5;
-    const reviewCount = useMemo(() => {
-        if (product.reviews != null) return product.reviews;
-        const idNum = Number(product.id) || 1;
-        return ((idNum * 37) % 200) + 50;
-    }, [product.reviews, product.id]);
+    const reviewCount = useMemo(() => (product.reviews != null ? Number(product.reviews) : 0), [product.reviews]);
+    const rating = reviewCount > 0 ? (Number(product.rating) || 0) : 0;
     const isNew = product.isNew;
     const badge = product.badge;
     const isPromoBadge = useMemo(() => {

@@ -1,15 +1,30 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Mail } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { newsletterService } from '../../services/api';
 import { HOME_IMAGES } from './homeImages';
 
 const NewsletterSection = () => {
   const [email, setEmail] = useState('');
   const [focused, setFocused] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Placeholder: integrate with your newsletter API
+    const value = email.trim();
+    if (!value) return;
+    setLoading(true);
+    try {
+      const data = await newsletterService.subscribe(value);
+      toast.success(data?.message || 'Merci ! Vous êtes inscrit à notre newsletter.');
+      setEmail('');
+    } catch (err) {
+      const msg = err?.errors?.email?.[0] || err?.message;
+      if (msg) toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const bgImage = HOME_IMAGES.botanical || HOME_IMAGES.womanFlowers || HOME_IMAGES.accent;
@@ -120,11 +135,12 @@ const NewsletterSection = () => {
             <motion.button
               type="submit"
               className="btn btn-primary"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              disabled={loading}
+              whileHover={loading ? {} : { scale: 1.02 }}
+              whileTap={loading ? {} : { scale: 0.98 }}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}
             >
-              S'abonner <ArrowRight size={18} />
+              {loading ? 'Inscription…' : "S'abonner"} <ArrowRight size={18} />
             </motion.button>
           </form>
         </motion.div>

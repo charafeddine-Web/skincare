@@ -1228,7 +1228,8 @@ p {
 }
 
 .product-card__star--empty {
-  opacity: 0.35;
+  color: var(--divider);
+  opacity: 1;
 }
 
 .product-card__review-count {

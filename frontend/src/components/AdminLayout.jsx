@@ -18,7 +18,8 @@ import {
   User,
   Globe,
   Sparkles,
-  MessageSquare
+  MessageSquare,
+  Mail
 } from 'lucide-react';
 
 const menuItems = [
@@ -29,6 +30,7 @@ const menuItems = [
   { to: '/admin/clients', label: 'Portefeuille Clients', icon: Users },
   { to: '/admin/statistiques', label: 'Analyses & Insights', icon: BarChart3 },
   { to: '/admin/avis', label: 'Avis & Modération', icon: MessageSquare },
+  { to: '/admin/newsletter', label: 'Newsletter', icon: Mail },
   { to: '/admin/parametres', label: 'Configuration', icon: Settings },
 ];
 

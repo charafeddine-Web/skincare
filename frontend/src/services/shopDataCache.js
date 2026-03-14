@@ -98,7 +98,7 @@ export function normalizeProduct(p) {
     image: p.images?.find((img) => img.is_main)?.image_url || p.images?.[0]?.image_url,
     imageHover: p.images?.[1]?.image_url,
     category: p.category?.name,
-    rating: p.rating ?? 4.5,
+    rating: (p.reviews_count && Number(p.reviews_count) > 0) ? (Number(p.rating) || 0) : 0,
     reviews: p.reviews_count ?? 0,
     price: hasPromo ? promoNum : priceNum,
     originalPrice: hasPromo ? priceNum : null,
