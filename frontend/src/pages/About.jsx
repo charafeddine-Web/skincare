@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Leaf, Award, Users, Globe, ArrowRight, Heart, Star, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSeoMeta } from '../hooks/useSeoMeta';
 
 const fadeUp = {
     hidden: { opacity: 0, y: 40 },
@@ -30,6 +31,15 @@ const milestones = [
     { year: '2026', text: 'Nouvelle collection Printemps & application mobile.' },
 ];
 
+const ingredientColors = [
+    { bg: 'linear-gradient(145deg, rgba(232,180,188,0.25) 0%, rgba(255,250,250,0.95) 100%)', border: 'rgba(232,180,188,0.4)', glow: 'rgba(232,180,188,0.2)' },
+    { bg: 'linear-gradient(145deg, rgba(144,198,149,0.22) 0%, rgba(248,252,248,0.95) 100%)', border: 'rgba(144,198,149,0.4)', glow: 'rgba(144,198,149,0.2)' },
+    { bg: 'linear-gradient(145deg, rgba(255,200,124,0.28) 0%, rgba(255,252,248,0.95) 100%)', border: 'rgba(255,180,100,0.45)', glow: 'rgba(255,180,100,0.25)' },
+    { bg: 'linear-gradient(145deg, rgba(173,216,230,0.3) 0%, rgba(248,252,255,0.95) 100%)', border: 'rgba(173,216,230,0.5)', glow: 'rgba(173,216,230,0.25)' },
+    { bg: 'linear-gradient(145deg, rgba(188,210,182,0.28) 0%, rgba(250,252,248,0.95) 100%)', border: 'rgba(168,190,160,0.45)', glow: 'rgba(168,190,160,0.22)' },
+    { bg: 'linear-gradient(145deg, rgba(197,160,89,0.2) 0%, rgba(253,251,247,0.95) 100%)', border: 'rgba(197,160,89,0.35)', glow: 'rgba(197,160,89,0.2)' },
+];
+
 const ingredients = [
     { icon: '🌸', name: 'Extrait de Rose', desc: 'Tonifiant & apaisant' },
     { icon: '🌿', name: 'Aloe Vera Bio', desc: 'Hydratation profonde' },
@@ -39,7 +49,13 @@ const ingredients = [
     { icon: '🌾', name: 'Niacinamide', desc: 'Pores & teint unifié' },
 ];
 
-const About = () => (
+const About = () => {
+  useSeoMeta({
+    title: 'À propos | Éveline Skincare Paris',
+    description: 'Notre histoire, nos valeurs et notre engagement pour des soins visage naturels et professionnels. Certifications COSMOS, cruelty-free.',
+    canonical: typeof window !== 'undefined' ? `${window.location.origin}/about` : undefined,
+  });
+  return (
     <div className="page-enter">
         {/* ── Hero Banner ── */}
         <section style={{
@@ -134,7 +150,7 @@ const About = () => (
                         }}>
                             {[{ n: '14 ans', l: "d'expertise" }, { n: '98%', l: 'naturel' }, { n: '50k+', l: 'clientes' }, { n: '0', l: 'toxines' }].map(({ n, l }) => (
                                 <div key={n} style={{ textAlign: 'center' }}>
-                                    <div style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1.6rem', fontWeight: 700, color: 'var(--accent)', lineHeight: 1 }}>{n}</div>
+                                    <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.6rem', fontWeight: 700, color: 'var(--accent)', lineHeight: 1 }}>{n}</div>
                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginTop: '4px' }}>{l}</div>
                                 </div>
                             ))}
@@ -167,7 +183,7 @@ const About = () => (
                             }}>
                                 <Icon size={22} style={{ color: 'var(--accent)' }} />
                             </div>
-                            <h3 style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1.3rem', marginBottom: '10px' }}>{title}</h3>
+                            <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.3rem', marginBottom: '10px' }}>{title}</h3>
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.8 }}>{desc}</p>
                         </motion.div>
                     ))}
@@ -226,7 +242,7 @@ const About = () => (
                                 boxShadow: 'var(--shadow-sm)',
                                 textAlign: 'left',
                             }}>
-                                <div style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent)', marginBottom: '8px' }}>{m.year}</div>
+                                <div style={{ fontFamily: 'var(--font-serif)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent)', marginBottom: '8px' }}>{m.year}</div>
                                 <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>{m.text}</div>
                             </div>
                         </motion.div>
@@ -235,27 +251,113 @@ const About = () => (
             </div>
         </section>
 
-        {/* ── Ingredients ── */}
-        <section className="section-spacer" style={{ background: 'var(--surface)' }}>
-            <div className="container">
-                <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="section-title text-center">
-                    <span className="section-label">Nos Actifs</span>
-                    <h2 style={{ marginTop: '10px' }}>La nature au cœur de chaque formule</h2>
-                </motion.div>
+        {/* ── Ingredients / Actifs ── cartes couleurs + animations */}
+        <section className="section-spacer about-actifs" style={{ background: 'var(--surface)', padding: 'clamp(64px, 10vw, 96px) 0', position: 'relative', overflow: 'hidden' }}>
+            <div className="container" style={{ position: 'relative', zIndex: 1 }}>
                 <motion.div
-                    variants={stagger} initial="hidden" whileInView="visible" viewport={{ once: true }}
-                    style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px' }}
+                    initial={{ opacity: 0, y: 28 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.2 }}
+                    transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    style={{ textAlign: 'center', marginBottom: 'clamp(40px, 5vw, 56px)' }}
                 >
-                    {ingredients.map(({ icon, name, desc }) => (
-                        <motion.div key={name} variants={fadeUp} whileHover={{ y: -4, scale: 1.02 }} style={{
-                            background: 'var(--white)', border: '1px solid var(--divider)',
-                            borderRadius: '12px', padding: '28px 20px', textAlign: 'center',
-                        }}>
-                            <div style={{ fontSize: '2.4rem', marginBottom: '12px' }}>{icon}</div>
-                            <div style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1.1rem', fontWeight: 600, marginBottom: '4px' }}>{name}</div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{desc}</div>
-                        </motion.div>
-                    ))}
+                    <span className="section-label" style={{ letterSpacing: '0.18em' }}>Nos Actifs</span>
+                    <h2 style={{
+                        marginTop: 12,
+                        marginBottom: 10,
+                        fontSize: 'clamp(1.8rem, 3vw, 2.4rem)',
+                        fontWeight: 600,
+                        letterSpacing: '-0.02em',
+                        lineHeight: 1.25,
+                        color: 'var(--text-main)',
+                    }}>
+                        La nature au cœur de chaque formule
+                    </h2>
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: 0.2, duration: 0.5 }}
+                        style={{ margin: 0, fontSize: '0.98rem', color: 'var(--text-muted)', maxWidth: 480, marginLeft: 'auto', marginRight: 'auto', lineHeight: 1.65 }}
+                    >
+                        Ingrédients soigneusement sélectionnés pour l'efficacité et la douceur.
+                    </motion.p>
+                </motion.div>
+
+                <motion.div
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(168px, 1fr))',
+                        gap: 'clamp(20px, 2.5vw, 28px)',
+                    }}
+                >
+                    {ingredients.map(({ icon, name, desc }, i) => {
+                        const colors = ingredientColors[i % ingredientColors.length];
+                        return (
+                            <motion.div
+                                key={name}
+                                initial={{ opacity: 0, y: 36 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: '-24px' }}
+                                transition={{
+                                    delay: 0.06 * i,
+                                    type: 'spring',
+                                    stiffness: 90,
+                                    damping: 18,
+                                }}
+                                whileHover={{
+                                    y: -10,
+                                    scale: 1.04,
+                                    transition: { type: 'spring', stiffness: 320, damping: 24 },
+                                }}
+                                style={{
+                                    position: 'relative',
+                                    borderRadius: 24,
+                                    padding: '28px 20px 24px',
+                                    textAlign: 'center',
+                                    background: colors.bg,
+                                    border: `1px solid ${colors.border}`,
+                                    boxShadow: '0 8px 32px rgba(28,28,30,0.06)',
+                                    overflow: 'hidden',
+                                }}
+                            >
+                                <motion.div
+                                    animate={{ y: [0, -5, 0] }}
+                                    transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: i * 0.15 }}
+                                    style={{
+                                        width: 60,
+                                        height: 60,
+                                        borderRadius: 20,
+                                        background: 'rgba(255,255,255,0.85)',
+                                        border: `1px solid ${colors.border}`,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        margin: '0 auto 16px',
+                                        fontSize: '1.85rem',
+                                        boxShadow: `0 6px 20px ${colors.glow}`,
+                                    }}
+                                >
+                                    {icon}
+                                </motion.div>
+                                <motion.div
+                                    style={{
+                                        fontFamily: 'var(--font-serif)',
+                                        fontSize: '1.12rem',
+                                        fontWeight: 600,
+                                        marginBottom: 6,
+                                        color: 'var(--text-main)',
+                                        letterSpacing: '-0.01em',
+                                    }}
+                                >
+                                    {name}
+                                </motion.div>
+                                <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                                    {desc}
+                                </div>
+                            </motion.div>
+                        );
+                    })}
                 </motion.div>
             </div>
         </section>
@@ -283,7 +385,7 @@ const About = () => (
                                 margin: '0 auto 20px', fontSize: '2.2rem',
                                 boxShadow: 'var(--shadow-glow-pink)',
                             }}>{emoji}</div>
-                            <h3 style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '1.25rem', marginBottom: '6px' }}>{name}</h3>
+                            <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', marginBottom: '6px' }}>{name}</h3>
                             <p style={{ fontSize: '0.78rem', color: 'var(--accent)', fontWeight: 600, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '1px' }}>{role}</p>
                             <p style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{yrs}</p>
                         </motion.div>
@@ -309,6 +411,7 @@ const About = () => (
             </motion.div>
         </section>
     </div>
-);
+  );
+};
 
 export default About;

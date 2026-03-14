@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight, Mail, Lock, User as UserIcon, AlertCircle, X, Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Navigate, Link } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 
 const BENEFITS = [
   '10% sur votre première commande',
@@ -97,7 +97,6 @@ const Auth = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.7 }}
           >
-            <Link to="/" className="auth-visual__logo">Éveline</Link>
             <h2 className="auth-visual__headline">
               {mode === 'login' ? 'Ravie de vous\nrevoir.' : 'Votre rituel\nbeauté commence\nici.'}
             </h2>
@@ -136,9 +135,6 @@ const Auth = () => {
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           >
-            {/* Mobile logo */}
-            <Link to="/" className="auth-form__logo-mobile">Éveline</Link>
-
             <div className="auth-form__header">
               <h1 className="auth-form__title">
                 {mode === 'login' ? 'Connexion' : 'Créer un compte'}

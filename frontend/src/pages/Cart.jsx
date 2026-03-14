@@ -296,7 +296,7 @@ const Cart = () => {
 
                             <div>
                                 <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="summary-card">
-                                    <h3 className="summary-title" style={{ fontFamily: "'Cormorant Garant', serif" }}>Détails du paiement</h3>
+                                    <h3 className="summary-title" style={{ fontFamily: 'var(--font-serif)' }}>Détails du paiement</h3>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginBottom: '32px' }}>
                                         <div className="flex-between">
                                             <span style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>Sous-total</span>

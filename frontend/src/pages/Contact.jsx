@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Phone, MapPin, Clock, Instagram, Facebook, ChevronDown } from 'lucide-react';
+import { useSeoMeta } from '../hooks/useSeoMeta';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
@@ -29,6 +30,12 @@ const faqItems = [
 
 const Contact = () => {
   const [open, setOpen] = useState(null);
+
+  useSeoMeta({
+    title: 'Contact | Éveline Skincare',
+    description: 'Contactez Éveline Skincare. Livraison Maroc & France. Showroom sur RDV, support client réactif.',
+    canonical: typeof window !== 'undefined' ? `${window.location.origin}/contact` : undefined,
+  });
 
   return (
     <div className="page-enter">
@@ -63,7 +70,7 @@ const Contact = () => {
             transition={{ duration: 0.5, delay: 0.08 }}
             style={{
               margin: 0,
-              fontFamily: "'Cormorant Garant', serif",
+              fontFamily: 'var(--font-serif)',
               fontSize: 'clamp(2rem, 5vw, 3rem)',
               fontWeight: 700,
               color: 'var(--text-main)',
@@ -109,7 +116,7 @@ const Contact = () => {
               variants={fadeUp}
               style={{
                 margin: '0 0 clamp(20px, 3vw, 28px)',
-                fontFamily: "'Cormorant Garant', serif",
+                fontFamily: 'var(--font-serif)',
                 fontSize: 'clamp(1.75rem, 4vw, 2.5rem)',
                 fontWeight: 700,
                 textAlign: 'center',
@@ -316,7 +323,7 @@ const Contact = () => {
             <h2
               style={{
                 margin: 0,
-                fontFamily: "'Cormorant Garant', serif",
+                fontFamily: 'var(--font-serif)',
                 fontSize: 'clamp(1.6rem, 3.5vw, 2.2rem)',
                 fontWeight: 700,
                 color: 'var(--text-main)',

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useSeoMeta } from '../hooks/useSeoMeta';
 import HeroVideo from '../components/home/HeroVideo';
 import TrustStrip from '../components/home/TrustStrip';
 import FeaturedCategories from '../components/home/FeaturedCategories';
@@ -19,6 +20,12 @@ const Home = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const mountedRef = useRef(true);
+
+  useSeoMeta({
+    title: 'Éveline Skincare Paris | Soins naturels & professionnels',
+    description: 'Soins botaniques naturels. Sérums, crèmes, nettoyants. Livraison Maroc & France. Découvrez la collection Éveline.',
+    canonical: typeof window !== 'undefined' ? `${window.location.origin}/` : undefined,
+  });
 
   useEffect(() => {
     if (location.pathname === '/') window.scrollTo(0, 0);
@@ -61,7 +68,7 @@ const Home = () => {
     <div className="page-enter">
       <HeroVideo />
 
-      <div className="home-flow home-flow--trust">
+      <div id="home-next-section" className="home-flow home-flow--trust">
         <TrustStrip />
       </div>
 

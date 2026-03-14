@@ -1,26 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import ProductCard, { SkeletonCard } from '../ProductCard';
 
+const SCROLL_STEP = 324; // ~ card width + gap
+const GAP = 24;
+
 const ProductCarousel = ({ products, loading, title = 'Best-sellers', subtitle }) => {
-  const [index, setIndex] = useState(0);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const scrollRef = useRef(null);
 
-  const cardWidth = 300;
-  const gap = 24;
-  const visibleCards = typeof window !== 'undefined' ? (Math.floor((window.innerWidth - 80) / (cardWidth + gap)) || 1) : 4;
-  const maxIndex = Math.max(0, (products?.length || 0) - visibleCards);
-
-  const updateScrollState = () => {
-    if (!scrollRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-    setCanScrollLeft(scrollLeft > 10);
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
-  };
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+  }, []);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -32,29 +29,16 @@ const ProductCarousel = ({ products, loading, title = 'Best-sellers', subtitle }
       el.removeEventListener('scroll', updateScrollState);
       window.removeEventListener('resize', updateScrollState);
     };
-  }, [products?.length]);
+  }, [updateScrollState, loading, products?.length]);
 
-  useEffect(() => {
-    if (loading || !products?.length) return;
-    const t = setInterval(() => {
-      setIndex((i) => (i >= maxIndex ? 0 : i + 1));
-    }, 4500);
-    return () => clearInterval(t);
-  }, [loading, products?.length, maxIndex]);
-
-  useEffect(() => {
-    if (!scrollRef.current || loading || !products?.length) return;
-    scrollRef.current.scrollTo({ left: index * (cardWidth + gap), behavior: 'smooth' });
-  }, [index, loading, products?.length]);
-
-  const scrollTo = (newIndex) => {
-    const i = Math.max(0, Math.min(newIndex, maxIndex));
-    setIndex(i);
-    scrollRef.current?.scrollTo({ left: i * (cardWidth + gap), behavior: 'smooth' });
+  const scroll = (direction) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * SCROLL_STEP, behavior: 'smooth' });
   };
 
   return (
-    <section className="section-spacer" style={{ background: 'transparent' }}>
+    <section className="section-spacer product-carousel-section" style={{ background: 'transparent' }}>
       <div className="container">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -65,12 +49,12 @@ const ProductCarousel = ({ products, loading, title = 'Best-sellers', subtitle }
         >
           <div>
             <span className="section-label">Sélection</span>
-            <h2 style={{ margin: 0 }}>{title}</h2>
+            <h2 style={{ margin: 0, fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', fontWeight: 600, letterSpacing: '-0.02em' }}>{title}</h2>
             {subtitle && (
-              <p style={{ margin: '8px 0 0', fontSize: '0.95rem', color: 'var(--text-muted)' }}>{subtitle}</p>
+              <p style={{ margin: '8px 0 0', fontSize: '0.95rem', color: 'var(--text-muted)', maxWidth: '480px' }}>{subtitle}</p>
             )}
           </div>
-          <Link to="/shop" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <Link to="/shop" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 999 }}>
             Voir la collection <ChevronRight size={16} />
           </Link>
         </motion.div>
@@ -81,93 +65,112 @@ const ProductCarousel = ({ products, loading, title = 'Best-sellers', subtitle }
           </p>
         )}
 
-        <div style={{ position: 'relative' }}>
-          <motion.button
+        <div className="product-carousel__track-wrap" style={{ position: 'relative', margin: '0 -12px' }}>
+          <button
             type="button"
             aria-label="Précédent"
-            onClick={() => scrollTo(index - 1)}
-            className="hide-mobile"
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.95 }}
+            onClick={() => scroll(-1)}
+            disabled={!canScrollLeft}
+            className="product-carousel__nav product-carousel__nav--left hide-mobile"
             style={{
               position: 'absolute',
-              left: -16,
+              left: 8,
               top: '50%',
               transform: 'translateY(-50%)',
-              zIndex: 10,
+              zIndex: 5,
               width: 48,
               height: 48,
               borderRadius: '50%',
-              border: '1px solid var(--divider)',
-              background: 'var(--white)',
-              boxShadow: 'var(--shadow-md)',
+              border: '1px solid rgba(0,0,0,0.08)',
+              background: 'rgba(255,255,255,0.96)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: 'var(--text-main)',
-              cursor: 'pointer',
-              opacity: canScrollLeft ? 1 : 0.4,
+              cursor: canScrollLeft ? 'pointer' : 'default',
+              opacity: canScrollLeft ? 1 : 0.35,
               pointerEvents: canScrollLeft ? 'auto' : 'none',
+              transition: 'opacity 0.2s, box-shadow 0.2s, background 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (canScrollLeft) {
+                e.currentTarget.style.background = '#fff';
+                e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.12)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.96)';
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
             }}
           >
-            <ChevronLeft size={24} />
-          </motion.button>
+            <ChevronLeft size={22} strokeWidth={2.2} />
+          </button>
 
-          <motion.button
+          <button
             type="button"
             aria-label="Suivant"
-            onClick={() => scrollTo(index + 1)}
-            className="hide-mobile"
-            whileHover={{ scale: 1.08 }}
-            whileTap={{ scale: 0.95 }}
+            onClick={() => scroll(1)}
+            disabled={!canScrollRight}
+            className="product-carousel__nav product-carousel__nav--right hide-mobile"
             style={{
               position: 'absolute',
-              right: -16,
+              right: 8,
               top: '50%',
               transform: 'translateY(-50%)',
-              zIndex: 10,
+              zIndex: 5,
               width: 48,
               height: 48,
               borderRadius: '50%',
-              border: '1px solid var(--divider)',
-              background: 'var(--white)',
-              boxShadow: 'var(--shadow-md)',
+              border: '1px solid rgba(0,0,0,0.08)',
+              background: 'rgba(255,255,255,0.96)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: 'var(--text-main)',
-              cursor: 'pointer',
-              opacity: canScrollRight ? 1 : 0.4,
+              cursor: canScrollRight ? 'pointer' : 'default',
+              opacity: canScrollRight ? 1 : 0.35,
               pointerEvents: canScrollRight ? 'auto' : 'none',
+              transition: 'opacity 0.2s, box-shadow 0.2s, background 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (canScrollRight) {
+                e.currentTarget.style.background = '#fff';
+                e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.12)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.96)';
+              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
             }}
           >
-            <ChevronRight size={24} />
-          </motion.button>
+            <ChevronRight size={22} strokeWidth={2.2} />
+          </button>
 
           <div
             ref={scrollRef}
             className="mobile-scroller no-scrollbar shop-grid shop-grid--carousel"
             style={{
               display: 'flex',
-              gap,
+              gap: GAP,
               overflowX: 'auto',
               scrollSnapType: 'x mandatory',
               scrollBehavior: 'smooth',
-              padding: '8px 4px 24px',
-              margin: '0 -4px',
+              padding: '16px 12px 28px',
             }}
           >
             {loading
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} style={{ flex: '0 0 280px', scrollSnapAlign: 'start' }}>
-                    <SkeletonCard />
-                  </div>
-                ))
-              : (products || []).map((product) => (
-                  <div key={product.id} style={{ flex: '0 0 280px', scrollSnapAlign: 'start' }}>
-                    <ProductCard product={product} showQuickAddBar />
-                  </div>
-                ))}
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ flex: '0 0 280px', scrollSnapAlign: 'start' }}>
+                  <SkeletonCard />
+                </div>
+              ))
+            : (products || []).map((product) => (
+                <div key={product.id} style={{ flex: '0 0 280px', scrollSnapAlign: 'start' }}>
+                  <ProductCard product={product} showQuickAddBar />
+                </div>
+              ))}
           </div>
         </div>
       </div>

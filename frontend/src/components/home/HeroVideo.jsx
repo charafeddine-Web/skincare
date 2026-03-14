@@ -18,7 +18,7 @@ const HeroVideo = () => {
       style={{
         position: 'relative',
         width: '100%',
-        minHeight: '100vh',
+        minHeight: '90vh',
         maxHeight: '900px',
         overflow: 'hidden',
         display: 'flex',
@@ -78,15 +78,15 @@ const HeroVideo = () => {
 
       {/* Contenu */}
       <div
-        className="container"
+        className="container hero-video__content"
         style={{
           position: 'relative',
           zIndex: 2,
-          paddingTop: 'clamp(80px, 14vh, 120px)',
-          paddingBottom: 'clamp(60px, 10vh, 96px)',
+          paddingTop: 'clamp(0px, 2vh, 0px)',
+          paddingBottom: 'clamp(40px, 8vh, 72px)',
         }}
       >
-        <div style={{ maxWidth: '560px' }}>
+        <div className="hero-video__content-inner" style={{ maxWidth: '560px' }}>
           <motion.p
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -97,7 +97,7 @@ const HeroVideo = () => {
               textTransform: 'uppercase',
               fontWeight: 700,
               color: 'rgba(255,255,255,0.9)',
-              marginBottom: 16,
+              marginBottom: 24,
             }}
           >
             Nouvelle collection
@@ -132,6 +132,7 @@ const HeroVideo = () => {
             Soins d'exception, formules certifiées. Découvrez la routine qui révélera votre éclat.
           </motion.p>
           <motion.div
+            className="hero-video__ctas"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6, duration: 0.5 }}
@@ -173,35 +174,52 @@ const HeroVideo = () => {
         </div>
       </div>
 
-      {/* Indicateur scroll (optionnel) */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.2 }}
+      {/* Indicateur scroll — cliquable, visible, envoie vers la section suivante */}
+      <motion.button
+        type="button"
+        onClick={() => {
+          const next = document.getElementById('home-next-section');
+          if (next) {
+            next.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
+          }
+        }}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.1, duration: 0.5 }}
+        className="hero-scroll-indicator"
         style={{
           position: 'absolute',
           bottom: 32,
           left: '50%',
           transform: 'translateX(-50%)',
-          zIndex: 2,
+          zIndex: 10,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: 8,
-          color: 'rgba(255,255,255,0.7)',
-          fontSize: '0.65rem',
-          letterSpacing: '0.15em',
+          color: 'rgba(255,255,255,0.95)',
+          fontSize: '0.7rem',
+          letterSpacing: '0.18em',
           textTransform: 'uppercase',
+          background: 'rgba(0,0,0,0.25)',
+          border: '1px solid rgba(255,255,255,0.4)',
+          borderRadius: 999,
+          padding: '12px 20px',
+          cursor: 'pointer',
+          pointerEvents: 'auto',
         }}
+        aria-label="Aller à la section suivante"
       >
-        <span>Scroll</span>
+        <span>Découvrir</span>
         <motion.div
           animate={{ y: [0, 6, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
         >
-          <ArrowRight size={16} style={{ transform: 'rotate(90deg)' }} />
+          <ArrowRight size={18} style={{ transform: 'rotate(90deg)' }} />
         </motion.div>
-      </motion.div>
+      </motion.button>
     </section>
   );
 };

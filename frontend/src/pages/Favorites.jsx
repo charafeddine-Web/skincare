@@ -4,6 +4,7 @@ import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { Heart, ShoppingBag, X, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
+import { useSeoMeta } from '../hooks/useSeoMeta';
 import { favoriteService } from '../services/api';
 
 /* ── Skeleton ── */
@@ -37,9 +38,11 @@ const Favorites = () => {
     });
     const favorites = Array.isArray(favoritesRaw) ? favoritesRaw : [];
 
-    React.useEffect(() => {
-        document.title = 'Mes Favoris — Éveline Skincare';
-    }, []);
+    useSeoMeta({
+        title: 'Mes Favoris — Éveline Skincare',
+        description: 'Vos produits favoris Éveline. Soins visage naturels et professionnels.',
+        canonical: typeof window !== 'undefined' ? `${window.location.origin}/favorites` : undefined,
+    });
 
     const handleRemove = async (productId) => {
         setRemoving(productId);
@@ -86,7 +89,7 @@ const Favorites = () => {
                                 <Heart size={22} fill="white" color="white" />
                             </div>
                             <h1 style={{
-                                fontFamily: "'Cormorant Garant', serif",
+                                fontFamily: 'var(--font-serif)',
                                 fontSize: 'clamp(2rem, 4vw, 2.8rem)',
                                 fontWeight: 700,
                             }}>
@@ -103,7 +106,7 @@ const Favorites = () => {
             </div>
 
             {/* ── Content ── */}
-            <div className="container" style={{ padding: '48px 0 80px' }}>
+            <div className="container favorites-page-content" style={{ padding: '48px 20px 80px' }}>
                 {loading ? (
                     <FavSkeleton />
                 ) : favorites.length === 0 ? (
@@ -113,7 +116,7 @@ const Favorites = () => {
                         style={{ textAlign: 'center', paddingTop: '80px' }}
                     >
                         <div style={{ fontSize: '5rem', marginBottom: '24px' }}>🌸</div>
-                        <h2 style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '2rem', marginBottom: '16px' }}>
+                        <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem', marginBottom: '16px' }}>
                             Votre liste est vide
                         </h2>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '40px', maxWidth: '400px', margin: '0 auto 40px' }}>
@@ -204,14 +207,22 @@ const Favorites = () => {
                                                 {product.name}
                                             </h3>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                                                <span style={{ fontSize: '1.3rem', fontWeight: 700, color: (product.promo_price != null && product.promo_price !== '') ? 'var(--accent)' : 'var(--text-main)' }}>
-                                                    {((product.promo_price != null && product.promo_price !== '') ? Number(product.promo_price) : Number(product.price)).toFixed(2)} MAD
-                                                </span>
-                                                {(product.promo_price != null && product.promo_price !== '') && (
-                                                    <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
-                                                        {Number(product.price).toFixed(2)} MAD
-                                                    </span>
-                                                )}
+                                                {(() => {
+                                                    const hasRealPromo = product.promo_price != null && product.promo_price !== '' && Number(product.promo_price) !== Number(product.price);
+                                                    const displayPrice = hasRealPromo ? Number(product.promo_price) : Number(product.price);
+                                                    return (
+                                                        <>
+                                                            <span style={{ fontSize: '1.3rem', fontWeight: 700, color: hasRealPromo ? 'var(--accent)' : 'var(--text-main)' }}>
+                                                                {displayPrice.toFixed(2)} MAD
+                                                            </span>
+                                                            {hasRealPromo && (
+                                                                <span style={{ fontSize: '0.95rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
+                                                                    {Number(product.price).toFixed(2)} MAD
+                                                                </span>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
                                                 <Motion.button
                                                     whileTap={{ scale: 0.95 }}
                                                     whileHover={{ scale: 1.05 }}

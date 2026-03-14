@@ -126,38 +126,46 @@ class ProductController extends Controller
                 $q->where('status', 'approved');
             }], 'rating');
 
-        if ($request->has('category_id')) {
-            $query->where('category_id', $request->category_id);
+        $categoryId = $request->input('category_id');
+        if ($categoryId !== null && $categoryId !== '') {
+            $categoryId = (int) $categoryId;
+            if ($categoryId > 0) {
+                $query->where('products.category_id', $categoryId);
+            }
         }
 
         if ($request->has('is_active')) {
             $query->where('is_active', $request->boolean('is_active'));
         }
 
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', "%{$search}%")
-                  ->orWhere('description', 'ilike', "%{$search}%")
-                  ->orWhere('sku', 'ilike', "%{$search}%");
-            });
+        $search = $request->input('search');
+        if (!empty($search) && is_string($search)) {
+            $search = trim($search);
+            if ($search !== '') {
+                $query->where(function ($q) use ($search) {
+                    $q->where('products.name', 'like', '%' . $search . '%')
+                      ->orWhere('products.description', 'like', '%' . $search . '%')
+                      ->orWhere('products.sku', 'like', '%' . $search . '%');
+                });
+            }
         }
 
-        if ($request->has('min_price') && is_numeric($request->min_price)) {
-            $query->whereRaw('COALESCE(products.promo_price, products.price) >= ?', [(float) $request->min_price]);
+        $minPrice = $request->input('min_price');
+        $maxPrice = $request->input('max_price');
+        if (is_numeric($minPrice)) {
+            $query->whereRaw('COALESCE(products.promo_price, products.price) >= ?', [(float) $minPrice]);
         }
-        if ($request->has('max_price') && is_numeric($request->max_price)) {
-            $query->whereRaw('COALESCE(products.promo_price, products.price) <= ?', [(float) $request->max_price]);
+        if (is_numeric($maxPrice)) {
+            $query->whereRaw('COALESCE(products.promo_price, products.price) <= ?', [(float) $maxPrice]);
         }
 
         $skinTypes = $request->input('skin_type');
         if (!empty($skinTypes)) {
             $types = is_array($skinTypes) ? $skinTypes : array_filter([$skinTypes]);
+            $types = array_map('trim', array_filter($types));
             if (count($types) > 0) {
-                $query->whereIn('skin_type', $types);
+                $query->whereIn('products.skin_type', $types);
             }
-        } elseif ($request->has('skin_type')) {
-            $query->where('skin_type', $request->skin_type);
         }
 
         if ($request->has('low_stock')) {
@@ -201,8 +209,9 @@ class ProductController extends Controller
         $result = Cache::remember($cacheKey, self::PRODUCT_LIST_CACHE_TTL, function () use ($request) {
             $query = Product::query()->where('is_active', true)
                 ->selectRaw('MIN(COALESCE(promo_price, price)) as min_price, MAX(COALESCE(promo_price, price)) as max_price');
-            if ($request->has('category_id')) {
-                $query->where('category_id', $request->category_id);
+            $cid = $request->input('category_id');
+            if ($cid !== null && $cid !== '' && (int) $cid > 0) {
+                $query->where('category_id', (int) $cid);
             }
             $row = $query->first();
             $min = (float) ($row->min_price ?? 0);
@@ -244,6 +253,15 @@ class ProductController extends Controller
         self::invalidateProductCaches();
 
         return response()->json($product->load(['category', 'images']), 201);
+    }
+
+    /**
+     * Affiche un produit par slug (SEO-friendly URL). Même réponse que show().
+     */
+    public function showBySlug(Request $request, string $slug)
+    {
+        $product = Product::where('slug', $slug)->where('is_active', true)->firstOrFail();
+        return $this->show($request, $product);
     }
 
     public function show(Request $request, Product $product)

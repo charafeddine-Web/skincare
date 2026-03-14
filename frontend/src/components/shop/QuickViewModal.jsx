@@ -19,15 +19,17 @@ const QuickViewModal = ({ productId, product: initialProduct, onClose }) => {
         .get(productId)
         .then((p) => {
           const img = p.images?.find((i) => i.is_main)?.image_url || p.images?.[0]?.image_url;
-          const hasPromo = p.promo_price != null && p.promo_price !== '';
+          const priceNum = Number(p.price);
+          const promoNum = p.promo_price != null && p.promo_price !== '' ? Number(p.promo_price) : null;
+          const hasPromo = promoNum != null && promoNum !== priceNum;
           setProduct({
             ...p,
             image: img,
             category: p.category?.name,
             rating: p.rating ?? 4.5,
             reviews: p.reviews_count ?? 0,
-            price: hasPromo ? Number(p.promo_price) : Number(p.price),
-            originalPrice: hasPromo ? Number(p.price) : null,
+            price: hasPromo ? promoNum : priceNum,
+            originalPrice: hasPromo ? priceNum : null,
           });
         })
         .catch(() => setProduct(null))

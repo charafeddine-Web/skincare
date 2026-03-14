@@ -92,7 +92,7 @@ const Checkout = () => {
             animate={{ opacity: 1 }}
             className="checkout-empty"
           >
-            <h1 style={{ marginBottom: '0.5rem', fontSize: '1.5rem', fontFamily: "'Cormorant Garamond', serif" }}>Checkout</h1>
+            <h1 style={{ marginBottom: '0.5rem', fontSize: '1.5rem', fontFamily: 'var(--font-serif)' }}>Checkout</h1>
             <p>Connectez-vous pour finaliser votre commande et accéder au paiement sécurisé.</p>
             <div>
               <Link to="/login" className="btn btn-primary">Se connecter</Link>
@@ -194,7 +194,7 @@ const Checkout = () => {
                     transition={{ delay: 0.1 }}
                     className="checkout-summary-card"
                   >
-                    <h3 className="summary-title" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                    <h3 className="summary-title" style={{ fontFamily: 'var(--font-serif)' }}>
                       Récapitulatif
                     </h3>
                     <div className="checkout-summary-row">

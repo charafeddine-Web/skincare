@@ -5,6 +5,7 @@ import { ShoppingBag, Heart, Star, ArrowLeft, Plus, Minus, Leaf, Shield, Truck }
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
+import { useSeoMeta } from '../hooks/useSeoMeta';
 import { productService, reviewService, favoriteService, cartService, CART_UPDATED_EVENT } from '../services/api';
 
 /* ── CONSTANTS ── */
@@ -91,7 +92,7 @@ const ReviewForm = ({ productId, onSuccess }) => {
                 marginBottom: '24px'
             }}
         >
-            <h4 style={{ marginBottom: '20px', fontFamily: "'Cormorant Garant', serif", fontSize: '1.4rem' }}>Laisser un avis</h4>
+            <h4 style={{ marginBottom: '20px', fontFamily: 'var(--font-serif)', fontSize: '1.4rem' }}>Laisser un avis</h4>
 
             <div style={{ marginBottom: '24px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '8px', fontWeight: 600 }}>Votre note</label>
@@ -237,13 +238,19 @@ const ProductDetail = () => {
         favoriteService.check(id).then((s) => setWishlisted(s?.favorited ?? false)).catch(() => {});
     }, [id, isAuthenticated]);
 
+    useSeoMeta({
+        title: product ? `${product.name} — Éveline Skincare` : 'Produit | Éveline Skincare',
+        description: product?.shortDesc || 'Soins naturels Éveline.',
+        canonical:
+            product && typeof window !== 'undefined'
+                ? `${window.location.origin}/product/${product.slug || product.id}`
+                : undefined,
+        image: product?.image || undefined,
+        type: 'product',
+    });
+
     React.useEffect(() => {
         if (!product) return;
-
-        // Meta (client-side) : titre et description simples
-        document.title = `${product.name} — Éveline Skincare`;
-        const metaDesc = document.querySelector('meta[name="description"]');
-        if (metaDesc) metaDesc.setAttribute('content', product.shortDesc || 'Soins naturels Éveline');
 
         // JSON-LD structured data
         const script = document.createElement('script');
@@ -259,7 +266,7 @@ const ProductDetail = () => {
             "offers": {
                 "@type": "Offer",
                 "priceCurrency": "MAD",
-                "price": (product.promo_price != null && product.promo_price !== '') ? product.promo_price : product.price,
+                "price": (product.promo_price != null && product.promo_price !== '' && Number(product.promo_price) !== Number(product.price)) ? product.promo_price : product.price,
                 "availability": "https://schema.org/InStock"
             },
             "aggregateRating": {
@@ -475,7 +482,7 @@ const ProductDetail = () => {
                         </div>
 
                         <h1 style={{
-                            fontFamily: "'Cormorant Garant', serif",
+                            fontFamily: 'var(--font-serif)',
                             fontSize: 'clamp(2rem, 5vw, 3.2rem)',
                             fontWeight: 700,
                             marginBottom: '16px',
@@ -518,11 +525,11 @@ const ProductDetail = () => {
                         )}
 
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px', marginBottom: '32px', flexWrap: 'wrap' }}>
-                            {product.promo_price != null && product.promo_price !== '' ? (
+                            {product.promo_price != null && product.promo_price !== '' && Number(product.promo_price) !== Number(product.price) ? (
                                 <>
                                     <span style={{
                                         fontSize: '2.8rem', fontWeight: 700,
-                                        fontFamily: "'Cormorant Garant', serif",
+                                        fontFamily: 'var(--font-serif)',
                                         color: 'var(--accent)',
                                     }}>{parseFloat(product.promo_price).toFixed(2)} MAD</span>
                                     <span style={{ fontSize: '1.4rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>{parseFloat(product.price).toFixed(2)} MAD</span>
@@ -530,7 +537,7 @@ const ProductDetail = () => {
                             ) : (
                                 <span style={{
                                     fontSize: '2.8rem', fontWeight: 700,
-                                    fontFamily: "'Cormorant Garant', serif",
+                                    fontFamily: 'var(--font-serif)',
                                     color: 'var(--text-main)',
                                 }}>{parseFloat(product.price).toFixed(2)} MAD</span>
                             )}
@@ -671,7 +678,7 @@ const ProductDetail = () => {
                                         display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap'
                                     }}>
                                         <div style={{ textAlign: 'center' }}>
-                                            <div style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '3.5rem', fontWeight: 700, lineHeight: 1, color: 'var(--text-main)' }}>
+                                            <div style={{ fontFamily: 'var(--font-serif)', fontSize: '3.5rem', fontWeight: 700, lineHeight: 1, color: 'var(--text-main)' }}>
                                                 {product.rating.toFixed(1)}
                                             </div>
                                             <Stars rating={product.rating} />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    ShoppingBag, Search, User, Menu, X, ChevronDown,
+    ShoppingBag, Search, User, Menu, X, ChevronDown, ChevronRight,
     Heart, LogOut, Settings, Package
 } from 'lucide-react';
 import { motion as Motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +15,8 @@ const Navbar = () => {
     const [cartCount, setCartCount] = useState(0);
     const [activeDropdown, setActiveDropdown] = useState(null); // Menu catégories
     const [showUserMenu, setShowUserMenu] = useState(false); // Menu Profil
+    const [hoveredNavLabel, setHoveredNavLabel] = useState(null); // Ligne au survol
+    const [mobileCategoriesOpen, setMobileCategoriesOpen] = useState(false); // Menu mobile : catégories dépliable
 
     const { user, isAuthenticated, isAdmin, logout, loading } = useAuth();
     const location = useLocation();
@@ -23,19 +25,12 @@ const Navbar = () => {
     // RÉFÉRENCE pour détecter le clic extérieur
     const userMenuRef = useRef(null);
 
-    // Liens de navigation : client non connecté = Accueil + Boutique + tout. Connecté = pas d'Accueil, + Mes commandes
     const publicNavLinks = [
         { label: 'Accueil', href: '/' },
         { label: 'Boutique', href: '/shop' },
         { label: 'Catégories', href: '#', children: (Array.isArray(categories) ? categories : []).map(c => c.name) },
         { label: 'À Propos', href: '/about' },
         { label: 'Contact', href: '/contact' },
-    ];
-
-    const authenticatedNavLinks = [
-        { label: 'Boutique', href: '/shop' },
-        { label: 'Catégories', href: '#', children: (Array.isArray(categories) ? categories : []).map(c => c.name) },
-        { label: 'Mes commandes', href: '/account/commandes' },
     ];
 
     // 1. FERMER LE MENU AU CLIC EXTÉRIEUR
@@ -53,6 +48,7 @@ const Navbar = () => {
     useEffect(() => {
         setShowUserMenu(false);
         setIsOpen(false);
+        setMobileCategoriesOpen(false);
     }, [location.pathname]);
 
     useEffect(() => {
@@ -122,6 +118,15 @@ const Navbar = () => {
 
     const getInitial = (name) => name ? name.charAt(0).toUpperCase() : 'U';
 
+    const getIsActive = (href, label) => {
+        if (href === '/') return location.pathname === '/';
+        if (href === '/shop') return location.pathname.startsWith('/shop') && !location.search.includes('cat=');
+        if (label === 'Catégories') return location.pathname.startsWith('/shop') && location.search.includes('cat=');
+        if (href === '/about') return location.pathname.startsWith('/about');
+        if (href === '/contact') return location.pathname.startsWith('/contact');
+        return false;
+    };
+
     if (isAdmin && location.pathname.startsWith('/admin')) return null;
 
     return (
@@ -145,30 +150,126 @@ const Navbar = () => {
                         <Link to="/"><img src="/logo2.png" alt="Logo" style={{ height: scrolled ? '38px' : '45px', transition: 'height 0.3s' }} /></Link>
 
                         <ul className="hide-mobile" style={{ display: 'flex', gap: '30px', listStyle: 'none', margin: 0, padding: 0 }}>
-                            {(isAuthenticated ? authenticatedNavLinks : publicNavLinks).map((link) => (
-                                <li key={link.label}
-                                    onMouseEnter={() => link.children?.length > 0 && setActiveDropdown(link.label)}
-                                    onMouseLeave={() => setActiveDropdown(null)}
-                                    style={{ position: 'relative' }}
-                                >
-                                    <Link to={link.href} onClick={(e) => handleNavigation(e, link.href)} className="nav-link"
-                                          style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}>
-                                        {link.label}
-                                        {link.children?.length > 0 && <ChevronDown size={12} />}
-                                    </Link>
+                            {publicNavLinks.map((link) => {
+                                const isActive = getIsActive(link.href, link.label);
+                                const showUnderline = isActive || hoveredNavLabel === link.label;
+                                return (
+                                    <li
+                                        key={link.label}
+                                        onMouseEnter={() => {
+                                            if (link.children?.length > 0) setActiveDropdown(link.label);
+                                            setHoveredNavLabel(link.label);
+                                        }}
+                                        onMouseLeave={() => {
+                                            setActiveDropdown(null);
+                                            setHoveredNavLabel(null);
+                                        }}
+                                        style={{ position: 'relative' }}
+                                    >
+                                        <Motion.div
+                                            whileHover={{ y: -3 }}
+                                            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                                            style={{ position: 'relative', paddingBottom: 6 }}
+                                        >
+                                            <Link
+                                                to={link.href}
+                                                onClick={(e) => handleNavigation(e, link.href)}
+                                                className="nav-link"
+                                                style={{
+                                                    fontSize: '0.78rem',
+                                                    fontWeight: 700,
+                                                    letterSpacing: '0.18em',
+                                                    textTransform: 'uppercase',
+                                                    color: isActive ? 'var(--accent)' : (hoveredNavLabel === link.label ? 'var(--accent)' : 'var(--text-main)'),
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    textDecoration: 'none',
+                                                    position: 'relative',
+                                                    outline: 'none',
+                                                    border: 'none',
+                                                    WebkitTapHighlightColor: 'transparent',
+                                                    transition: 'color 0.2s ease',
+                                                }}
+                                            >
+                                                {link.label}
+                                                {link.children?.length > 0 && <ChevronDown size={12} />}
+                                            </Link>
+                                            <AnimatePresence>
+                                                {showUnderline && (
+                                                    <Motion.div
+                                                        layoutId="nav-active-underline"
+                                                        initial={{ opacity: 0, scaleX: 0.4 }}
+                                                        animate={{ opacity: 1, scaleX: 1 }}
+                                                        exit={{ opacity: 0, scaleX: 0.4 }}
+                                                        transition={{ duration: 0.25, ease: 'easeOut' }}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            left: 0,
+                                                            right: 0,
+                                                            bottom: 0,
+                                                            height: 2,
+                                                            borderRadius: 999,
+                                                            background: 'linear-gradient(90deg, #c5a059, #e2c792)',
+                                                            transformOrigin: 'center',
+                                                        }}
+                                                    />
+                                                )}
+                                            </AnimatePresence>
+                                        </Motion.div>
 
-                                    <AnimatePresence>
-                                        {activeDropdown === link.label && link.children && (
-                                            <Motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-                                                        style={{ position: 'absolute', top: '100%', left: '-20px', background: 'white', borderRadius: '20px', padding: '15px', minWidth: '200px', maxWidth: '280px', boxShadow: '0 20px 40px rgba(0,0,0,0.08)', marginTop: '15px', zIndex: 1001 }}>
-                                                {link.children.map(child => (
-                                                    <Link key={child} to={`/shop?cat=${encodeURIComponent(child.toLowerCase().trim())}`} style={{ display: 'block', padding: '10px 15px', fontSize: '0.85rem', color: '#666', borderRadius: '12px', textDecoration: 'none' }}>{child}</Link>
-                                                ))}
-                                            </Motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </li>
-                            ))}
+                                        <AnimatePresence>
+                                            {activeDropdown === link.label && link.children && (
+                                                <Motion.div
+                                                    initial={{ opacity: 0, y: 6 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: 6 }}
+                                                    style={{
+                                                        position: 'absolute',
+                                                        top: '100%',
+                                                        left: '-20px',
+                                                        marginTop: 0,
+                                                        background: 'white',
+                                                        borderRadius: '20px',
+                                                        padding: '12px 15px 15px',
+                                                        minWidth: '200px',
+                                                        maxWidth: '280px',
+                                                        boxShadow: '0 24px 60px rgba(15,15,15,0.12)',
+                                                        zIndex: 1001,
+                                                    }}
+                                                >
+                                                    {link.children.map((child) => (
+                                                        <Link
+                                                            key={child}
+                                                            to={`/shop?cat=${encodeURIComponent(child.toLowerCase().trim())}`}
+                                                            className="nav-dropdown-item"
+                                                            style={{
+                                                                display: 'block',
+                                                                padding: '10px 15px',
+                                                                fontSize: '0.85rem',
+                                                                color: 'var(--text-muted)',
+                                                                borderRadius: '12px',
+                                                                textDecoration: 'none',
+                                                                transition: 'color 0.2s ease, background 0.2s ease',
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.color = 'var(--accent)';
+                                                                e.currentTarget.style.background = 'rgba(197, 160, 89, 0.08)';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.color = 'var(--text-muted)';
+                                                                e.currentTarget.style.background = 'transparent';
+                                                            }}
+                                                        >
+                                                            {child}
+                                                        </Link>
+                                                    ))}
+                                                </Motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     </div>
 
@@ -281,7 +382,7 @@ const Navbar = () => {
 
             <div style={{ height: scrolled ? '64px' : '95px', transition: 'height 0.4s ease', width: '100%' }} />
 
-            {/* MOBILE MENU — design aligné au site (surfaces, accent, typo) */}
+            {/* MOBILE MENU — items clairs, catégories au clic, section Profil + Mes Commandes */}
             <AnimatePresence>
                 {isOpen && (
                     <Motion.div
@@ -300,21 +401,63 @@ const Navbar = () => {
                             </button>
                         </div>
                         <nav className="navbar-mobile-drawer__nav">
-                            {(isAuthenticated ? authenticatedNavLinks : publicNavLinks).map(l => (
-                                l.href === '#' && l.children?.length ? (
-                                    <div key={l.label} className="navbar-mobile-drawer__block">
-                                        <span className="navbar-mobile-drawer__label">{l.label}</span>
-                                        <div className="navbar-mobile-drawer__sublinks">
-                                            {l.children.map(child => (
-                                                <Link key={child} to={`/shop?cat=${encodeURIComponent(child.toLowerCase().trim())}`} onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__sublink">{child}</Link>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <Link key={l.label} to={l.href} onClick={(e) => { handleNavigation(e, l.href); setIsOpen(false); }} className="navbar-mobile-drawer__link">{l.label}</Link>
-                                )
-                            ))}
+                            <Link to="/" onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__link">Accueil</Link>
+                            <Link to="/shop" onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__link">Boutique</Link>
+
+                            {/* Catégories : au clic pour afficher la liste */}
+                            {publicNavLinks.find(l => l.label === 'Catégories')?.children?.length > 0 && (
+                                <div className="navbar-mobile-drawer__block">
+                                    <button
+                                        type="button"
+                                        onClick={() => setMobileCategoriesOpen(!mobileCategoriesOpen)}
+                                        className="navbar-mobile-drawer__link navbar-mobile-drawer__link--expand"
+                                        style={{ width: '100%', justifyContent: 'space-between', border: 'none', background: 'var(--surface)', cursor: 'pointer', font: 'inherit', color: 'inherit' }}
+                                    >
+                                        <span>Catégories</span>
+                                        <ChevronRight size={20} style={{ transform: mobileCategoriesOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                                    </button>
+                                    <AnimatePresence>
+                                        {mobileCategoriesOpen && (
+                                            <Motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.2 }}
+                                                style={{ overflow: 'hidden' }}
+                                            >
+                                                <div className="navbar-mobile-drawer__sublinks" style={{ paddingLeft: 12, paddingTop: 8, paddingBottom: 4 }}>
+                                                    {(Array.isArray(categories) ? categories : []).map((cat) => {
+                                                        const slug = cat.slug || (cat.name || '').toLowerCase().trim().replace(/\s+/g, '-');
+                                                        return (
+                                                            <Link key={cat.id ?? cat.name} to={`/shop?cat=${encodeURIComponent(slug)}`} onClick={() => { setIsOpen(false); setMobileCategoriesOpen(false); }} className="navbar-mobile-drawer__sublink">{cat.name}</Link>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </Motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            )}
+
+                            <Link to="/about" onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__link">À Propos</Link>
+                            <Link to="/contact" onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__link">Contact</Link>
+
                             <div className="navbar-mobile-drawer__divider" />
+
+                            {/* Profil + Mes Commandes (si connecté) */}
+                            {isAuthenticated && (
+                                <>
+                                    <span className="navbar-mobile-drawer__label" style={{ marginTop: 8 }}>Mon compte</span>
+                                    <Link to="/account" onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__link">
+                                        <User size={20} /> Mon Profil
+                                    </Link>
+                                    <Link to="/account/commandes" onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__link">
+                                        <Package size={20} /> Mes Commandes
+                                    </Link>
+                                    <div className="navbar-mobile-drawer__divider" />
+                                </>
+                            )}
+
                             <Link to="/cart" onClick={() => setIsOpen(false)} className="navbar-mobile-drawer__link navbar-mobile-drawer__link--cart">
                                 <ShoppingBag size={20} /> Panier {cartCount > 0 && <span className="navbar-mobile-drawer__badge">{cartCount}</span>}
                             </Link>

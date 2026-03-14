@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useSeoMeta } from '../hooks/useSeoMeta';
 import ProductCard, { SkeletonCard } from '../components/ProductCard';
 import ShopFilters from '../components/shop/ShopFilters';
 import QuickViewModal from '../components/shop/QuickViewModal';
@@ -42,7 +43,8 @@ const Shop = () => {
   const initialSearch = queryParams.get('search');
   const focusSearch = queryParams.get('focus') === 'search';
 
-  const [selectedCategory, setSelectedCategory] = useState('Tous');
+  // Filtrage par catégorie : on utilise l'ID (null = Tous) pour éviter les erreurs nom/ID
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
   const [sortBy, setSortBy] = useState('popular');
   const [searchQuery, setSearchQuery] = useState(initialSearch || '');
   const [priceRange, setPriceRange] = useState([0, 500]);
@@ -59,25 +61,25 @@ const Shop = () => {
   const lastUrlSearchRef = useRef(null);
   const userChoseTousRef = useRef(false);
 
-  // React Query: categories (cached 10 min)
+  // React Query: categories (cached 10 min) — liste brute de l'API (sans faux "Tous")
   const { data: categoriesData } = useQuery({
     queryKey: ['shop', 'categories'],
     queryFn: async () => {
       const res = await categoryService.list();
       const list = Array.isArray(res) ? res : res?.data ?? [];
-      return [{ id: 'Tous', name: 'Tous' }, ...list];
+      return list;
     },
     staleTime: 10 * 60 * 1000,
   });
+  const categoriesFromApi = useMemo(() => categoriesData ?? [], [categoriesData]);
+  // Liste affichée : "Tous" en premier puis les catégories API
   const categories = useMemo(
-    () => categoriesData ?? [{ id: 'Tous', name: 'Tous' }],
-    [categoriesData]
+    () => [{ id: null, name: 'Tous' }, ...categoriesFromApi],
+    [categoriesFromApi]
   );
 
   // React Query: price range (depends on category for filter)
-  const categoryIdForPrice = selectedCategory === 'Tous'
-    ? undefined
-    : categories.find((c) => c.name === selectedCategory)?.id;
+  const categoryIdForPrice = selectedCategoryId && selectedCategoryId > 0 ? selectedCategoryId : undefined;
   const { data: priceBoundsData } = useQuery({
     queryKey: ['shop', 'priceRange', categoryIdForPrice],
     queryFn: () => productService.getPriceRange(categoryIdForPrice != null ? { category_id: categoryIdForPrice } : {}),
@@ -97,37 +99,46 @@ const Shop = () => {
     }
   }, [priceBoundsData]);
 
-  // Build params for products query — ne jamais envoyer category_id quand "Tous"
+  // Build params for products query — category_id uniquement si ID numérique > 0
   const listParams = useMemo(() => {
-    const isAll = selectedCategory === 'Tous';
-    const category = isAll ? null : categories.find((c) => c.name === selectedCategory);
-    const categoryId = category && category.id !== 'Tous' ? category.id : undefined;
     const sortParam = sortBy === 'price-asc' ? 'price_asc' : sortBy === 'price-desc' ? 'price_desc' : sortBy;
+    const minP = Number(priceRange[0]);
+    const maxP = Number(priceRange[1]);
     const params = {
       page,
       per_page: PRODUCTS_PER_PAGE,
       is_active: true,
       sort: sortParam,
-      min_price: Number(priceRange[0]) || 0,
-      max_price: Number(priceRange[1]) || 500,
+      min_price: Number.isFinite(minP) ? minP : 0,
+      max_price: Number.isFinite(maxP) ? maxP : 500,
     };
-    if (!isAll && categoryId != null) params.category_id = categoryId;
-    if (debouncedSearch?.trim()) params.search = debouncedSearch.trim();
+    const cid = selectedCategoryId != null ? Number(selectedCategoryId) : null;
+    if (Number.isFinite(cid) && cid > 0) params.category_id = cid;
+    const search = typeof debouncedSearch === 'string' ? debouncedSearch.trim() : '';
+    if (search) params.search = search;
     if (skinTypeFilters.length > 0) {
       params.skin_type = skinTypeFilters.map((id) => SKIN_TYPE_TO_BACKEND[id]).filter(Boolean);
     }
     return params;
-  }, [page, selectedCategory, categories, debouncedSearch, priceRange, sortBy, skinTypeFilters]);
+  }, [page, selectedCategoryId, debouncedSearch, priceRange, sortBy, skinTypeFilters]);
 
-  // React Query: products list (selectedCategory dans la clé pour éviter cache incorrect)
+  // Clé stable pour éviter d'afficher les données d'une autre requête (ex: ancienne catégorie)
+  const productsQueryKey = useMemo(
+    () => ['shop', 'products', JSON.stringify(listParams)],
+    [listParams]
+  );
+
+  // React Query: products list — pas de placeholder pour ne jamais afficher une liste d'un autre filtre
   const {
     data: productsPayload,
     isLoading: loadingProducts,
     isFetching: isFetchingProducts,
   } = useQuery({
-    queryKey: ['shop', 'products', selectedCategory, listParams],
+    queryKey: productsQueryKey,
     queryFn: () => productService.list(listParams),
     enabled: categories.length > 0,
+    placeholderData: undefined,
+    staleTime: 0,
   });
 
   const products = useMemo(() => {
@@ -138,6 +149,23 @@ const Shop = () => {
   }, [productsPayload]);
 
   const totalProducts = productsPayload?.total ?? 0;
+
+  const selectedCategory = useMemo(
+    () => categories.find((c) => c.id === selectedCategoryId) || null,
+    [categories, selectedCategoryId]
+  );
+  useSeoMeta({
+    title: selectedCategory?.name
+      ? `${selectedCategory.name} | Boutique | Éveline Skincare`
+      : 'Boutique | Soins visage | Éveline Skincare',
+    description: selectedCategory?.name
+      ? `Découvrez notre sélection de ${selectedCategory.name}. Soins naturels et professionnels. Livraison Maroc & France.`
+      : 'Découvrez toute la collection de soins visage Éveline. Sérums, crèmes, nettoyants. Livraison Maroc & France.',
+    canonical:
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/shop${selectedCategory?.slug ? `?cat=${encodeURIComponent(selectedCategory.slug)}` : ''}`
+        : undefined,
+  });
   const totalPages = Math.max(1, productsPayload?.last_page ?? 1);
 
   useEffect(() => {
@@ -166,26 +194,28 @@ const Shop = () => {
       if (!initialCat) userChoseTousRef.current = false;
       return;
     }
-    if (initialCat && categories.length <= 1) return;
+    if (initialCat && categoriesFromApi.length === 0) return;
     const urlChanged = lastUrlSearchRef.current !== location.search;
     if (!urlChanged && lastUrlSearchRef.current !== null) return;
     lastUrlSearchRef.current = location.search;
     if (!initialCat) {
-      setSelectedCategory('Tous');
+      setSelectedCategoryId(null);
       return;
     }
     const slug = normalizeCategorySlug(initialCat);
     if (!slug) return;
-    const found = categories.find((c) => c.name && normalizeCategorySlug(c.name) === slug);
-    setSelectedCategory(found ? found.name : 'Tous');
-  }, [location.search, initialCat, categories, normalizeCategorySlug]);
+    const found = categoriesFromApi.find(
+      (c) => (c.slug && normalizeCategorySlug(c.slug) === slug) || (c.name && normalizeCategorySlug(c.name) === slug)
+    );
+    setSelectedCategoryId(found ? found.id : null);
+  }, [location.search, initialCat, categoriesFromApi, normalizeCategorySlug]);
 
   // Mettre à jour l’URL quand la catégorie change (pour que « Tous » retire ?cat= et évite que le sync ci‑dessus réapplique l’ancienne catégorie)
   const updateShopUrl = useCallback((updates) => {
     const params = new URLSearchParams(location.search);
     if (updates.cat !== undefined) {
-      if (updates.cat == null || updates.cat === 'Tous' || updates.cat === '') params.delete('cat');
-      else params.set('cat', typeof updates.cat === 'string' ? updates.cat.toLowerCase().trim() : updates.cat);
+      if (updates.cat == null || updates.cat === '') params.delete('cat');
+      else params.set('cat', typeof updates.cat === 'string' ? updates.cat : String(updates.cat));
     }
     if (updates.search !== undefined) {
       if (updates.search == null || updates.search === '') params.delete('search');
@@ -233,7 +263,7 @@ const Shop = () => {
   const resetFilters = () => {
     userChoseTousRef.current = true;
     flushSync(() => {
-      setSelectedCategory('Tous');
+      setSelectedCategoryId(null);
       setPage(1);
       setPriceRange([priceBounds.min, priceBounds.max]);
       setSearchQuery('');
@@ -244,19 +274,36 @@ const Shop = () => {
     queryClient.invalidateQueries({ queryKey: ['shop', 'products'] });
   };
 
-  const handleCategoryChange = (name) => {
-    if (name === 'Tous') {
-      resetFilters();
-      return;
-    }
-    setSelectedCategory(name);
+  // Changement de catégorie : id = null pour "Tous", sinon l'id de la catégorie
+  const handleCategoryChange = (categoryId) => {
     setPage(1);
     setFiltersOpen(false);
-    updateShopUrl({ cat: name });
+    if (categoryId == null) {
+      // Retour à "Tous" : vider le cache produits pour forcer le bon affichage (tous les produits)
+      queryClient.removeQueries({ queryKey: ['shop', 'products'] });
+      setPriceRange([0, 500]);
+      setSelectedCategoryId(null);
+      updateShopUrl({ cat: null });
+      return;
+    }
+    // Nouvelle catégorie : plage de prix sera mise à jour par priceBoundsData
+    setPriceRange([0, 500]);
+    setSelectedCategoryId(categoryId);
+    const cat = categoriesFromApi.find((c) => c.id === categoryId) || categories.find((c) => c.id === categoryId);
+    const slug = cat?.slug || (cat?.name ? normalizeCategorySlug(cat.name) : '');
+    updateShopUrl({ cat: slug || String(categoryId) });
   };
 
   const handleSkinTypeToggle = (id, checked) => {
-    setSkinTypeFilters((prev) => (checked ? [...prev, id] : prev.filter((x) => x !== id)));
+    setSkinTypeFilters((prev) => {
+      const next = checked ? [...prev, id] : prev.filter((x) => x !== id);
+      if (next.length === 0) {
+        setPriceRange([priceBounds.min, priceBounds.max]);
+        // Forcer un refetch sans cache pour afficher tous les produits
+        queryClient.removeQueries({ queryKey: ['shop', 'products'] });
+      }
+      return next;
+    });
     setPage(1);
   };
 
@@ -267,10 +314,10 @@ const Shop = () => {
     <div className="page-enter shop-page">
       <div className="container shop-layout" style={{ padding: 'clamp(24px, 4vw, 48px) var(--container-pad)' }}>
         {/* Sidebar — style GLOW */}
-        <aside className="shop-sidebar hide-mobile" style={{ position: 'sticky', top: 100, alignSelf: 'flex-start', width: 256 }}>
+        <aside className="shop-sidebar hide-mobile" style={{ position: 'sticky', top: 100, alignSelf: 'flex-start', width: 256, marginRight: 8 }}>
           <ShopFilters
             categories={categories}
-            selectedCategory={selectedCategory}
+            selectedCategoryId={selectedCategoryId}
             onCategoryChange={handleCategoryChange}
             priceRange={priceRange}
             onPriceChange={(v) => { setPriceRange(v); setPage(1); }}
@@ -290,145 +337,179 @@ const Shop = () => {
             <span style={{ color: 'var(--text-main)' }}>Boutique</span>
           </nav>
 
-          {/* Header: titre + description | X produits + tri */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 28 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: 20 }}>
-              <div style={{ maxWidth: 560 }}>
-                <h1 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-main)', margin: 0 }}>
-                  Toute la Collection
-                </h1>
-                <p style={{ margin: '12px 0 0', fontSize: '1rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                  Soins formulés pour prendre soin de votre peau au quotidien.
-                </p>
-              </div>
-              <div className="shop-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => setFiltersOpen(true)}
-                  className="btn btn-secondary btn-sm show-mobile"
-                  style={{ alignItems: 'center', gap: 8 }}
-                >
-                  <SlidersHorizontal size={16} /> Filtres
-                </button>
-                <span className="shop-toolbar-count" style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                  {totalProducts} produit{totalProducts !== 1 ? 's' : ''}
-                </span>
-                <div ref={sortRef} className="shop-sort-wrap" style={{ position: 'relative', minWidth: 0 }}>
-                  <span className="shop-sort-label-mobile" aria-hidden="true">Tri :</span>
-                  <button
-                    type="button"
-                    onClick={() => setSortOpen(!sortOpen)}
-                    className="shop-sort-trigger"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '10px 16px',
-                      borderRadius: 14,
-                      border: '1px solid var(--divider)',
-                      background: 'var(--white)',
-                      fontSize: '0.9rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      color: 'var(--text-main)',
-                    }}
-                  >
-                    {currentSortLabel}
-                    <ChevronDown size={16} style={{ transition: 'transform 0.3s', transform: sortOpen ? 'rotate(180deg)' : 'none' }} />
-                  </button>
-                  <AnimatePresence>
-                    {sortOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 8 }}
-                        className="shop-sort-dropdown"
-                        style={{
-                          position: 'absolute',
-                          right: 0,
-                          top: '100%',
-                          marginTop: 8,
-                          background: 'var(--white)',
-                          border: '1px solid var(--divider)',
-                          borderRadius: 20,
-                          padding: 8,
-                          minWidth: 200,
-                          boxShadow: 'var(--shadow-lg)',
-                          zIndex: 50,
-                        }}
-                      >
-                        {sortOptions.map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => { setSortBy(opt.value); setSortOpen(false); setPage(1); }}
-                            style={{
-                              width: '100%',
-                              padding: '12px 16px',
-                              borderRadius: 12,
-                              border: 'none',
-                              background: sortBy === opt.value ? 'var(--surface)' : 'transparent',
-                              fontSize: '0.9rem',
-                              fontWeight: sortBy === opt.value ? 700 : 500,
-                              color: sortBy === opt.value ? 'var(--accent-deep)' : 'var(--text-main)',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                            }}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-            </div>
+          {/* Header: titre + description */}
+          <div style={{ marginBottom: 24 }}>
+            <h1 style={{ fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text-main)', margin: 0 }}>
+              Toute la Collection
+            </h1>
+            <p style={{ margin: '12px 0 0', fontSize: '1rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              Soins formulés pour prendre soin de votre peau au quotidien.
+            </p>
+          </div>
 
-            {/* Barre de recherche */}
-            <div ref={searchBarRef} className="shop-search-bar" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', background: 'rgba(197,160,89,0.06)', borderRadius: 20, border: '1px solid rgba(197,160,89,0.15)' }}>
-              <Search size={20} className="shop-search-icon" style={{ color: 'var(--text-light)', flexShrink: 0 }} />
+          {/* Même ligne : recherche + X produits + Tri (Populaires) */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 28 }}>
+            <motion.div
+              ref={searchBarRef}
+              className="shop-search-bar"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              style={{
+                flex: '1 1 280px',
+                minWidth: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 14,
+                padding: '14px 20px 14px 22px',
+                minHeight: 52,
+                background: 'rgba(255, 255, 255, 0.85)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderRadius: 28,
+                border: '1px solid rgba(0, 0, 0, 0.06)',
+                boxShadow: '0 4px 24px rgba(28, 28, 30, 0.06), 0 1px 0 rgba(255, 255, 255, 0.5) inset',
+                transition: 'border-color 0.35s ease, box-shadow 0.35s ease, background 0.35s ease',
+              }}
+            >
+              <div
+                className="shop-search-icon-wrap"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  background: 'rgba(197, 160, 89, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'background 0.3s ease, color 0.3s ease',
+                }}
+              >
+                <Search size={18} className="shop-search-icon" style={{ color: 'var(--text-muted)' }} strokeWidth={1.8} />
+              </div>
               <input
                 ref={searchInputRef}
                 type="search"
                 placeholder="Rechercher un soin, un ingrédient…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                aria-label="Rechercher"
+                aria-label="Rechercher dans la boutique"
                 className="shop-search-input"
                 style={{
                   flex: 1,
                   minWidth: 0,
-                  padding: '10px 0',
+                  padding: '4px 0',
                   border: 'none',
                   background: 'transparent',
-                  fontSize: '0.95rem',
+                  fontSize: '0.98rem',
                   color: 'var(--text-main)',
                   outline: 'none',
                 }}
               />
-            </div>
+            </motion.div>
 
-            {isFetchingProducts && (
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 16 }}>
-                Récupération en cours…
-              </p>
-            )}
+            <div className="shop-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setFiltersOpen(true)}
+                className="btn btn-secondary btn-sm show-mobile"
+                style={{ alignItems: 'center', gap: 8 }}
+              >
+                <SlidersHorizontal size={16} /> Filtres
+              </button>
+              <span className="shop-toolbar-count" style={{ fontSize: '0.9rem', fontWeight: 500, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                {totalProducts} produit{totalProducts !== 1 ? 's' : ''}
+              </span>
+              <div ref={sortRef} className="shop-sort-wrap" style={{ position: 'relative', minWidth: 0 }}>
+                <span className="shop-sort-label-mobile" aria-hidden="true">Tri :</span>
+                <button
+                  type="button"
+                  onClick={() => setSortOpen(!sortOpen)}
+                  className="shop-sort-trigger"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '10px 16px',
+                    borderRadius: 14,
+                    border: '1px solid var(--divider)',
+                    background: 'var(--white)',
+                    fontSize: '0.9rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: 'var(--text-main)',
+                  }}
+                >
+                  {currentSortLabel}
+                  <ChevronDown size={16} style={{ transition: 'transform 0.3s', transform: sortOpen ? 'rotate(180deg)' : 'none' }} />
+                </button>
+                <AnimatePresence>
+                  {sortOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      className="shop-sort-dropdown"
+                      style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: '100%',
+                        marginTop: 8,
+                        background: 'var(--white)',
+                        border: '1px solid var(--divider)',
+                        borderRadius: 20,
+                        padding: 8,
+                        minWidth: 200,
+                        boxShadow: 'var(--shadow-lg)',
+                        zIndex: 50,
+                      }}
+                    >
+                      {sortOptions.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => { setSortBy(opt.value); setSortOpen(false); setPage(1); }}
+                          style={{
+                            width: '100%',
+                            padding: '12px 16px',
+                            borderRadius: 12,
+                            border: 'none',
+                            background: sortBy === opt.value ? 'var(--surface)' : 'transparent',
+                            fontSize: '0.9rem',
+                            fontWeight: sortBy === opt.value ? 700 : 500,
+                            color: sortBy === opt.value ? 'var(--accent-deep)' : 'var(--text-main)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
 
             {/* Pills catégories (au-dessus des produits — même logique que filtre gauche) */}
-            <div className="mobile-scroller no-scrollbar" style={{ display: 'flex', gap: 10, padding: '4px 0' }}>
+            <div
+              className="mobile-scroller no-scrollbar"
+              style={{ display: 'flex', gap: 10, padding: '4px 0', marginBottom: 20 }}
+            >
               {categories.map((cat) => (
                 <motion.button
                   key={cat.id || cat.name}
                   type="button"
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => handleCategoryChange(cat.name)}
+                  onClick={() => handleCategoryChange(cat.id)}
                   style={{
                     padding: '10px 20px',
                     borderRadius: 100,
                     border: '1px solid var(--divider)',
-                    background: selectedCategory === cat.name ? 'var(--secondary)' : 'var(--white)',
-                    color: selectedCategory === cat.name ? 'white' : 'var(--text-main)',
+                    background: selectedCategoryId === cat.id ? 'var(--secondary)' : 'var(--white)',
+                    color: selectedCategoryId === cat.id ? 'white' : 'var(--text-main)',
                     fontSize: '0.85rem',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -439,7 +520,6 @@ const Shop = () => {
                 </motion.button>
               ))}
             </div>
-          </div>
 
           {/* Product grid */}
           <AnimatePresence mode="wait">
@@ -482,7 +562,7 @@ const Shop = () => {
               </motion.div>
             ) : (
               <motion.div
-                key={`${selectedCategory}-${sortBy}-${priceRange[1]}`}
+                key={`${selectedCategoryId}-${sortBy}-${priceRange[1]}`}
                 variants={stagger}
                 initial="hidden"
                 animate="visible"
@@ -632,7 +712,7 @@ const Shop = () => {
             >
               <ShopFilters
                 categories={categories}
-                selectedCategory={selectedCategory}
+                selectedCategoryId={selectedCategoryId}
                 onCategoryChange={handleCategoryChange}
                 priceRange={priceRange}
                 onPriceChange={(v) => { setPriceRange(v); setPage(1); }}

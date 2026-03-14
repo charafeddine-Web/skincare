@@ -50,7 +50,7 @@ const Footer = () => {
                 <div className="container footer-grid">
                     {/* Brand Column */}
                     <div className="footer-brand-side">
-                        <div style={{ fontFamily: "'Cormorant Garant', serif", fontSize: '2rem', fontWeight: 700, letterSpacing: '4px', marginBottom: '4px' }}>ÉVELINE</div>
+                        <div style={{ fontFamily: 'var(--font-serif)', fontSize: '2rem', fontWeight: 700, letterSpacing: '4px', marginBottom: '4px' }}>ÉVELINE</div>
                         <div style={{ fontSize: '0.55rem', letterSpacing: '4px', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600, marginBottom: '28px' }}>SKINCARE PARIS</div>
                         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.9rem', lineHeight: 1.8, marginBottom: '32px', maxWidth: '380px' }}>
                             Votre destination beauté dédiée au skincare naturel & professionnel. Révélez le meilleur de votre peau avec la douceur de la nature.
@@ -107,22 +107,25 @@ const Footer = () => {
                         </ul>
                     </div>
 
-                    {/* Newsletter */}
+                    {/* Aide & Service */}
                     <div className="footer-news-col">
-                        <h4 style={{ fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '28px' }}>Newsletter</h4>
+                        <h4 style={{ fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: '28px' }}>Aide & Service</h4>
                         <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.85rem', marginBottom: '24px', lineHeight: 1.7 }}>
-                            Profitez de 10% sur votre première commande en rejoignant notre communauté.
+                            Livraison offerte dès 500 MAD · Retours sous 30 jours. Une question ? Notre équipe est là pour vous.
                         </p>
-                        <form onSubmit={e => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <input
-                                type="email" placeholder="votre@email.com"
-                                style={{
-                                    background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-                                    borderRadius: '12px', padding: '14px 18px', color: 'white', fontSize: '0.85rem', outline: 'none',
-                                }}
-                            />
-                            <button id="newsletter-submit" className="btn btn-primary btn-full" style={{ padding: '14px' }}>S'abonner</button>
-                        </form>
+                        <ul className="footer-links" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {[
+                                { label: 'Livraison & retours', to: '/contact' },
+                                { label: 'Suivi de commande', to: '/account/commandes' },
+                                { label: 'Nous contacter', to: '/contact' },
+                            ].map(({ label, to }) => (
+                                <li key={label}>
+                                    <Link to={to} style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.9rem', transition: 'color 0.2s' }}>
+                                        {label}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
             </div>

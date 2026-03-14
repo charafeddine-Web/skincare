@@ -262,20 +262,49 @@ const ProductCard = React.memo(function ProductCard({ product, onQuickView, show
 });
 
 export const SkeletonCard = () => (
-    <div className="product-card product-card--skeleton">
+    <Motion.article
+        className="product-card product-card--skeleton"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        aria-hidden="true"
+    >
+        {/* Même bloc media que la carte réelle */}
         <div className="product-card__media">
-            <div className="product-card__shimmer product-card__shimmer--animate" />
-        </div>
-        <div className="product-card__body">
-            <div className="product-card__shimmer product-card__shimmer--line product-card__shimmer--animate" style={{ width: '38%', height: 10 }} />
-            <div className="product-card__shimmer product-card__shimmer--line product-card__shimmer--animate" style={{ width: '88%', height: 20, marginTop: 12 }} />
-            <div className="product-card__shimmer product-card__shimmer--line product-card__shimmer--animate" style={{ width: '45%', height: 14, marginTop: 20 }} />
-            <div className="product-card__footer" style={{ marginTop: 20 }}>
-                <div className="product-card__shimmer product-card__shimmer--animate" style={{ width: 56, height: 28, borderRadius: 6 }} />
-                <div className="product-card__shimmer product-card__shimmer--animate" style={{ width: 100, height: 40, borderRadius: 20 }} />
+            <div className="product-card__placeholder">
+                <div className="product-card__placeholder-bottle" />
             </div>
         </div>
-    </div>
+
+        {/* Même structure que ProductCard mais vide (layout identique) */}
+        <div className="product-card__body">
+            <p className="product-card__category" style={{ visibility: 'hidden' }}>
+                &nbsp;
+            </p>
+            <h3 className="product-card__title" style={{ visibility: 'hidden' }}>
+                &nbsp;
+            </h3>
+            <div className="product-card__rating-wrap" style={{ visibility: 'hidden' }}>
+                <StarRating rating={0} count={0} />
+            </div>
+
+            <div className="product-card__footer">
+                <div className="product-card__prices">
+                    <div className="product-card__price-line" style={{ visibility: 'hidden' }}>
+                        <span className="product-card__price-value">0</span>
+                        <span className="product-card__currency">MAD</span>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    className="product-card__cta"
+                    style={{ visibility: 'hidden' }}
+                >
+                    Ajouter
+                </button>
+            </div>
+        </div>
+    </Motion.article>
 );
 
 export default ProductCard;

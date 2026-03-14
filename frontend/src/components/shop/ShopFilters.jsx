@@ -58,7 +58,7 @@ const FilterCheckbox = ({ checked, onChange, label }) => (
 
 const ShopFilters = ({
   categories,
-  selectedCategory,
+  selectedCategoryId,
   onCategoryChange,
   priceRange,
   onPriceChange,
@@ -86,7 +86,7 @@ const ShopFilters = ({
         height: '100%',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 20, marginBottom: 8, borderBottom: '1px solid var(--divider)' }}>
         <span style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
           Filtres
         </span>
@@ -98,7 +98,7 @@ const ShopFilters = ({
       </div>
 
       {/* Catégories avec icônes */}
-      <div>
+      <div style={{ marginTop: 4 }}>
         <h3 style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 16 }}>
           Catégorie
         </h3>
@@ -106,7 +106,7 @@ const ShopFilters = ({
           <li>
             <button
               type="button"
-              onClick={() => onCategoryChange('Tous')}
+              onClick={() => onCategoryChange(null)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -119,18 +119,18 @@ const ShopFilters = ({
                 textAlign: 'left',
                 fontSize: '0.9rem',
                 fontWeight: 600,
-                background: selectedCategory === 'Tous' ? 'var(--action)' : 'transparent',
-                color: selectedCategory === 'Tous' ? 'white' : 'var(--text-muted)',
+                background: selectedCategoryId == null ? 'var(--action)' : 'transparent',
+                color: selectedCategoryId == null ? 'white' : 'var(--text-muted)',
                 transition: 'all 0.2s',
               }}
               onMouseEnter={(e) => {
-                if (selectedCategory !== 'Tous') {
+                if (selectedCategoryId != null) {
                   e.currentTarget.style.background = 'rgba(238,43,91,0.10)';
                   e.currentTarget.style.color = 'var(--action)';
                 }
               }}
               onMouseLeave={(e) => {
-                if (selectedCategory !== 'Tous') {
+                if (selectedCategoryId != null) {
                   e.currentTarget.style.background = 'transparent';
                   e.currentTarget.style.color = 'var(--text-muted)';
                 }
@@ -140,14 +140,14 @@ const ShopFilters = ({
               Tous les produits
             </button>
           </li>
-          {(categories || []).filter((c) => c.name !== 'Tous').map((cat) => {
+          {(categories || []).filter((c) => c.id != null).map((cat) => {
             const Icon = getIcon(cat.name);
-            const isSelected = selectedCategory === cat.name;
+            const isSelected = selectedCategoryId === cat.id;
             return (
               <li key={cat.id || cat.name}>
                 <button
                   type="button"
-                  onClick={() => onCategoryChange(cat.name)}
+                  onClick={() => onCategoryChange(cat.id)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',

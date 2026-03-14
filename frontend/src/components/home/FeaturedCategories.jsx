@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowRight, Droplets, Sparkles, Sun, Leaf, Flower2 } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, Droplets, Sparkles, Sun, Leaf, Flower2 } from 'lucide-react';
 
 const categoryIcons = {
   nettoyants: Droplets,
@@ -46,11 +46,56 @@ const SkeletonCategoryCard = () => (
   </div>
 );
 
+const SCROLL_STEP = 320;
+
 const FeaturedCategories = ({ categories, loading }) => {
   const navigate = useNavigate();
   const list = Array.isArray(categories) ? categories : [];
+  const scrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener('scroll', updateScrollState);
+    window.addEventListener('resize', updateScrollState);
+    return () => {
+      el.removeEventListener('scroll', updateScrollState);
+      window.removeEventListener('resize', updateScrollState);
+    };
+  }, [updateScrollState, loading, list.length]);
+
+  const scroll = (direction) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollBy({ left: direction * SCROLL_STEP, behavior: 'smooth' });
+  };
 
   if (list.length === 0 && !loading) return null;
+
+  const btnNav = {
+    width: 36,
+    height: 36,
+    borderRadius: '50%',
+    border: '1px solid var(--divider)',
+    background: 'var(--white)',
+    color: 'var(--text-main)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    boxShadow: '0 2px 12px rgba(28,28,30,0.06)',
+    transition: 'background 0.2s, color 0.2s, opacity 0.2s, border-color 0.2s',
+  };
 
   return (
     <section className="section-spacer" style={{ background: 'transparent' }}>
@@ -67,9 +112,61 @@ const FeaturedCategories = ({ categories, loading }) => {
             <span className="section-label">Explorer</span>
             <h2 style={{ margin: 0 }}>Parcourir par catégorie</h2>
           </div>
-          <Link to="/shop" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            Voir tout <ArrowRight size={14} />
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              type="button"
+              aria-label="Défiler vers la gauche"
+              onClick={() => scroll(-1)}
+              disabled={!canScrollLeft}
+              style={{
+                ...btnNav,
+                opacity: canScrollLeft ? 1 : 0.4,
+                pointerEvents: canScrollLeft ? 'auto' : 'none',
+              }}
+              onMouseEnter={(e) => {
+                if (canScrollLeft) {
+                  e.currentTarget.style.background = 'var(--surface)';
+                  e.currentTarget.style.color = 'var(--accent)';
+                  e.currentTarget.style.borderColor = 'rgba(197,160,89,0.3)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--white)';
+                e.currentTarget.style.color = 'var(--text-main)';
+                e.currentTarget.style.borderColor = 'var(--divider)';
+              }}
+            >
+              <ChevronLeft size={18} strokeWidth={2} />
+            </button>
+            <button
+              type="button"
+              aria-label="Défiler vers la droite"
+              onClick={() => scroll(1)}
+              disabled={!canScrollRight}
+              style={{
+                ...btnNav,
+                opacity: canScrollRight ? 1 : 0.4,
+                pointerEvents: canScrollRight ? 'auto' : 'none',
+              }}
+              onMouseEnter={(e) => {
+                if (canScrollRight) {
+                  e.currentTarget.style.background = 'var(--surface)';
+                  e.currentTarget.style.color = 'var(--accent)';
+                  e.currentTarget.style.borderColor = 'rgba(197,160,89,0.3)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'var(--white)';
+                e.currentTarget.style.color = 'var(--text-main)';
+                e.currentTarget.style.borderColor = 'var(--divider)';
+              }}
+            >
+              <ChevronRight size={18} strokeWidth={2} />
+            </button>
+            <Link to="/shop" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              Voir tout <ArrowRight size={14} />
+            </Link>
+          </div>
         </motion.div>
 
         {loading && (
@@ -79,6 +176,7 @@ const FeaturedCategories = ({ categories, loading }) => {
         )}
 
         <motion.div
+          ref={scrollRef}
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0 }}
@@ -92,9 +190,9 @@ const FeaturedCategories = ({ categories, loading }) => {
             scrollSnapType: 'x mandatory',
           }}
         >
-          {loading
-            ? Array.from({ length: 4 }).map((_, i) => <SkeletonCategoryCard key={i} />)
-            : list.map((cat) => {
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => <SkeletonCategoryCard key={i} />)
+              : list.map((cat) => {
                 const name = (cat.name || '').toLowerCase();
                 const key = name.includes('nettoy') ? 'nettoyants' : name.includes('sérum') || name.includes('serum') ? 'sérums' : name.includes('hydrat') ? 'hydratants' : name.includes('spf') ? 'spf' : 'default';
                 const Icon = categoryIcons[key] || categoryIcons.default;

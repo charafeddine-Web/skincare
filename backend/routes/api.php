@@ -35,6 +35,7 @@ Route::post('/login', [AuthController::class, 'login']);
 // Routes publiques (sans authentification)
 Route::get('/products/price-range', [ProductController::class, 'priceRange']);
 Route::get('/products', [ProductController::class, 'index']);
+Route::get('/products/by-slug/{slug}', [ProductController::class, 'showBySlug']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/categories/{category}', [CategoryController::class, 'show']);
