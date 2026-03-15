@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ChevronDown } from 'lucide-react';
 import { HOME_VIDEOS, HOME_IMAGES } from './homeMedia';
 
 /**
@@ -174,7 +174,7 @@ const HeroVideo = () => {
         </div>
       </div>
 
-      {/* Indicateur scroll — cliquable, visible, envoie vers la section suivante */}
+      {/* Indicateur scroll — icône seule, compact */}
       <motion.button
         type="button"
         onClick={() => {
@@ -185,40 +185,19 @@ const HeroVideo = () => {
             window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
           }
         }}
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.1, duration: 0.5 }}
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.9, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
         className="hero-scroll-indicator"
-        style={{
-          position: 'absolute',
-          bottom: 32,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 8,
-          color: 'rgba(255,255,255,0.95)',
-          fontSize: '0.7rem',
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          background: 'rgba(0,0,0,0.25)',
-          border: '1px solid rgba(255,255,255,0.4)',
-          borderRadius: 999,
-          padding: '12px 20px',
-          cursor: 'pointer',
-          pointerEvents: 'auto',
-        }}
         aria-label="Aller à la section suivante"
       >
-        <span>Découvrir</span>
-        <motion.div
-          animate={{ y: [0, 6, 0] }}
+        <motion.span
+          className="hero-scroll-indicator__chevron"
+          animate={{ y: [0, 4, 0] }}
           transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
         >
-          <ArrowRight size={18} style={{ transform: 'rotate(90deg)' }} />
-        </motion.div>
+          <ChevronDown size={22} strokeWidth={2.2} />
+        </motion.span>
       </motion.button>
     </section>
   );

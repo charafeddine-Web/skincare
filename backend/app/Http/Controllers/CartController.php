@@ -45,6 +45,17 @@ class CartController extends Controller
     }
 
     /**
+     * Config livraison publique (pour affichage promo bar, panier, etc.) — pas d'auth.
+     */
+    public function shippingConfig()
+    {
+        $config = $this->getShippingConfig();
+        return response()->json([
+            'free_shipping_threshold' => (int) round($config['free_shipping_threshold']),
+        ], 200);
+    }
+
+    /**
      * Résumé léger du panier (pour badge / perf) : pas de détail des produits.
      */
     public function summary(Request $request)

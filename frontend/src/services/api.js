@@ -645,6 +645,16 @@ export const reviewService = {
   },
 };
 
+// Config boutique publique (seuil livraison pour promo bar, etc.)
+export const getShippingConfig = async () => {
+  try {
+    const response = await api.get('/shop/shipping-config');
+    return response.data;
+  } catch {
+    return { free_shipping_threshold: 500 };
+  }
+};
+
 // Service Paramètres Boutique
 export const shopSettingsService = {
   getShippingMethods: async () => {

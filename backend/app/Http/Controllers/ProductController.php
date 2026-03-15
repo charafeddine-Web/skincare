@@ -142,10 +142,11 @@ class ProductController extends Controller
         if (!empty($search) && is_string($search)) {
             $search = trim($search);
             if ($search !== '') {
-                $query->where(function ($q) use ($search) {
-                    $q->where('products.name', 'like', '%' . $search . '%')
-                      ->orWhere('products.description', 'like', '%' . $search . '%')
-                      ->orWhere('products.sku', 'like', '%' . $search . '%');
+                $pattern = '%' . mb_strtolower($search) . '%';
+                $query->where(function ($q) use ($pattern) {
+                    $q->whereRaw('LOWER(products.name) LIKE ?', [$pattern])
+                      ->orWhereRaw("LOWER(COALESCE(products.description, '')) LIKE ?", [$pattern])
+                      ->orWhereRaw("LOWER(COALESCE(products.sku, '')) LIKE ?", [$pattern]);
                 });
             }
         }
@@ -321,6 +322,7 @@ class ProductController extends Controller
         $product->update($validated);
         self::invalidateProductCaches($product->id);
 
+        $product->load(['category:id,name', 'images:id,product_id,image_url,is_main']);
         return response()->json($product, 200);
     }
 

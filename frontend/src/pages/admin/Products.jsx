@@ -60,11 +60,13 @@ const Products = () => {
   const imageFileInputRef = useRef(null);
   const createImageFileInputRef = useRef(null);
   const editImageFileInputRef = useRef(null);
+  const editPendingPreviewsRef = useRef([]);
 
   const [editImageUrl, setEditImageUrl] = useState('');
   const [editImageIsMain, setEditImageIsMain] = useState(false);
   const [editFormError, setEditFormError] = useState(null);
   const [editImageError, setEditImageError] = useState(null);
+  const [editPendingPreviews, setEditPendingPreviews] = useState([]);
 
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
@@ -447,7 +449,16 @@ const Products = () => {
 
     try {
       setIsSubmitting(true);
-      const updatePayload = { ...editProduct, promo_price: editProduct.promo_price === '' || editProduct.promo_price == null ? null : Number(editProduct.promo_price) };
+      const catId = editProduct.category_id != null && editProduct.category_id !== '' ? Number(editProduct.category_id) : null;
+      const updatePayload = {
+        ...editProduct,
+        promo_price: editProduct.promo_price === '' || editProduct.promo_price == null ? null : Number(editProduct.promo_price),
+      };
+      if (catId != null && catId > 0) {
+        updatePayload.category_id = catId;
+      } else if (Object.prototype.hasOwnProperty.call(updatePayload, 'category_id')) {
+        delete updatePayload.category_id;
+      }
       const updatedProduct = await productService.update(editProduct.id, updatePayload);
 
       // Handle image uploads for the edit modal
@@ -469,38 +480,38 @@ const Products = () => {
         uploadedImages = [created];
       }
 
-      // Update product images in state
+      const existingImages = Array.isArray(editProduct.images) ? editProduct.images : [];
+      const hasNewMain = uploadedImages.some((i) => i.is_main);
+      const existingFixed = hasNewMain ? existingImages.map((img) => ({ ...img, is_main: false })) : existingImages;
+      const mergedImages = [...existingFixed, ...uploadedImages];
+
       setProducts((prev) =>
         prev.map((p) => {
-          if (p.id === updatedProduct.id) {
-            let currentImages = Array.isArray(p.images) ? p.images : [];
-            let newImages = [...currentImages];
-
-            uploadedImages.forEach((img) => {
-              if (img.is_main) {
-                newImages = newImages.map((existing) => ({ ...existing, is_main: false }));
-              }
-              newImages.push(img);
-            });
-
-            return { ...updatedProduct, images: newImages };
-          }
-          return p;
+          if (p.id !== updatedProduct.id) return p;
+          const category = updatedProduct.category ?? p.category ?? (() => {
+            const cat = categories.find((c) => c.id === editProduct.category_id || c.id === updatedProduct.category_id);
+            return cat ? { id: cat.id, name: cat.name } : null;
+          })();
+          return { ...updatedProduct, images: mergedImages, category };
         })
       );
 
       invalidateProducts();
-      setEditProduct(null);
+      setEditProduct((prev) => (prev ? { ...prev, images: mergedImages } : null));
+      (editPendingPreviewsRef.current || []).forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl));
+      editPendingPreviewsRef.current = [];
+      setEditPendingPreviews([]);
       setEditImageUrl('');
       if (editImageFileInputRef.current) {
         editImageFileInputRef.current.value = '';
       }
       setEditImageIsMain(false);
 
-      toast.success('Produit mis à jour avec succès', {
+      toast.success(uploadedImages.length > 0 ? 'Produit et nouvelles images enregistrés.' : 'Produit mis à jour avec succès.', {
         position: 'top-right',
         autoClose: 3000,
       });
+      closeEditModal();
     } catch (err) {
       const apiError = err?.message || err?.error || err?.errors;
       if (typeof apiError === 'string') {
@@ -594,9 +605,14 @@ const Products = () => {
   const handleEditProduct = async (id) => {
     try {
       setEditFormError(null);
+      editPendingPreviewsRef.current = [];
+      setEditPendingPreviews([]);
       const fullProduct = await productService.get(id);
+      const categoryId = fullProduct.category_id ?? fullProduct.category?.id ?? '';
       setEditProduct({
         ...fullProduct,
+        category_id: categoryId,
+        images: fullProduct.images ?? [],
         stock_quantity: fullProduct.stock_quantity ?? 0,
         low_stock_threshold: fullProduct.low_stock_threshold ?? 10,
       });
@@ -604,6 +620,42 @@ const Products = () => {
       toast.error("Erreur lors du chargement du produit pour modification");
       console.error(err);
     }
+  };
+
+  const handleEditImagesSelected = (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const current = editProduct?.images?.length ?? 0;
+    const pending = editPendingPreviews.length;
+    const maxNew = Math.max(0, 8 - current - pending);
+    const toAdd = Array.from(files).slice(0, maxNew).map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+    setEditPendingPreviews((prev) => {
+      const next = [...prev, ...toAdd].slice(0, 8 - current);
+      editPendingPreviewsRef.current = next;
+      return next;
+    });
+  };
+
+  const removeEditPendingPreview = (index) => {
+    setEditPendingPreviews((prev) => {
+      const next = prev.slice();
+      if (next[index]?.previewUrl) URL.revokeObjectURL(next[index].previewUrl);
+      next.splice(index, 1);
+      editPendingPreviewsRef.current = next;
+      return next;
+    });
+    if (editImageFileInputRef.current) editImageFileInputRef.current.value = '';
+  };
+
+  const closeEditModal = () => {
+    (editPendingPreviewsRef.current || []).forEach((p) => p.previewUrl && URL.revokeObjectURL(p.previewUrl));
+    editPendingPreviewsRef.current = [];
+    setEditPendingPreviews([]);
+    if (editImageFileInputRef.current) editImageFileInputRef.current.value = '';
+    setEditProduct(null);
   };
 
   return (
@@ -956,14 +1008,16 @@ const Products = () => {
           style={{
             position: 'fixed',
             top: 0,
+            left: 0,
             right: 0,
             bottom: 0,
+            width: '100%',
             minHeight: '100vh',
             background: 'rgba(26, 26, 30, 0.32)',
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
             display: 'flex',
-            zIndex: 90,
+            zIndex: 1100,
             overflowY: 'auto',
           }}
         >
@@ -1378,7 +1432,7 @@ const Products = () => {
       {/* Edit Product Modal */}
       <AdminModal
         isOpen={!!editProduct}
-        onClose={() => setEditProduct(null)}
+        onClose={closeEditModal}
         title="Modifier le produit"
         subtitle="Mise à jour des informations"
         icon={Edit}
@@ -1444,8 +1498,8 @@ const Products = () => {
             <div>
               <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 6, display: 'block' }}>Catégorie</label>
               <select
-                value={editProduct.category_id || ''}
-                onChange={(e) => setEditProduct({ ...editProduct, category_id: e.target.value })}
+                value={String(editProduct.category_id ?? '')}
+                onChange={(e) => setEditProduct({ ...editProduct, category_id: e.target.value === '' ? '' : Number(e.target.value) })}
                 style={{ width: '100%', borderRadius: 12, border: '1px solid var(--divider)', padding: '10px 14px', fontSize: '0.9rem', background: 'var(--surface)' }}
               >
                 <option value="">Sélectionner...</option>
@@ -1566,6 +1620,29 @@ const Products = () => {
                 )}
               </div>
 
+              {editPendingPreviews.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-deep)', display: 'block', marginBottom: 8 }}>
+                    Nouvelles images à enregistrer ({editPendingPreviews.length})
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: 10 }}>
+                    {editPendingPreviews.map((item, index) => (
+                      <div key={index} style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '2px solid var(--accent)', aspectRatio: '1/1' }}>
+                        <img src={item.previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <button
+                          type="button"
+                          onClick={() => removeEditPendingPreview(index)}
+                          style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', width: 24, height: 24, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          title="Retirer"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: 8, display: 'block' }}>Ajouter de nouvelles images</label>
                 <div style={{ border: '1px dashed var(--divider)', borderRadius: 12, padding: '16px', textAlign: 'center', background: 'var(--surface)' }}>
@@ -1576,6 +1653,7 @@ const Products = () => {
                     multiple
                     style={{ display: 'none' }}
                     id="edit-product-images"
+                    onChange={handleEditImagesSelected}
                   />
                   <label htmlFor="edit-product-images" style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                     <Upload size={24} color="var(--accent-deep)" />
@@ -1593,7 +1671,7 @@ const Products = () => {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 8 }}>
               <button
                 type="button"
-                onClick={() => setEditProduct(null)}
+                onClick={closeEditModal}
                 style={{ padding: '10px 18px', borderRadius: 999, border: '1px solid var(--divider)', background: 'white', cursor: 'pointer', fontWeight: 500 }}
               >
                 Annuler

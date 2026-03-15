@@ -4,6 +4,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
+import PromoBar from './components/PromoBar';
+import ScrollToTopButton from './components/ScrollToTopButton';
 import Footer from './components/Footer';
 import BottomNav from './components/BottomNav';
 import AdminLayout from './components/AdminLayout';
@@ -100,10 +102,15 @@ const AppContent = () => {
   }, []);
 
   return (
-    <div className="app" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {!isAdminPath && <Navbar />}
+    <div className={`app${!isAdminPath ? ' app-with-promo' : ''}`} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {!isAdminPath && (
+        <>
+          <PromoBar />
+          <Navbar />
+        </>
+      )}
 
-      <main style={{ flex: 1 }}>
+      <main style={{ flex: 1, paddingTop: !isAdminPath ? 44 : 0 }}>
         <Suspense fallback={<Loader />}>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -149,6 +156,7 @@ const AppContent = () => {
 
       {!isAdminPath && (
         <>
+          <ScrollToTopButton />
           <BottomNav />
           <Footer />
         </>

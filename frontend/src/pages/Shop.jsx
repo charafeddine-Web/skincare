@@ -60,6 +60,7 @@ const Shop = () => {
   const searchBarRef = useRef(null);
   const lastUrlSearchRef = useRef(null);
   const userChoseTousRef = useRef(false);
+  const userClearedSearchRef = useRef(false);
 
   // React Query: categories (cached 10 min) — liste brute de l'API (sans faux "Tous")
   const { data: categoriesData } = useQuery({
@@ -225,9 +226,15 @@ const Shop = () => {
     navigate(qs ? `${location.pathname}?${qs}` : location.pathname, { replace: true });
   }, [location.pathname, location.search, navigate]);
 
-  // Sync search from URL
+  // Sync search from URL — ne pas écraser quand l’utilisateur vient de vider le champ (évite que "white" revienne)
   useEffect(() => {
-    setSearchQuery(initialSearch || '');
+    if (!initialSearch || initialSearch === '') {
+      userClearedSearchRef.current = false;
+      setSearchQuery('');
+      return;
+    }
+    if (userClearedSearchRef.current) return;
+    setSearchQuery(initialSearch);
   }, [initialSearch]);
 
   // Clic icône recherche navbar : activer automatiquement l’input de recherche (scroll + focus)
@@ -249,6 +256,17 @@ const Shop = () => {
     }, 400);
     return () => clearTimeout(id);
   }, [focusSearch, loadingProducts, location.pathname, location.search, navigate]);
+
+  // Quand l’utilisateur vide la recherche : bloquer le sync URL→input, mettre à jour l’URL, et forcer debouncedSearch à '' tout de suite pour que la liste recharge (tous les produits)
+  const searchTrimmed = typeof searchQuery === 'string' ? searchQuery.trim() : '';
+  useEffect(() => {
+    if (searchTrimmed !== '' || (initialSearch || '') === '') return;
+    userClearedSearchRef.current = true;
+    setDebouncedSearch('');
+    setPage(1);
+    updateShopUrl({ search: null });
+    queryClient.removeQueries({ queryKey: ['shop', 'products'] });
+  }, [searchTrimmed, initialSearch, updateShopUrl, queryClient]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -562,7 +580,7 @@ const Shop = () => {
               </motion.div>
             ) : (
               <motion.div
-                key={`${selectedCategoryId}-${sortBy}-${priceRange[1]}`}
+                key={`grid-${selectedCategoryId}-${sortBy}-${priceRange[1]}-${searchTrimmed || 'all'}`}
                 variants={stagger}
                 initial="hidden"
                 animate="visible"

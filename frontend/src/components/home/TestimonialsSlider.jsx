@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Quote, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Quote, Star, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-react';
 import { reviewService } from '../../services/api';
 
 const slideVariants = {
@@ -173,6 +173,37 @@ const TestimonialsSlider = () => {
               <ChevronRight size={22} />
             </button>
           </div>
+          )}
+
+          {!loading && !hasData && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              style={{
+                background: 'var(--surface)',
+                borderRadius: 28,
+                padding: 'clamp(32px, 5vw, 48px)',
+                border: '1px dashed var(--divider)',
+                textAlign: 'center',
+                minHeight: 200,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 16,
+              }}
+            >
+              <div style={{ color: 'var(--text-muted)', opacity: 0.8 }}>
+                <MessageCircle size={48} strokeWidth={1.2} />
+              </div>
+              <p style={{ fontSize: '1.05rem', color: 'var(--text-main)', fontWeight: 500, margin: 0 }}>
+                Soyez la première à partager votre avis
+              </p>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: 0, maxWidth: 400 }}>
+                Après votre commande, votre témoignage pourra apparaître ici et aider d'autres clientes.
+              </p>
+            </motion.div>
           )}
 
           <AnimatePresence mode="wait" custom={direction}>

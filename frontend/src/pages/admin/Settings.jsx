@@ -2,13 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { shopSettingsService } from '../../services/api';
 import AdminLoader from '../../components/AdminLoader';
-import { Truck, CreditCard, Cpu, Save } from 'lucide-react';
+import { Truck, Save, Layout, Globe } from 'lucide-react';
+
+const SIDEBAR_COLLAPSED_KEY = 'admin_sidebar_collapsed';
 
 const Settings = () => {
   const [shippingMethods, setShippingMethods] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() =>
+    typeof window !== 'undefined' && window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1'
+  );
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -26,21 +31,16 @@ const Settings = () => {
   }, []);
 
   const handleShippingChange = (id, field, value) => {
-    setShippingMethods(prev => prev.map(m =>
-      m.id === id ? { ...m, [field]: value } : m
-    ));
+    setShippingMethods((prev) => prev.map((m) => (m.id === id ? { ...m, [field]: value } : m)));
   };
 
   const handleSave = async () => {
     try {
       setIsSaving(true);
       await shopSettingsService.updateShippingMethods(shippingMethods);
-      toast.success('Paramètres de livraison enregistrés avec succès', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
+      toast.success('Paramètres de livraison enregistrés.', { position: 'top-right', autoClose: 3000 });
     } catch (err) {
-      toast.error('Erreur lors de l\'enregistrement: ' + (err.message || 'Erreur inconnue'), {
+      toast.error("Erreur lors de l'enregistrement: " + (err.message || 'Erreur inconnue'), {
         position: 'top-right',
         autoClose: 4000,
       });
@@ -49,227 +49,209 @@ const Settings = () => {
     }
   };
 
-  if (loading) return <AdminLoader message="Chargement des configurations de la boutique..." />;
+  const handleSidebarCollapsedChange = (checked) => {
+    try {
+      window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, checked ? '1' : '0');
+    } catch (_) {}
+    setSidebarCollapsed(checked);
+    window.dispatchEvent(new CustomEvent('admin:sidebar-toggle'));
+    toast.success(checked ? 'Barre latérale réduite (icônes seules).' : 'Barre latérale agrandie.', {
+      position: 'top-right',
+      autoClose: 2000,
+    });
+  };
+
+  if (loading) return <AdminLoader message="Chargement des configurations..." />;
 
   return (
-    <div style={{ paddingBottom: '40px' }}>
-      <header style={{ marginBottom: '24px' }}>
-        <p
-          style={{
-            fontSize: '0.7rem',
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            color: 'var(--text-light)',
-            marginBottom: '6px',
-          }}
-        >
-          Paramètres
-        </p>
-        <h2 style={{ fontSize: '1.6rem', fontWeight: 600 }}>Configuration boutique</h2>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-          Gérez les modes de paiement, les options de livraison et les réglages généraux de l&apos;application.
+    <div style={{ paddingBottom: 40, width: '100%' }}>
+      <header style={{ marginBottom: 28 }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>Configuration</h2>
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginTop: 6 }}>
+          Livraison et apparence du tableau de bord.
         </p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-6 items-start">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Modes de livraison */}
-          <section
-            style={{
-              borderRadius: '18px',
-              border: '1px solid var(--divider)',
-              background: 'var(--white)',
-              padding: '20px',
-              boxShadow: 'var(--shadow-xs)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <Truck size={20} color="var(--accent-deep)" />
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Logistique & Livraison</h3>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {shippingMethods.map((method) => (
-                <div
-                  key={method.id}
-                  style={{
-                    padding: '16px',
-                    borderRadius: '14px',
-                    background: 'var(--surface)',
-                    border: '1px solid var(--divider)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px'
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{method.name}</span>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{method.is_active ? 'Actif' : 'Inactif'}</span>
-                      <input
-                        type="checkbox"
-                        checked={method.is_active}
-                        onChange={(e) => handleShippingChange(method.id, 'is_active', e.target.checked)}
-                      />
-                    </label>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-light)', display: 'block', marginBottom: '4px' }}>Tarif de livraison (MAD)</label>
-                      <input
-                        type="number"
-                        value={method.price}
-                        onChange={(e) => handleShippingChange(method.id, 'price', e.target.value)}
-                        step="0.01"
-                        style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--divider)', fontSize: '0.85rem' }}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '0.75rem', color: 'var(--text-light)', display: 'block', marginBottom: '4px' }}>Délai estimé (jours)</label>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <input
-                          type="number"
-                          value={method.estimated_days_min || 1}
-                          onChange={(e) => handleShippingChange(method.id, 'estimated_days_min', e.target.value)}
-                          style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--divider)', fontSize: '0.85rem' }}
-                        />
-                        <span>-</span>
-                        <input
-                          type="number"
-                          value={method.estimated_days_max || 5}
-                          onChange={(e) => handleShippingChange(method.id, 'estimated_days_max', e.target.value)}
-                          style={{ width: '100%', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--divider)', fontSize: '0.85rem' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={isSaving}
-                style={{
-                  marginTop: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '12px 20px',
-                  borderRadius: '999px',
-                  border: 'none',
-                  background: 'var(--accent-deep)',
-                  color: 'white',
-                  fontSize: '0.9rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(197, 160, 89, 0.2)',
-                  opacity: isSaving ? 0.7 : 1
-                }}
-              >
-                <Save size={18} />
-                {isSaving ? 'Enregistrement...' : 'Sauvegarder les configurations'}
-              </button>
-            </div>
-          </section>
-
-          {/* Modes de paiement */}
-          <section
-            style={{
-              borderRadius: '18px',
-              border: '1px solid var(--divider)',
-              background: 'var(--white)',
-              padding: '20px',
-              boxShadow: 'var(--shadow-xs)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <CreditCard size={20} color="var(--accent-deep)" />
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Options de Paiement</h3>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.85rem' }}>
-              <div style={{ padding: '14px', borderRadius: '12px', background: 'var(--surface)', border: '1px solid var(--divider)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" style={{ height: '18px' }} />
-                  <span>PayPal Express Checkout</span>
-                </div>
-                <input type="checkbox" defaultChecked />
-              </div>
-              <div style={{ padding: '14px', borderRadius: '12px', background: 'var(--surface)', border: '1px solid var(--divider)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: 24, height: 24, background: '#6366f1', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 10, fontWeight: 'bold' }}>CMI</div>
-                  <span>CMI (Centre Monétique Interbancaire)</span>
-                </div>
-                <input type="checkbox" defaultChecked />
-              </div>
-            </div>
-          </section>
-        </div>
-
-        {/* Bloc configuration technique */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24, width: '100%', maxWidth: 1000 }}>
+        {/* Apparence du tableau de bord */}
         <section
           style={{
-            borderRadius: '18px',
+            borderRadius: 16,
             border: '1px solid var(--divider)',
             background: 'var(--white)',
-            padding: '20px',
-            fontSize: '0.85rem',
-            boxShadow: 'var(--shadow-xs)'
+            padding: 24,
+            boxShadow: 'var(--shadow-xs)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-            <Cpu size={20} color="var(--accent-deep)" />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>Infrastructure & API</h3>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <Layout size={22} style={{ color: 'var(--accent)' }} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Apparence du tableau de bord</h3>
           </div>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 16px',
+              borderRadius: 12,
+              background: 'var(--surface)',
+              border: '1px solid var(--divider)',
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>Sidebar compacte (icônes seules)</span>
+            <input
+              type="checkbox"
+              checked={sidebarCollapsed}
+              onChange={(e) => handleSidebarCollapsedChange(e.target.checked)}
+              style={{ width: 18, height: 18, accentColor: 'var(--accent)' }}
+            />
+          </label>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 12, marginBottom: 0 }}>
+            Réduit la barre latérale pour n'afficher que les icônes et gagner de l'espace.
+          </p>
+        </section>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>Environnement Backend</label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <span style={{ padding: '4px 10px', borderRadius: '999px', background: '#22c55e1a', color: '#16a34a', fontSize: '0.7rem', fontWeight: 700 }}>PRODUCTION READY</span>
-              </div>
+        {/* Livraison */}
+        <section
+          style={{
+            borderRadius: 16,
+            border: '1px solid var(--divider)',
+            background: 'var(--white)',
+            padding: 24,
+            boxShadow: 'var(--shadow-xs)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <Truck size={22} style={{ color: 'var(--accent)' }} />
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>Livraison</h3>
+          </div>
+          {error && (
+            <div style={{ padding: 12, background: 'rgba(239,68,68,0.08)', borderRadius: 10, color: '#b91c1c', marginBottom: 16, fontSize: '0.9rem' }}>
+              {error}
             </div>
-
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <span>URL de l&apos;API principale</span>
-              <input
-                type="text"
-                readOnly
-                value={import.meta.env.VITE_API_URL || 'http://localhost:8000/api'}
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {shippingMethods.map((method) => (
+              <div
+                key={method.id}
                 style={{
-                  borderRadius: '10px',
-                  border: '1px solid var(--divider)',
-                  padding: '10px 14px',
-                  fontSize: '0.85rem',
+                  padding: 16,
+                  borderRadius: 12,
                   background: 'var(--surface)',
-                  color: 'var(--text-muted)'
-                }}
-              />
-            </label>
-
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <span>Stockage Cloudinary (Dossier)</span>
-              <input
-                type="text"
-                placeholder="skincare_prod/products"
-                style={{
-                  borderRadius: '10px',
                   border: '1px solid var(--divider)',
-                  padding: '10px 14px',
-                  fontSize: '0.85rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
                 }}
-              />
-            </label>
-
-            <div style={{ marginTop: '10px', padding: '12px', borderRadius: '12px', background: 'rgba(197, 160, 89, 0.05)', border: '1px solid rgba(197, 160, 89, 0.15)' }}>
-              <p style={{ fontSize: '0.75rem', color: 'var(--accent-deep)', lineHeight: 1.4 }}>
-                <strong>Note :</strong> Les changements sur l'infrastructure peuvent nécessiter un redémarrage des services de cache.
-              </p>
-            </div>
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>{method.name}</span>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{method.is_active ? 'Actif' : 'Inactif'}</span>
+                    <input
+                      type="checkbox"
+                      checked={method.is_active}
+                      onChange={(e) => handleShippingChange(method.id, 'is_active', e.target.checked)}
+                      style={{ accentColor: 'var(--accent)' }}
+                    />
+                  </label>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Tarif (MAD)</label>
+                    <input
+                      type="number"
+                      value={method.price}
+                      onChange={(e) => handleShippingChange(method.id, 'price', e.target.value)}
+                      step="0.01"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--divider)', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Délai (jours)</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input
+                        type="number"
+                        value={method.estimated_days_min ?? 1}
+                        onChange={(e) => handleShippingChange(method.id, 'estimated_days_min', e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--divider)', fontSize: '0.9rem' }}
+                      />
+                      <span style={{ color: 'var(--text-muted)' }}>–</span>
+                      <input
+                        type="number"
+                        value={method.estimated_days_max ?? 5}
+                        onChange={(e) => handleShippingChange(method.id, 'estimated_days_max', e.target.value)}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1px solid var(--divider)', fontSize: '0.9rem' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                padding: '12px 24px',
+                borderRadius: 999,
+                border: 'none',
+                background: 'var(--accent)',
+                color: 'white',
+                fontSize: '0.9rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                opacity: isSaving ? 0.7 : 1,
+                marginTop: 4,
+              }}
+            >
+              <Save size={18} />
+              {isSaving ? 'Enregistrement…' : 'Sauvegarder la livraison'}
+            </button>
           </div>
+        </section>
+
+        {/* Lien site public — toute la largeur */}
+        <section
+          style={{
+            gridColumn: '1 / -1',
+            borderRadius: 16,
+            border: '1px solid var(--divider)',
+            background: 'var(--surface)',
+            padding: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Globe size={20} style={{ color: 'var(--accent)' }} />
+            <span style={{ fontSize: '0.9rem', fontWeight: 500 }}>Voir le site en ligne</span>
+          </div>
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              padding: '10px 20px',
+              borderRadius: 12,
+              border: '1px solid var(--divider)',
+              background: 'var(--white)',
+              color: 'var(--text-main)',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+            }}
+          >
+            Ouvrir le site
+          </a>
         </section>
       </div>
     </div>
@@ -277,5 +259,3 @@ const Settings = () => {
 };
 
 export default Settings;
-
-

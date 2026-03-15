@@ -47,14 +47,63 @@ const ProductCarousel = ({ products, loading, title = 'Best-sellers', subtitle }
           className="section-header-flex"
           style={{ flexWrap: 'wrap', gap: 16 }}
         >
-          <div>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <span className="section-label">Sélection</span>
-            <h2 style={{ margin: 0, fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', fontWeight: 600, letterSpacing: '-0.02em' }}>{title}</h2>
+            {/* Sur mobile : flèches gauche/droite à côté du titre pour indiquer la navigation */}
+            <div className="product-carousel__title-row" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                aria-label="Faire défiler à gauche"
+                onClick={() => scroll(-1)}
+                disabled={!canScrollLeft}
+                className="product-carousel__nav-mobile show-mobile"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  border: '1px solid var(--divider)',
+                  background: 'var(--white)',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: canScrollLeft ? 'var(--text-main)' : 'var(--text-muted)',
+                  cursor: canScrollLeft ? 'pointer' : 'default',
+                  opacity: canScrollLeft ? 1 : 0.5,
+                  flexShrink: 0,
+                }}
+              >
+                <ChevronLeft size={22} strokeWidth={2.2} />
+              </button>
+              <h2 style={{ margin: 0, fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', fontWeight: 600, letterSpacing: '-0.02em' }}>{title}</h2>
+              <button
+                type="button"
+                aria-label="Faire défiler à droite"
+                onClick={() => scroll(1)}
+                disabled={!canScrollRight}
+                className="product-carousel__nav-mobile show-mobile"
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  border: '1px solid var(--divider)',
+                  background: 'var(--white)',
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: canScrollRight ? 'var(--text-main)' : 'var(--text-muted)',
+                  cursor: canScrollRight ? 'pointer' : 'default',
+                  opacity: canScrollRight ? 1 : 0.5,
+                  flexShrink: 0,
+                }}
+              >
+                <ChevronRight size={22} strokeWidth={2.2} />
+              </button>
+            </div>
             {subtitle && (
               <p style={{ margin: '8px 0 0', fontSize: '0.95rem', color: 'var(--text-muted)', maxWidth: '480px' }}>{subtitle}</p>
             )}
           </div>
-          <Link to="/shop" className="btn btn-secondary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 999 }}>
+          <Link to="/shop" className="btn btn-secondary btn-sm hide-mobile" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, borderRadius: 999 }}>
             Voir la collection <ChevronRight size={16} />
           </Link>
         </motion.div>

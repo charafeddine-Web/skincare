@@ -132,6 +132,7 @@ const Navbar = () => {
     return (
         <>
             <Motion.nav
+                className="main-nav"
                 initial={{ y: -100, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 style={{

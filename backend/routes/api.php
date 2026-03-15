@@ -47,6 +47,9 @@ Route::get('/product-images/{productImage}', [ProductImageController::class, 'sh
 Route::get('/reviews', [ReviewController::class, 'index']);
 Route::get('/reviews/{review}', [ReviewController::class, 'show']);
 
+// Config boutique publique (seuil livraison gratuite pour promo bar, etc.)
+Route::get('/shop/shipping-config', [CartController::class, 'shippingConfig']);
+
 // Newsletter (public)
 Route::post('/newsletter/subscribe', [NewsletterController::class, 'subscribe']);
 

@@ -198,11 +198,16 @@ const ProductDetail = () => {
         const avgRating = reviewsList.length > 0
             ? reviewsList.reduce((sum, r) => sum + r.rating, 0) / reviewsList.length
             : 0;
+        const rawImages = data.images || [];
+        const mainImg = rawImages.find(img => img.is_main);
+        const others = rawImages.filter(img => img !== mainImg);
+        const imagesOrdered = mainImg ? [mainImg, ...others] : rawImages;
+        const firstImageUrl = imagesOrdered[0]?.image_url;
         return {
             ...data,
             category: data.category?.name || 'Soins',
-            image: data.images?.find(img => img.is_main)?.image_url || data.images?.[0]?.image_url,
-            images: data.images || [],
+            image: firstImageUrl || data.images?.[0]?.image_url,
+            images: imagesOrdered,
             shortDesc: data.description?.substring(0, 160) + (data.description?.length > 160 ? '...' : ''),
             description: data.description || 'Aucune description disponible.',
             ingredients: data.active_ingredients

@@ -12,15 +12,16 @@ import {
   Tags,
   Menu,
   X,
-  Bell,
-  Search,
+  ChevronLeft,
   ChevronRight,
   User,
   Globe,
-  Sparkles,
   MessageSquare,
   Mail
 } from 'lucide-react';
+
+const SIDEBAR_COLLAPSED_KEY = 'admin_sidebar_collapsed';
+const getSidebarCollapsed = () => typeof window !== 'undefined' && window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
 
 const menuItems = [
   { to: '/admin', label: 'Tableau de Bord', icon: LayoutDashboard, end: true },
@@ -39,6 +40,7 @@ const AdminLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(getSidebarCollapsed);
   const location = useLocation();
 
   useEffect(() => {
@@ -48,86 +50,101 @@ const AdminLayout = () => {
   }, []);
 
   useEffect(() => {
+    const onSidebarToggle = () => setSidebarCollapsed(getSidebarCollapsed());
+    window.addEventListener('admin:sidebar-toggle', onSidebarToggle);
+    return () => window.removeEventListener('admin:sidebar-toggle', onSidebarToggle);
+  }, []);
+
+  useEffect(() => {
     setIsSidebarOpen(false);
     setIsProfileOpen(false);
   }, [location.pathname]);
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
 
+  const toggleCollapsed = () => {
+    const next = !sidebarCollapsed;
+    try {
+      window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
+    } catch (_) {}
+    setSidebarCollapsed(next);
+    window.dispatchEvent(new CustomEvent('admin:sidebar-toggle'));
+  };
+
   return (
     <div className="min-h-screen bg-[#FDFCFB] flex font-sans selection:bg-[#FADADD] selection:text-[#A8874A]">
-      {/* SIDEBAR FIXED */}
+      {/* SIDEBAR FIXED — mode normal (280px) ou compact (80px, icônes seules) */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-[100] w-[280px] bg-white border-r border-[#EFE9E3] transform transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]
+          fixed inset-y-0 left-0 z-[100] bg-white border-r border-[#EFE9E3] transform transition-all duration-300 ease-out flex flex-col
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-          flex flex-col
+          ${sidebarCollapsed ? 'w-[80px] md:w-[80px]' : 'w-[280px]'}
         `}
       >
-        {/* Brand Identity / Official Logo */}
-        <div className="h-[120px] flex flex-col items-center justify-center px-8">
-          <img
-            src="/logo2.png"
-            alt="Éveline Skincare"
-            className="h-16 w-auto object-contain mb-2"
-          />
-          <div className="text-[10px] font-black text-[#A8874A] uppercase tracking-[0.4em]">Administration</div>
+        {/* Brand + toggle compact */}
+        <div className={`flex flex-col items-center justify-center border-b border-[#EFE9E3] ${sidebarCollapsed ? 'h-24 px-0' : 'h-[120px] px-8'}`}>
+          <img src="/logo2.png" alt="Éveline" className={`object-contain ${sidebarCollapsed ? 'h-10' : 'h-16 mb-2'}`} />
+          {!sidebarCollapsed && <div className="text-[10px] font-black text-[#A8874A] uppercase tracking-[0.4em]">Administration</div>}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            className="hidden md:flex mt-2 w-8 h-8 rounded-xl bg-[#F7F3EF] border border-[#EFE9E3] items-center justify-center text-[#A8874A] hover:bg-[#FADADD]/50 transition-colors"
+            title={sidebarCollapsed ? 'Agrandir la barre latérale' : 'Réduire la barre latérale'}
+          >
+            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
         </div>
 
-        {/* Navigation Section */}
-        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto no-scrollbar">
-          <div className="px-5 mb-4 text-[10px] font-bold text-[#A8A09A] uppercase tracking-[0.2em]">Pilotage</div>
+        {/* Navigation */}
+        <nav className={`flex-1 overflow-y-auto no-scrollbar ${sidebarCollapsed ? 'px-0 py-4 space-y-1' : 'px-4 py-6 space-y-1'}`}>
+          {!sidebarCollapsed && <div className="px-5 mb-4 text-[10px] font-bold text-[#A8A09A] uppercase tracking-[0.2em]">Pilotage</div>}
           {menuItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.end}
               className={({ isActive }) => `
-                flex items-center gap-4 px-5 py-3.5 rounded-2xl transition-all duration-300 group relative
-                ${isActive
-                  ? 'bg-[#F7F3EF] text-[#A8874A] shadow-sm'
-                  : 'text-[#7A7070] hover:text-[#1A1A1E] hover:bg-[#F7F3EF]/50'}
+                flex items-center rounded-2xl transition-all duration-300 group relative
+                ${sidebarCollapsed ? 'justify-center w-full py-3.5 px-0' : 'gap-4 px-5 py-3.5'}
+                ${isActive ? 'bg-[#F7F3EF] text-[#A8874A] shadow-sm' : 'text-[#7A7070] hover:text-[#1A1A1E] hover:bg-[#F7F3EF]/50'}
               `}
+              title={sidebarCollapsed ? item.label : undefined}
             >
               {({ isActive }) => (
                 <>
-                  <item.icon
-                    size={20}
-                    strokeWidth={isActive ? 2.5 : 2}
-                    className={`transition-all duration-300 ${isActive ? 'text-[#C5A059]' : 'text-[#D4C9BF] group-hover:text-[#A8874A]'}`}
-                  />
-                  <span className={`font-semibold text-[0.92rem] ${isActive ? 'tracking-tight' : 'tracking-normal'}`}>{item.label}</span>
-                  {isActive && (
-                    <div className="absolute right-4 w-1.5 h-1.5 bg-[#C5A059] rounded-full shadow-[0_0_8px_#C5A059]"></div>
-                  )}
+                  <item.icon size={20} strokeWidth={isActive ? 2.5 : 2} className={`flex-shrink-0 ${isActive ? 'text-[#C5A059]' : 'text-[#D4C9BF] group-hover:text-[#A8874A]'}`} />
+                  {!sidebarCollapsed && <span className="font-semibold text-[0.92rem]">{item.label}</span>}
+                  {isActive && !sidebarCollapsed && <div className="absolute right-4 w-1.5 h-1.5 bg-[#C5A059] rounded-full" />}
                 </>
               )}
             </NavLink>
           ))}
 
-          <div className="pt-8 px-5 mb-4 text-[10px] font-bold text-[#A8A09A] uppercase tracking-[0.2em]">Raccourcis</div>
+          {!sidebarCollapsed && <div className="pt-8 px-5 mb-4 text-[10px] font-bold text-[#A8A09A] uppercase tracking-[0.2em]">Raccourcis</div>}
           <a
             href="/"
             target="_blank"
-            className="flex items-center gap-4 px-5 py-3.5 rounded-2xl text-[#7A7070] hover:text-[#1A1A1E] hover:bg-[#F7F3EF]/50 transition-all duration-300 group"
+            rel="noopener noreferrer"
+            className={`flex items-center rounded-2xl text-[#7A7070] hover:text-[#1A1A1E] hover:bg-[#F7F3EF]/50 transition-all duration-300 group ${sidebarCollapsed ? 'justify-center py-3.5 px-0' : 'gap-4 px-5 py-3.5'}`}
+            title={sidebarCollapsed ? 'Consulter le site' : undefined}
           >
-            <div className="w-8 h-8 rounded-xl bg-[#F7F3EF] flex items-center justify-center group-hover:bg-[#FADADD]/50 transition-colors">
-              <Globe size={18} className="text-[#A8A09A] group-hover:text-[#A8874A]" />
-            </div>
-            <span className="font-semibold text-[0.92rem]">Consulter le site</span>
+            <Globe size={18} className="text-[#A8A09A] group-hover:text-[#A8874A]" />
+            {!sidebarCollapsed && <span className="font-semibold text-[0.92rem]">Consulter le site</span>}
           </a>
         </nav>
 
-        {/* Sidebar Footer - User Quick Info */}
-        <div className="p-4 border-t border-[#EFE9E3]">
-          <div className="bg-[#FDFCFB] border border-[#EFE9E3] rounded-3xl p-4 flex items-center gap-3 shadow-inner">
-            <div className="w-10 h-10 rounded-2xl bg-[#E8B4BC] flex items-center justify-center font-bold text-white shadow-lg shadow-pink-200/50">
-              {user?.name?.[0].toUpperCase() || 'A'}
+        {/* Footer user */}
+        <div className={`border-t border-[#EFE9E3] ${sidebarCollapsed ? 'p-2' : 'p-4'}`}>
+          <div className={`bg-[#FDFCFB] border border-[#EFE9E3] rounded-3xl flex items-center shadow-inner ${sidebarCollapsed ? 'p-2 justify-center' : 'p-4 gap-3'}`}>
+            <div className="w-10 h-10 rounded-2xl bg-[#E8B4BC] flex items-center justify-center font-bold text-white text-sm flex-shrink-0">
+              {user?.name?.[0]?.toUpperCase() || 'A'}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-[#1A1A1E] truncate">{user?.name || 'Administrateur'}</p>
-              <div className="text-[10px] text-[#A8A09A] font-bold uppercase tracking-wider">Session Active</div>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-[#1A1A1E] truncate">{user?.name || 'Administrateur'}</p>
+                <div className="text-[10px] text-[#A8A09A] font-bold uppercase tracking-wider">Session</div>
+              </div>
+            )}
           </div>
         </div>
       </aside>
@@ -141,7 +158,7 @@ const AdminLayout = () => {
       )}
 
       {/* MAIN CONTENT WRAPPER */}
-      <div className="flex-1 md:ml-[280px] flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${sidebarCollapsed ? 'md:ml-[80px]' : 'md:ml-[280px]'}`}>
         {/* TOP NAVBAR FIXED-LIKE */}
         <header className={`
           h-[100px] flex items-center justify-between px-6 md:px-12 sticky top-0 z-[80] transition-all duration-500
